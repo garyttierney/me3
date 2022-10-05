@@ -1,0 +1,18 @@
+[workspace]
+members = [
+    "crates/me3_framework",
+    "crates/me3_host",
+    "crates/me3_game_support/fromsoft",
+    "crates/me3_game_support/ds3",
+    "crates/me3_test/harness",
+    "crates/me3_test/harness_loader",
+    "crates/me3_launcher",
+]
+
+[profile.release]
+opt-level = 'z'     # Optimize for size.
+lto = true          # Enable Link Time Optimization
+codegen-units = 1   # Reduce number of codegen units to increase optimizations.
+panic = 'abort'     # Abort on panic
+strip = true
+debug = false

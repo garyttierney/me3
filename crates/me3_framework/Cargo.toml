@@ -1,0 +1,50 @@
+[package]
+name = "me3_framework"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = "0.4.22"
+detour = { git = "https://github.com/garyttierney/detour-rs.git" }
+dynasmrt = "1.2"
+fern = { version = "0.6", features = ["colored", "date-based"] }
+egui = "0.19"
+lazy_static = "1.4"
+log = "0.4"
+once_cell = "1.14"
+thiserror = "1.0"
+tokio = { version = "1.21", features = ["rt", "rt-multi-thread"] }
+tracy-client = { version = "0.14.0", features = ["enable"] }
+win_dbg_logger = "0.1"
+
+[dependencies.walkdir]
+version = "2"
+
+[build-dependencies]
+cc = { version = "1.0", features = ["parallel"] }
+
+[dependencies.egui_extras]
+version = "0.19"
+features = ["image"]
+
+[dependencies.egui-d3d11]
+version = "0.8"
+features = ["force-compile", "save-blob", "parking-lot"]
+
+
+[dependencies.faithe]
+git = "https://github.com/sy1ntexx/faithe"
+
+[dependencies.windows]
+version = "0.36.0"
+features = [
+    "alloc",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_Dxgi",
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Storage_FileSystem", 
+    "Win32_System_LibraryLoader"
+]

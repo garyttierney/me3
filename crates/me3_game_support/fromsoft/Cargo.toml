@@ -1,0 +1,8 @@
+[package]
+name = "me3_game_support_fromsoft"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+me3_framework = {path = "../../me3_framework"}
+abi_stable = "0.10"

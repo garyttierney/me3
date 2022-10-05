@@ -1,0 +1,29 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "custom",
+            "name": "ME3 Debug (Dark Souls 3 - LLDB)",
+            "preLaunchTask": "rust: cargo build",
+            "targetCreateCommands": [
+                "target create '${config:me3.ds3GameFolderPath}/DarkSoulsIII.exe'",
+                "settings set target.x86-disassembly-flavor intel",
+            ],
+            "processCreateCommands": [
+                "platform settings -w '${config:me3.ds3GameFolderPath}'",
+                "process launch --stop-at-entry",
+                "platform shell -- ${workspaceFolder}/tools/scylla-hide/InjectorCLIx64.exe DarkSoulsIII.exe ${workspaceFolder}/tools/scylla-hide/HookLibraryx64.dll nowait",
+                "platform shell -- ${workspaceFolder}/target/debug/me3_launcher.exe ${workspaceFolder}/target/debug/me3_game_support_ds3.dll",
+                "continue"
+            ],
+            "sourceLanguages": [
+                "rust",
+                "cpp"
+            ]
+        }
+    ]
+}

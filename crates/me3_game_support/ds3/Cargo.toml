@@ -1,0 +1,15 @@
+[package]
+name = "me3_game_support_ds3"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+me3_framework = {path = "../../me3_framework"}
+me3_game_support_fromsoft = {path="../fromsoft"}
+log = "0.4"
+
+[dev-dependencies]
+me3_test_harness = {path = "../../me3_test/harness"}

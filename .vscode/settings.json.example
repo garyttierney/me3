@@ -1,0 +1,8 @@
+{
+    "me3.ds3GameFolderPath": "C:/Program Files (x86)/Steam/steamapps/common/DARK SOULS III/Game",
+    // These are optional (but helpful) debugger settings.
+    "lldb.showDisassembly": "auto",
+    "lldb.displayFormat": "auto",
+    "lldb.dereferencePointers": true,
+    "lldb.consoleMode": "commands"
+}

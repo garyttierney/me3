@@ -1,0 +1,29 @@
+[package]
+name = "me3_host"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+me3_framework = {path = "../me3_framework"}
+me3_game_support_fromsoft = {path="../me3_game_support/fromsoft"}
+log = "0.4"
+
+[dependencies.config]
+version = "0.13"
+
+[dependencies.serde]
+version = "1"
+features = ["derive"]
+
+[dependencies.windows]
+version = "0.36.0"
+features = [
+    "Win32_System_SystemServices"
+]
+
+
+[build-dependencies]
+protobuf-codegen = "3.1"

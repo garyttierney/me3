@@ -1,0 +1,5 @@
+/target
+/Cargo.lock
+
+# This is intentionally ignored. Put workspace settings in me3.code-workspace and your local overrides in settings.json
+/.vscode/settings.json 

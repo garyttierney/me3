@@ -1,0 +1,20 @@
+[package]
+name = "me3_test_harness_loader"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dll-syringe = { version = "0.13", features = ["rpc-payload", "payload-utils"] }
+
+[dependencies.pollster]
+version = "0.2"
+
+[dependencies.windows]
+version = "0.41.0"
+features = [
+    "Win32_System_Com"
+]
