@@ -17,6 +17,10 @@ tokio = { version = "1.21", features = ["rt", "rt-multi-thread"] }
 tracy-client = { version = "0.14.0", features = ["enable"] }
 win_dbg_logger = "0.1"
 
+[dependencies.mlua]
+version = "0.8"
+features = ["luau", "async", "send", "serialize"]
+
 [dependencies.walkdir]
 version = "2"
 

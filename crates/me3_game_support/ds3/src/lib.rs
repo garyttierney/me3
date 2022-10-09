@@ -1,6 +1,5 @@
 use std::{ffi::OsString, os::windows::prelude::OsStringExt};
 
-use me3_framework::{self};
 use me3_game_support_fromsoft::sprj::{ParamRepository, SprjGame};
 
 me3_framework::global! {

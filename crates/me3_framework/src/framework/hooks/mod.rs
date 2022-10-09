@@ -8,7 +8,8 @@ use dynasmrt::ExecutableBuffer;
 use dynasmrt::{dynasm, x64::Assembler};
 use once_cell::sync::OnceCell;
 
-use crate::{FrameworkError, FrameworkGlobal, FunctionRef};
+pub use self::function_ref::{FunctionAddress, FunctionRef};
+use crate::{FrameworkError, FrameworkGlobal};
 
 mod function_ref;
 mod hook;
@@ -61,15 +62,15 @@ impl Hooks {
         let trampoline_offset = ops.offset();
         dynasm!(ops
             ; -> prelude:
-            ; mov rax, QWORD closure_ptr as *mut _ as  _
-            ; mov r11, QWORD callback as _
+            ; mov rax, QWORD closure_ptr as *const () as _
+            ; mov r11, QWORD callback as *const () as _
             ; jmp r11
             ; int3
         );
 
-        let buffer = ops
-            .finalize()
-            .expect("unable to create profiler prelude/prologue buffer");
+        ops.commit()?;
+
+        let buffer = ops.finalize().expect("unable to assemble hook trampoline");
 
         let trampoline = unsafe { mem::transmute(buffer.ptr(trampoline_offset)) };
         let detour = unsafe { RawDetour::new(function.get_ptr(), trampoline)? };

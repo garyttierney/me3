@@ -5,4 +5,6 @@ edition = "2021"
 
 [dependencies]
 me3_framework = {path = "../../me3_framework"}
-abi_stable = "0.10"
+
+[dependencies.serde]
+version = "1"

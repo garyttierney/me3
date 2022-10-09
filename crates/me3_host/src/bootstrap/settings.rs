@@ -5,20 +5,24 @@ use serde::{Deserialize, Serialize};
 
 pub type SettingsError = config::ConfigError;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct SettingsBuilder {
     config_builder: ConfigBuilder<DefaultState>,
     mod_paths: HashMap<String, PathBuf>,
 }
 
 impl SettingsBuilder {
+    #[allow(clippy::result_large_err)]
     pub fn add_file<T: AsRef<str>>(
         mut self,
         filename: T,
         required: bool,
-    ) -> Result<Self, SettingsError> {
+    ) -> Result<Self, (Self, SettingsError)> {
         let source = config::File::new(filename.as_ref(), FileFormat::Toml).required(required);
-        let config = Config::builder().add_source(source).build()?;
+        let config = match Config::builder().add_source(source).build() {
+            Ok(config) => config,
+            Err(e) => return Err((self, e)),
+        };
         let mods: HashMap<String, Value> = config.get("mod").unwrap_or_default();
 
         for (name, _) in mods {
@@ -38,6 +42,7 @@ impl SettingsBuilder {
         })
     }
 
+    #[allow(dead_code)]
     pub fn add_string<T: AsRef<str>>(self, string: T) -> Self {
         Self {
             config_builder: self
@@ -65,6 +70,10 @@ pub struct Mod {
 
     #[serde(default = "mod_default_enablement")]
     pub enabled: bool,
+
+    /// A list of Lua scripts that will be executed when this mod loads.
+    #[serde(default = "Vec::new")]
+    pub scripts: Vec<String>,
 }
 
 pub struct Settings {
@@ -126,14 +135,15 @@ mod tests {
             .expect("failed to build test config for mod_config_is_enabled_by_default");
 
         let mods = settings.mods();
-        assert_eq!(mods["a"].enabled, true);
+        assert!(mods["a"].enabled);
     }
 
     #[test]
     fn mod_path_is_remembered() -> Result<(), Box<dyn Error>> {
         let root = format!("{}/test-data/", env!("CARGO_MANIFEST_DIR"));
         let settings = SettingsBuilder::default()
-            .add_file(format!("{}/mod-path-is-remembered.toml", root), true)?
+            .add_file(format!("{}/mod-path-is-remembered.toml", root), true)
+            .expect("failed to load test config file for mod_path_is_remembered")
             .build()
             .expect("failed to build test config for mod_path_is_remembered");
 

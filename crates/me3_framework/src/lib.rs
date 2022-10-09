@@ -16,21 +16,6 @@ macro_rules! deref {
 }
 
 pub use faithe;
-
-pub enum FunctionAddress {
-    Offset(RuntimeOffset),
-    Pointer(*const ()),
-}
-
-pub trait FunctionRef {
-    type Target;
-
-    fn set_target(&self, new_target: *const ());
-    fn get_target(&self) -> Self::Target;
-    fn get_ptr(&self) -> *const ();
-}
-
-use faithe::RuntimeOffset;
 pub use faithe::{global, interface};
-pub use framework::{hooks, overlay, tracing, vfs};
+pub use framework::{hooks, overlay, scripting, tracing, vfs};
 pub use framework::{Framework, FrameworkBuilder, FrameworkError, FrameworkGlobal};

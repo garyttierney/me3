@@ -5,15 +5,22 @@ use once_cell::sync::OnceCell;
 use thiserror::Error;
 use tokio::{runtime::Runtime, task::JoinHandle};
 
-use self::{hooks::Hooks, overlay::Overlay, tracing::Profiler, vfs::VirtualFileSystem};
+use self::{
+    hooks::Hooks, overlay::Overlay, scripting::ScriptHost, tracing::Profiler,
+    vfs::VirtualFileSystem,
+};
 
 pub mod hooks;
 pub mod overlay;
+pub mod scripting;
 pub mod tracing;
 pub mod vfs;
 
 #[derive(Debug, Error)]
 pub enum FrameworkError {
+    #[error("failed to assemble code")]
+    CodeAssemblyFailed(#[from] dynasmrt::DynasmError),
+
     #[error("failed to patch code")]
     CodePatchingFailed(#[from] detour::Error),
 
@@ -31,6 +38,9 @@ pub enum FrameworkError {
 
     #[error("failed to execute pattern scan")]
     PatternScanningFailed(#[from] faithe::FaitheError),
+
+    #[error("a lua error occurred")]
+    ScriptingError(#[from] mlua::Error),
 }
 
 pub struct FrameworkBuilder {
@@ -49,7 +59,6 @@ impl FrameworkBuilder {
     pub fn debug_console(self, new_value: bool) -> Self {
         Self {
             debug_console: new_value,
-            ..self
         }
     }
 
@@ -64,6 +73,7 @@ pub struct Framework {
     hooks: &'static Hooks,
     overlay: &'static Overlay,
     profiler: &'static Profiler,
+    script_host: &'static ScriptHost,
     scheduler: Runtime,
     vfs: &'static VirtualFileSystem,
 }
@@ -76,7 +86,10 @@ pub trait FrameworkGlobal: Sync + Send + Sized {
         Self::cell().get_or_try_init(|| Self::create())
     }
 
-    // UNSAFE: no guarantee the global was ever created.
+    /// # Safety
+    ///
+    /// It is only safe to retrieve a [FrameworkGlobal] after it has been initialized
+    /// via [FrameworkGlobal::get_or_create].
     unsafe fn get_unchecked() -> &'static Self {
         Self::cell().get_unchecked()
     }
@@ -106,6 +119,7 @@ impl Framework {
         let hooks = Hooks::get_or_create()?;
         let overlay = Overlay::get_or_create()?;
         let profiler = Profiler::get_or_create()?;
+        let script_host = ScriptHost::get_or_create()?;
         let scheduler = Runtime::new()?;
         let vfs = VirtualFileSystem::get_or_create()?;
 
@@ -113,9 +127,14 @@ impl Framework {
             hooks,
             overlay,
             profiler,
+            script_host,
             scheduler,
             vfs,
         })
+    }
+
+    pub fn get_hooks(&self) -> &'static hooks::Hooks {
+        self.hooks
     }
 
     pub fn get_overlay(&self) -> &'static overlay::Overlay {
@@ -124,6 +143,10 @@ impl Framework {
 
     pub fn get_profiler(&self) -> &'static tracing::Profiler {
         self.profiler
+    }
+
+    pub fn get_script_host(&self) -> &'static scripting::ScriptHost {
+        self.script_host
     }
 
     pub fn get_vfs(&self) -> &'static vfs::VirtualFileSystem {

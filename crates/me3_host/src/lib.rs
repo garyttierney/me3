@@ -1,3 +1,5 @@
+//! A standalone DLL that hosts the extension functionality
+//! of all [me3_game_support_fromsoft] supported games.
 #![feature(assert_matches)]
 
 use windows::Win32::{
@@ -9,6 +11,7 @@ use windows::Win32::{
 };
 
 mod bootstrap;
+mod script_api;
 
 #[no_mangle]
 pub extern "stdcall" fn DllMain(hinst_dll: HINSTANCE, fdw_reason: u32, _: *const ()) -> i32 {

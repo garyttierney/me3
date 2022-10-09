@@ -8,6 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 me3_framework = {path = "../me3_framework"}
+me3_game_support_ds3 = {path="../me3_game_support/ds3"}
 me3_game_support_fromsoft = {path="../me3_game_support/fromsoft"}
 log = "0.4"
 

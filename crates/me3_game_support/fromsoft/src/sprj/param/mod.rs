@@ -1,11 +1,8 @@
-use abi_stable::StableAbi;
-
 pub use self::file::ParamFileDescriptor;
 
 pub mod file;
 
 #[repr(transparent)]
-#[derive(StableAbi)]
 pub struct ParamRepository(*mut usize);
 
 #[derive(Copy, Clone, Debug)]
@@ -13,7 +10,7 @@ pub struct ParamRepository(*mut usize);
 pub struct ParamFileHeader {
     #[doc(hidden)]
     _pad1: [u8; 0xA],
-    size: i16,
+    pub size: i16,
     #[doc(hidden)]
     _pad2: [u8; 0x34],
 }
@@ -21,27 +18,15 @@ pub struct ParamFileHeader {
 #[derive(Copy, Clone, Debug)]
 #[repr(packed)]
 pub struct ParamFileEntry {
-    id: i32,
+    pub id: i32,
 
     #[doc(hidden)]
     _pad1: [u8; 4],
 
-    offset: i32,
+    pub offset: i32,
 
     #[doc(hidden)]
     _pad2: [u8; 0xc],
-}
-
-impl ParamFileEntry {
-    #[inline]
-    pub fn id(&self) -> i32 {
-        self.id
-    }
-
-    #[inline]
-    pub fn offset(&self) -> i32 {
-        self.offset
-    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -51,7 +36,7 @@ pub struct ParamFileData<'p> {
 }
 
 impl ParamRepository {
-    fn get_file_data<'p>(&'p self, id: i32) -> Option<ParamFileData<'p>> {
+    fn get_file_data(&self, id: i32) -> Option<ParamFileData<'_>> {
         let param_repo_instance = unsafe { *self.0 as *const usize };
 
         unsafe {
@@ -69,8 +54,8 @@ impl ParamRepository {
         }
     }
 
-    fn get_row_pointer<T: ParamFileDescriptor>(&self, id: i32) -> Option<*const T::Row> {
-        let file = self.get_file_data(T::ID as i32)?;
+    fn get_row_pointer(&self, file: i32, id: i32) -> Option<*const ()> {
+        let file = self.get_file_data(file)?;
         let entry_offset = file
             .entries
             .binary_search_by_key(&id, |entry| entry.id)
@@ -79,26 +64,27 @@ impl ParamRepository {
         let entry = &file.entries[entry_offset];
         let data = file.header as *const ParamFileHeader;
 
-        unsafe { Some(data.byte_offset(entry.offset as isize).cast::<T::Row>()) }
+        unsafe { Some(data.byte_offset(entry.offset as isize) as *const _) }
     }
 
     #[allow(dead_code)]
-    fn get_row<T>(&self, id: i32) -> Option<&T::Row>
+    pub fn get_row<T>(&self, id: i32) -> Option<&T::Row>
     where
         T: ParamFileDescriptor,
     {
-        let row_ptr = self.get_row_pointer::<T>(id)?;
+        let row_ptr = self.get_row_pointer(T::ID as i32, id)?;
 
-        unsafe { row_ptr.as_ref() }
+        unsafe { row_ptr.cast::<T::Row>().as_ref() }
     }
 
+    // TODO: this could cooperate with the games synchronization primitives.
     #[allow(dead_code)]
-    fn get_row_mut<T>(&mut self, id: i32) -> Option<&mut T::Row>
+    pub fn get_row_mut<T>(&self, id: i32) -> Option<&mut T::Row>
     where
         T: ParamFileDescriptor,
     {
-        let row_ptr = self.get_row_pointer::<T>(id)?;
+        let row_ptr = self.get_row_pointer(T::ID as i32, id)?;
 
-        unsafe { row_ptr.cast_mut().as_mut() }
+        unsafe { row_ptr.cast::<T::Row>().cast_mut().as_mut() }
     }
 }

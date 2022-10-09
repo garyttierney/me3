@@ -91,6 +91,7 @@ unsafe extern "stdcall" fn hk_wnd_proc(
     CallWindowProcW(OLD_WND_PROC.unwrap(), hwnd, msg, wparam, lparam)
 }
 
+// TODO: shouldn't need to use lazy_static.
 lazy_static! {
     static ref STEAM_GAMEOVERLAY_PRESENT_PATTERN: Pattern =
         Pattern::from_ida_style("48 89 6C 24 18 48 89 74 24 20 41 56 48 83 EC 20 41");

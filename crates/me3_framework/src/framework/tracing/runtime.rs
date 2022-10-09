@@ -8,13 +8,11 @@ extern "C" {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn __profiler_begin(name: u64) -> ___tracy_c_zone_context {
-    let zone = ___tracy_emit_zone_begin_alloc(name, 1);
-
-    zone
+pub extern "C" fn __profiler_begin(name: u64) -> ___tracy_c_zone_context {
+    unsafe { ___tracy_emit_zone_begin_alloc(name, 1) }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn __profiler_end(ctx: tracy_client::sys::___tracy_c_zone_context) {
-    ___tracy_emit_zone_end(ctx)
+pub extern "C" fn __profiler_end(ctx: tracy_client::sys::___tracy_c_zone_context) {
+    unsafe { ___tracy_emit_zone_end(ctx) }
 }
