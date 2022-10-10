@@ -11,7 +11,9 @@ use windows::{
     Win32::{
         Foundation::{HWND, LPARAM, LRESULT, WPARAM},
         Graphics::Dxgi::{Common::DXGI_FORMAT, IDXGISwapChain},
-        UI::WindowsAndMessaging::{CallWindowProcW, SetWindowLongPtrA, GWLP_WNDPROC, WNDPROC},
+        UI::WindowsAndMessaging::{
+            CallWindowProcW, DefWindowProcW, SetWindowLongPtrA, GWLP_WNDPROC, WNDPROC,
+        },
     },
 };
 
@@ -86,9 +88,13 @@ unsafe extern "stdcall" fn hk_wnd_proc(
     wparam: WPARAM,
     lparam: LPARAM,
 ) -> LRESULT {
-    APP.wnd_proc(msg, wparam, lparam);
-
-    CallWindowProcW(OLD_WND_PROC.unwrap(), hwnd, msg, wparam, lparam)
+    let _ = APP.wnd_proc(msg, wparam, lparam);
+    let overlay = Overlay::get_unchecked();
+    if overlay.state.lock().unwrap().hidden {
+        CallWindowProcW(OLD_WND_PROC.unwrap(), hwnd, msg, wparam, lparam)
+    } else {
+        DefWindowProcW(hwnd, msg, wparam, lparam)
+    }
 }
 
 // TODO: shouldn't need to use lazy_static.
