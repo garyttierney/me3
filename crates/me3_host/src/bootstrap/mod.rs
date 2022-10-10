@@ -19,6 +19,8 @@ pub fn setup_and_run() -> Result<(), Box<dyn Error>> {
         .debug_console(cfg!(debug_assertions))
         .build()?;
 
+    log::info!("Setup me3 v{}", env!("CARGO_PKG_VERSION"));
+
     let bootstrap_info = Config::builder()
         .add_source(
             config::Environment::with_prefix("ME3")
@@ -28,6 +30,11 @@ pub fn setup_and_run() -> Result<(), Box<dyn Error>> {
         )
         .build()
         .and_then(|config| config.try_deserialize::<BootstrapInfo>())?;
+
+    log::info!(
+        "Loading settings from config files: {:#?}",
+        &bootstrap_info.config_files
+    );
 
     let settings_builder = bootstrap_info.config_files.into_iter().fold(
         SettingsBuilder::default(),
@@ -43,6 +50,9 @@ pub fn setup_and_run() -> Result<(), Box<dyn Error>> {
     );
 
     let settings = settings_builder.build()?;
+
+    log::info!("Loaded settings: {}", settings);
+
     let script_host = framework.get_script_host();
     let vfs = framework.get_vfs();
 

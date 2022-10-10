@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
 
 use config::{builder::DefaultState, Config, ConfigBuilder, ConfigError, FileFormat, Value};
 use serde::{Deserialize, Serialize};
@@ -79,6 +79,26 @@ pub struct Mod {
 pub struct Settings {
     config: Config,
     mod_paths: HashMap<String, PathBuf>,
+}
+
+impl Display for Settings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let toml = format!(
+            "{}",
+            self.config
+                .clone()
+                .try_deserialize::<toml::Value>()
+                .unwrap()
+        );
+
+        if toml.is_empty() {
+            f.write_str("<empty>")?;
+        } else {
+            f.write_str(&toml)?;
+        }
+
+        Ok(())
+    }
 }
 
 impl Settings {

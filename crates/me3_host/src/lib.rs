@@ -22,11 +22,11 @@ pub extern "stdcall" fn DllMain(hinst_dll: HINSTANCE, fdw_reason: u32, _: *const
                 let _ = std::thread::spawn(move || {
                     let exit_code = match std::panic::catch_unwind(bootstrap::setup_and_run) {
                         Err(e) => {
-                            eprintln!("me3_host panicked in bootstrap: {:#?}", e);
+                            log::error!("me3_host panicked in bootstrap: {:#?}", e);
                             0
                         }
                         Ok(Err(e)) => {
-                            eprintln!("encountered an error during setup: {:#?}", e);
+                            log::error!("encountered an error during setup: {:#?}", e);
                             0
                         }
                         Ok(_) => 1,

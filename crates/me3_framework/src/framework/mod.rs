@@ -98,7 +98,7 @@ pub trait FrameworkGlobal: Sync + Send + Sized {
 impl Framework {
     pub fn setup_framework(builder: FrameworkBuilder) -> Result<Self, FrameworkError> {
         if builder.debug_console {
-            alloc_console().expect("failed to create debug console");
+            let _ = alloc_console();
         }
 
         fern::Dispatch::new()
