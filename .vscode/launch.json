@@ -17,7 +17,7 @@
                 "platform settings -w '${config:me3.ds3GameFolderPath}'",
                 "process launch --stop-at-entry",
                 "platform shell -- ${workspaceFolder}/tools/scylla-hide/InjectorCLIx64.exe DarkSoulsIII.exe ${workspaceFolder}/tools/scylla-hide/HookLibraryx64.dll nowait",
-                "platform shell -- ${workspaceFolder}/target/debug/me3_launcher.exe ${workspaceFolder}/target/debug/me3_game_support_ds3.dll",
+                "platform shell -- ${workspaceFolder}/target/debug/me3_launcher.exe ${workspaceFolder}/target/debug/me3_host.dll",
                 "continue"
             ],
             "sourceLanguages": [

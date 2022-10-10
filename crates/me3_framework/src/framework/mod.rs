@@ -164,7 +164,9 @@ impl Framework {
 
     pub fn run_until_shutdown(&self) {
         self.scheduler.block_on(async move {
-            tokio::task::yield_now().await;
+            loop {
+                tokio::task::yield_now().await;
+            }
         });
     }
 }
