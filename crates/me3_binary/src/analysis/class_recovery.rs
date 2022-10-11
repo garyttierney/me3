@@ -76,6 +76,7 @@ pub fn find_rtti_data_candidates(
         .iter()
         .find(|sec| &sec.Name == b".text\0\0\0")
         .expect("no .text section found");
+
     let rdata = file
         .section_headers()
         .iter()
