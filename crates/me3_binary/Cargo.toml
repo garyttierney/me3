@@ -3,6 +3,10 @@ name = "me3_binary"
 version = "0.1.0"
 edition = "2021"
 
+## Disassembler
+[dependencies.iced-x86]
+version = "1"
+
 [dependencies.pelite]
 version = "0.9"
 

@@ -20,8 +20,12 @@ pub struct MaybeRttiData {
     vtable_rva: Rva,
 }
 
+/// A description of a class recovered from a [Program].
 pub struct Class<'a> {
+    /// Demangled name of this class.
     pub name: String,
+
+    /// Relative address of the vtable of this class.
     pub vtable: Rva,
     pub col: &'a RTTICompleteObjectLocator,
     pub hierarchy_descriptor: &'a RTTIClassHierarchyDescriptor,
@@ -29,11 +33,11 @@ pub struct Class<'a> {
     pub ty: &'a TypeDescriptor,
 }
 
-pub fn find_classes(file: Program<'_>) -> impl ParallelIterator<Item = Class<'_>> + '_ {
+pub fn find_classes(file: Program) -> impl ParallelIterator<Item = Class> + '_ {
     find_rtti_data_candidates(file).filter_map(move |candidate| resolve_class(file, candidate))
 }
 
-pub fn resolve_class(file: Program<'_>, candidate: MaybeRttiData) -> Option<Class<'_>> {
+pub fn resolve_class(file: Program, candidate: MaybeRttiData) -> Option<Class> {
     let col: &RTTICompleteObjectLocator = file.derva(candidate.vtable_meta_rva).ok()?;
 
     // Check if mangled type name is printable
@@ -69,7 +73,7 @@ pub fn resolve_class(file: Program<'_>, candidate: MaybeRttiData) -> Option<Clas
 /// Analyze a PE file and return an iterator over every potential reference
 /// to an [RTTICompleteObjectLocator].
 pub fn find_rtti_data_candidates(
-    file: Program<'_>,
+    file: Program,
 ) -> impl ParallelIterator<Item = MaybeRttiData> + '_ {
     let text = file
         .section_headers()
