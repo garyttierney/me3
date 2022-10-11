@@ -1,10 +1,6 @@
-
-
-use futures::{
-    channel::mpsc::{Receiver, Sender},
-};
+use futures::channel::mpsc::{Receiver, Sender};
 use me3_framework::overlay::{
-    Align2, Context, ScrollArea, TextEdit, TextStyle, Ui, Vec2, Visuals, Window,
+    Align2, Context, Key, ScrollArea, TextBuffer, TextEdit, TextStyle, Ui, Vec2, Visuals, Window,
 };
 use ringbuffer::{AllocRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite};
 
@@ -82,8 +78,8 @@ impl Console {
                 .hint_text("Enter a command"),
         );
 
-        if input_response.lost_focus() {
-            let _ = self.command_tx.try_send(self.input.clone());
+        if input_response.lost_focus() && ui.input().key_down(Key::Enter) {
+            let _ = self.command_tx.try_send(self.input.take());
         }
     }
 }
