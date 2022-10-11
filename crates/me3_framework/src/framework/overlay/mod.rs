@@ -1,15 +1,17 @@
 use std::sync::{Mutex, RwLock};
 
-use egui::{Align2, Color32, Key, Pos2, Ui};
+pub use egui::*;
 use once_cell::sync::OnceCell;
 
 use super::{FrameworkError, FrameworkGlobal};
 
 mod hook;
 
-pub struct OverlayPanel {
-    renderer: Box<dyn Fn(&mut Ui) + Send + Sync>,
-    title: String,
+// not really, but OverlayComponent is only accessed from a single thread
+// needs a better design
+unsafe impl Sync for OverlayComponent {}
+pub struct OverlayComponent {
+    renderer: Box<dyn FnMut(&Context) + Send>,
 }
 
 struct OverlayState {
@@ -18,7 +20,7 @@ struct OverlayState {
 }
 
 pub struct Overlay {
-    panels: RwLock<Vec<OverlayPanel>>,
+    panels: RwLock<Vec<OverlayComponent>>,
     state: Mutex<OverlayState>,
 }
 
@@ -63,28 +65,41 @@ impl Overlay {
         }
 
         if !state.hidden {
-            let panels = self
+            // TODO: locking here is too coarse, it should lock individual panels
+            let mut panels = self
                 .panels
-                .read()
+                .write()
                 .expect("panel lock was poisoned by writer");
 
-            for panel in &*panels {
-                egui::containers::Window::new(&panel.title)
-                    .show(context, |ui| (panel.renderer)(ui));
+            for panel in &mut *panels {
+                (panel.renderer)(context);
             }
         }
     }
 
-    pub fn register_panel<F>(&self, title: String, renderer: F)
+    pub fn register_component<F>(&self, renderer: F)
     where
-        F: Fn(&mut Ui) + Send + Sync + 'static,
+        F: FnMut(&Context) + Send + 'static,
     {
         self.panels
             .write()
             .expect("panel lock was poisoned by previous writer")
-            .push(OverlayPanel {
-                title,
+            .push(OverlayComponent {
                 renderer: Box::new(renderer),
             });
+    }
+
+    pub fn register_panel<F>(&self, title: &'static str, mut renderer: F)
+    where
+        F: FnMut(&mut Ui) + Send + 'static,
+    {
+        self.register_component(move |ctx| {
+            egui::containers::Window::new(title)
+                .resizable(true)
+                .collapsible(false)
+                .default_size([250.0, 150.0])
+                .title_bar(false)
+                .show(ctx, |ui| (renderer)(ui));
+        });
     }
 }

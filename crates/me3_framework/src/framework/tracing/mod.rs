@@ -34,6 +34,7 @@ pub struct ZoneData {
     tls_index: u32,
 }
 
+#[derive(Debug)]
 pub struct ProfiledFunction {
     code_buffer: ExecutableBuffer,
     zone: Pin<Box<ZoneData>>,
@@ -81,7 +82,7 @@ impl Profiler {
 
     pub fn install_at(
         &self,
-        addr: extern "C" fn(),
+        addr: *const (),
         name: &'static str,
     ) -> Result<ProfiledFunction, FrameworkError> {
         let name_cstr = CString::new(name).expect("given name is not a valid ASCII string"); // TODO: should be a FrameworkError
