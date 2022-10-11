@@ -1,0 +1,15 @@
+[package]
+name = "me3_binary"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies.pelite]
+version = "0.9"
+
+## Iterator extensions
+[dependencies.itertools]
+version = "0.10"
+
+## Parallel iterators
+[dependencies.rayon]
+version = "1"
