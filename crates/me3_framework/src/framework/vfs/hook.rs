@@ -50,6 +50,7 @@ fn hk_create_file(
     }
 }
 
+#[allow(clippy::or_fun_call)] // false positive
 fn get_proc_addr(
     module: HINSTANCE,
     name: &'static str,
