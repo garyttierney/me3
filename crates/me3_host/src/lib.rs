@@ -12,6 +12,7 @@ use windows::Win32::{
 
 mod bootstrap;
 mod script_api;
+mod widgets;
 
 #[no_mangle]
 pub extern "stdcall" fn DllMain(hinst_dll: HINSTANCE, fdw_reason: u32, _: *const ()) -> i32 {

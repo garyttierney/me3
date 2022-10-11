@@ -14,9 +14,17 @@ log = "0.4"
 
 [dependencies.config]
 version = "0.13"
+default-features = false
+features = ["toml"]
+
+[dependencies.futures]
+version = "0.3"
 
 [dependencies.toml]
 version = "0.5"
+
+[dependencies.ringbuffer]
+version = "0.8"
 
 [dependencies.serde]
 version = "1"
@@ -27,7 +35,3 @@ version = "0.36.0"
 features = [
     "Win32_System_SystemServices"
 ]
-
-
-[build-dependencies]
-protobuf-codegen = "3.1"

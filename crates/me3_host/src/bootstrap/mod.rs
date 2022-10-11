@@ -1,9 +1,11 @@
 use std::error::Error;
 
 use config::Config;
+use futures::channel::mpsc::channel;
+use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 
-use crate::bootstrap::settings::SettingsBuilder;
+use crate::{bootstrap::settings::SettingsBuilder, widgets::Console};
 
 mod game;
 mod settings;
@@ -89,12 +91,22 @@ pub fn setup_and_run() -> Result<(), Box<dyn Error>> {
     }
 
     let _game = game::bootstrap_game(&framework).expect("unable to determine game");
+    let overlay = framework.get_overlay();
 
-    framework
-        .get_overlay()
-        .register_panel("Panel Title".to_owned(), |ui| {
-            ui.label("hello");
-        });
+    let (mut command_output_tx, command_output_rx) = channel::<String>(1024);
+    let (command_tx, mut command_rx) = channel::<String>(1);
+
+    framework.spawn(async move {
+        while let Some(command) = command_rx.next().await {
+            log::info!("wanted to execute {}", &command);
+
+            let _ = command_output_tx.send(command).await;
+        }
+    });
+
+    let mut console = Console::new(command_tx, command_output_rx);
+    overlay.register_component(move |ctx| console.render(ctx));
+
     framework.run_until_shutdown();
     Ok(())
 }
