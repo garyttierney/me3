@@ -12,12 +12,16 @@ impl SprjGame for DarkSouls3 {
         self
     }
 
-    fn param_repository(&self) -> &'static ParamRepository {
-        unsafe { PARAM_REPOSITORY.get_ref() }
-    }
-
     fn enable_file_overrides(&self) -> bool {
         false
+    }
+
+    fn name(&self) -> &'static str {
+        "DARK SOULS III"
+    }
+
+    fn param_repository(&self) -> &'static ParamRepository {
+        unsafe { PARAM_REPOSITORY.get_ref() }
     }
 }
 

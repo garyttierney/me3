@@ -1,13 +1,14 @@
 use std::error::Error;
 
 use config::Config;
-use futures::channel::mpsc::channel;
-use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 
+use crate::bootstrap::bootstrapper::bootstrap_game;
 use crate::{bootstrap::settings::SettingsBuilder, widgets::Console};
 
+mod bootstrapper;
 mod game;
+mod game_support;
 mod settings;
 
 #[derive(Serialize, Deserialize)]
@@ -90,22 +91,15 @@ pub fn setup_and_run() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    let _game = game::bootstrap_game(&framework).expect("unable to determine game");
+    let (mut console, console_runner) = Console::setup();
+
+    let game = bootstrap_game(&framework, &mut console).expect("unable to determine game");
+    log::info!("Initialized me3 with game: {}", game.name());
+
+    // Register the terminal/console component and start handling commands from it.
     let overlay = framework.get_overlay();
-
-    let (mut command_output_tx, command_output_rx) = channel::<String>(1024);
-    let (command_tx, mut command_rx) = channel::<String>(1);
-
-    framework.spawn(async move {
-        while let Some(command) = command_rx.next().await {
-            log::info!("wanted to execute {}", &command);
-
-            let _ = command_output_tx.send(command).await;
-        }
-    });
-
-    let mut console = Console::new(command_tx, command_output_rx);
     overlay.register_component(move |ctx| console.render(ctx));
+    framework.spawn(console_runner.run());
 
     framework.run_until_shutdown();
     Ok(())

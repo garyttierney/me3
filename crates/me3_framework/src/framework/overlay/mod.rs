@@ -47,7 +47,7 @@ impl Overlay {
     pub fn render(&self, context: &egui::Context) {
         let mut state = self.state.lock().unwrap();
 
-        if context.input().key_pressed(Key::F1) {
+        if context.input().key_pressed(Key::F2) {
             state.hidden = !state.hidden;
         }
 

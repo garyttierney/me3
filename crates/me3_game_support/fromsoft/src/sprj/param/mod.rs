@@ -1,3 +1,5 @@
+use me3_framework::deref;
+
 pub use self::file::ParamFileDescriptor;
 
 pub mod file;
@@ -37,13 +39,14 @@ pub struct ParamFileData<'p> {
 
 impl ParamRepository {
     fn get_file_data(&self, id: i32) -> Option<ParamFileData<'_>> {
-        let param_repo_instance = unsafe { *self.0 as *const usize };
+        let param_repo_instance = self.0;
 
         unsafe {
-            let file = *param_repo_instance.byte_offset(0x48 * id as isize + 0x70) as *const usize;
-            let file_data = *file.byte_offset(0x68) as *const usize;
+            let header =
+                deref!([[[param_repo_instance + 0x48 * id as usize + 0x70] + 0x68] + 0x68])?
+                    .cast::<ParamFileHeader>()
+                    .as_ptr();
 
-            let header = *file_data.byte_offset(0x68) as *const ParamFileHeader;
             let entry_pointer = header.add(1) as *const ParamFileEntry;
             let entries = std::slice::from_raw_parts(entry_pointer, (*header).size as usize);
 

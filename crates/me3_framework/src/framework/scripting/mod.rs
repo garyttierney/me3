@@ -1,6 +1,6 @@
 use std::{path::Path, sync::Mutex};
 
-use mlua::{Lua, Table, UserData};
+use mlua::{Lua, MultiValue, Table, UserData};
 use once_cell::sync::OnceCell;
 
 use crate::{FrameworkError, FrameworkGlobal};
@@ -30,6 +30,24 @@ pub trait ScriptType: UserData + Send + Sync {}
 impl<T: UserData + Send + Sync> ScriptType for T {}
 
 impl ScriptHost {
+    pub fn eval<
+        S: AsRef<str>,
+        F: FnOnce(Result<MultiValue, mlua::Error>) -> Result<T, FrameworkError>,
+        T,
+    >(
+        &'_ self,
+        code: S,
+        result_handler: F,
+    ) -> Result<T, FrameworkError> {
+        result_handler(
+            self.lua
+                .lock()
+                .unwrap()
+                .load(code.as_ref())
+                .eval::<MultiValue>(),
+        )
+    }
+
     pub fn load_script<P>(&self, path: P) -> Result<(), FrameworkError>
     where
         P: AsRef<Path>,
@@ -57,10 +75,7 @@ impl ScriptHost {
         let _ = globals.set(
             name.as_ref(),
             constructor(
-                self.lua
-                    .lock()
-                    .unwrap()
-                    .create_table()
+                lua.create_table()
                     .expect("failed basic lua operation: create_table"),
             )?,
         );

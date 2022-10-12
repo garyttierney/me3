@@ -19,6 +19,9 @@ pub trait SprjGame: Send + Sync {
     #[doc(hidden)]
     fn as_any(&self) -> &dyn Any;
 
+    /// Get a friendly description of this game.
+    fn name(&self) -> &'static str;
+
     /// Get a reference to the [ParamRepository] of this game.
     fn param_repository(&self) -> &'static ParamRepository;
 
