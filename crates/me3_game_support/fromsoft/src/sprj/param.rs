@@ -4,17 +4,29 @@ pub use self::file::ParamFileDescriptor;
 
 pub mod file;
 
+#[doc(hidden)]
+#[derive(Copy, Clone)]
+#[repr(packed)]
+pub(crate) struct Padding<const LENGTH: usize> {
+    #[doc(hidden)]
+    _pad: [u8; LENGTH],
+}
+
+impl<const LENGTH: usize> std::fmt::Debug for Padding<LENGTH> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Padding").field("length", &LENGTH).finish()
+    }
+}
+
 #[repr(transparent)]
 pub struct ParamRepository(*mut usize);
 
 #[derive(Copy, Clone, Debug)]
 #[repr(packed)]
 pub struct ParamFileHeader {
-    #[doc(hidden)]
-    _pad1: [u8; 0xA],
+    _pad1: Padding<0xA>,
     pub size: i16,
-    #[doc(hidden)]
-    _pad2: [u8; 0x34],
+    _pad2: Padding<0x34>,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -22,13 +34,11 @@ pub struct ParamFileHeader {
 pub struct ParamFileEntry {
     pub id: i32,
 
-    #[doc(hidden)]
-    _pad1: [u8; 4],
+    _pad1: Padding<0x4>,
 
     pub offset: i32,
 
-    #[doc(hidden)]
-    _pad2: [u8; 0xc],
+    _pad2: Padding<0xC>,
 }
 
 #[derive(Copy, Clone, Debug)]

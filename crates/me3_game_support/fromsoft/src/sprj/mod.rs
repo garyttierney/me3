@@ -1,3 +1,4 @@
+pub mod formats;
 mod param;
 
 use std::any::Any;
