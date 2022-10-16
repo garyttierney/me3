@@ -1,9 +1,9 @@
 on: [push, pull_request]
 
-name: Lints
+name: CI
 
 jobs:
-  test:
+  build-and-test:
     name: Test
     runs-on: windows-latest
     steps:
@@ -12,20 +12,55 @@ jobs:
         with:
           toolchain: nightly
           override: true
+      - uses: actions/setup-python@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+      - uses: pre-commit/action@v3.0.0
       - uses: actions-rs/cargo@v1
         with:
           command: test
           args: --all-features --no-fail-fast --target x86_64-pc-windows-msvc
-  lints:
-    name: Linting
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      # Only generate documentation on master
+      - if: github.ref == 'refs/heads/master'
+        uses: actions-rs/cargo@v1
         with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-          components: rustfmt, clippy
-      - uses: actions/setup-python@v3
-      - uses: pre-commit/action@v3.0.0
+          command: doc
+          args: --all-features --verbose
+      - if: github.ref == 'refs/heads/master'
+        name: Archive Documentation
+        run: |
+          pushd target/doc
+          tar -czvf ../docs.tar.gz .
+          popd
+      - if: github.ref == 'refs/heads/master'
+        name: Upload artifact
+        uses: actions/upload-artifact@main
+        with:
+          name: github-pages
+          path: target/docs.tar.gz
+          retention-days: 1
+  lints:
+    name: Upload Documentation
+    needs: build-docs
+    if: github.ref == 'refs/heads/master'
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: Documentation (latest)
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
