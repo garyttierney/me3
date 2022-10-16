@@ -12,6 +12,7 @@ jobs:
         with:
           toolchain: nightly
           override: true
+          components: rustfmt, clippy
       - uses: actions/setup-python@v3
       - uses: Swatinem/rust-cache@v2
       - uses: pre-commit/action@v3.0.0
