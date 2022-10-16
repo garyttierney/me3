@@ -1,7 +1,7 @@
-use std::io::{Read, Write};
-
 mod read;
 mod write;
+
+use std::io::{Read, Write};
 
 use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
@@ -63,5 +63,51 @@ impl CompressionParameters {
             Self::Kraken {} => b"KRAK",
             Self::Edge => b"EDGE",
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{fs::File, io::Cursor};
+
+    use pretty_assertions::assert_eq;
+
+    use super::*;
+    #[test]
+    fn roundtrip() {
+        // TODO: helpers for reading test fixtures and roundtripping decoders/encoders
+        let path = format!(
+            "{}/test-data/formats/dcx/o000499.objbnd.dcx",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let mut file = File::open(path).unwrap();
+        let mut encoded_file = Vec::new();
+        file.read_to_end(&mut encoded_file).unwrap();
+
+        let (header, mut reader) = DcxDecoder::new(Cursor::new(&encoded_file[..])).unwrap();
+        let mut decoded_data =
+            Vec::with_capacity(header.compressed_sizes.uncompressed_size as usize);
+        reader.read_to_end(&mut decoded_data).unwrap();
+
+        let mut reencoded_file =
+            Vec::with_capacity(header.compressed_sizes.compressed_size as usize);
+        let mut writer = DcxBuilder::new(header.version)
+            .write(
+                Cursor::new(&mut reencoded_file),
+                header.compression_parameters,
+            )
+            .unwrap();
+
+        writer.write_all(&decoded_data).unwrap();
+        writer.finish().unwrap();
+
+        let mut roundtripped_data =
+            Vec::with_capacity(header.compressed_sizes.uncompressed_size as usize);
+        let (_, mut reencoded_reader) = DcxDecoder::new(Cursor::new(&reencoded_file[..])).unwrap();
+        reencoded_reader
+            .read_to_end(&mut roundtripped_data)
+            .unwrap();
+
+        assert_eq!(decoded_data, roundtripped_data);
     }
 }

@@ -15,7 +15,13 @@ impl<R: Read> ReadFormatsExt for R {
         } else {
             Err(std::io::Error::new(
                 ErrorKind::InvalidInput,
-                format!("expected {:x?}, found {:x?}", expected, &buffer),
+                format!(
+                    "expected {:?} ({:#x?}), found {:?} ({:#x?})",
+                    String::from_utf8_lossy(expected),
+                    expected,
+                    String::from_utf8_lossy(&buffer),
+                    &buffer
+                ),
             ))
         }
     }

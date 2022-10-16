@@ -120,6 +120,16 @@ impl<W: Write> DcxEncoder<W> {
     }
 }
 
+impl<W: Write + Seek> Write for DcxWriter<W> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.encoder.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.encoder.flush()
+    }
+}
+
 impl<W: Write + Seek> DcxWriter<W> {
     pub fn finish(mut self) -> Result<W, std::io::Error> {
         self.encoder.flush()?;

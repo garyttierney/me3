@@ -17,8 +17,8 @@ pub fn read_compression_params<R: Read>(
     reader.read_exact(&mut algo)?;
 
     let algo_settings_len = reader.read_u32::<BigEndian>()?;
-    let mut algo_settings = Vec::with_capacity(algo_settings_len as usize);
-    reader.read_to_end(&mut algo_settings)?;
+    let mut algo_settings = vec![0; algo_settings_len as usize - 12];
+    reader.read_exact(&mut algo_settings[..])?;
 
     let compression_level = algo_settings[0];
 
