@@ -40,7 +40,7 @@ jobs:
           retention-days: 1
   lints:
     name: Upload Documentation
-    needs: build-docs
+    needs: build-and-test
     if: github.ref == 'refs/heads/master'
 
     permissions:
