@@ -26,18 +26,20 @@ jobs:
         with:
           command: doc
           args: --all-features --verbose
-      - if: github.ref == 'refs/heads/master'
-        name: Archive Documentation
+      - shell: bash
         run: |
-          pushd target/doc
-          tar -czvf ../docs.tar.gz .
-          popd
+          tar \
+            --dereference --hard-dereference \
+            --directory "target\doc" \
+            -cvf "target\docs.tar" \
+            --force-local \
+            "."
       - if: github.ref == 'refs/heads/master'
         name: Upload artifact
         uses: actions/upload-artifact@main
         with:
           name: github-pages
-          path: target/docs.tar.gz
+          path: target/docs.tar
           retention-days: 1
   lints:
     name: Upload Documentation
