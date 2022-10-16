@@ -1,1 +1,1 @@
-
+pub fn load() {}
