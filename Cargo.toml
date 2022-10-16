@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/me3_binary",
+    "crates/me3_binary_db",
     "crates/me3_framework",
     "crates/me3_host",
     "crates/me3_game_support/fromsoft",

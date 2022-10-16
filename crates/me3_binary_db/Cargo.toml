@@ -1,0 +1,11 @@
+[package]
+name = "me3_binary_db"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+me3_binary = {path="../me3_binary"}
+
+[dependencies.salsa]
+git = "https://github.com/salsa-rs/salsa"
+package = "salsa-2022"
