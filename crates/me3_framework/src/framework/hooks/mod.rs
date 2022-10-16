@@ -91,7 +91,7 @@ impl Hooks {
         asm!("ret", options(noreturn)) // trampoline already put the closure in RAX
     }
 
-    unsafe extern "C" fn callback<A, F: Fn<A> + 'static>(args: A) -> F::Output {
+    unsafe extern "rust-call" fn callback<A, F: Fn<A> + 'static>(args: A) -> F::Output {
         let closure = Self::get_trampoline_closure() as *const Box<F>;
         std::ops::Fn::call(&**closure, args)
     }
@@ -190,15 +190,15 @@ mod test {
             v * 2
         }
 
-        let (hooks, target) = test_hook(test_fn);
+        {
+            let (hooks, target) = test_hook(test_fn);
 
-        hooks
-            .install(&target, |v| v)
-            .expect("failed to install hook in perfect_closure_forwarding_ffi test");
+            hooks
+                .install(&target, |v| v)
+                .expect("failed to install hook in perfect_closure_forwarding_ffi test");
 
-        assert_eq!(42, test_fn(42));
-
-        std::mem::drop(hooks);
+            assert_eq!(42, test_fn(42));
+        }
 
         assert_eq!(20, test_fn(10));
     }
