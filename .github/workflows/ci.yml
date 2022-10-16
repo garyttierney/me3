@@ -11,6 +11,9 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v3
+      - run: |
+          rustup toolchain install nightly --component rustfmt --component clippy
+          rustup override set nightly
       - uses: lionel1704/toolchain@master
         with:
           toolchain: nightly
