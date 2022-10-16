@@ -13,15 +13,7 @@ jobs:
           toolchain: nightly
           override: true
       - uses: actions/setup-python@v3
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+      - uses: Swatinem/rust-cache@v2
       - uses: pre-commit/action@v3.0.0
       - uses: actions-rs/cargo@v1
         with:
