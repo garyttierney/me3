@@ -130,7 +130,7 @@ $noalloc:
     add rsp, 38h
 
     restore_regs
-  
+
     pop rbx
 
     ; store the "context" of the profiled zone if required
