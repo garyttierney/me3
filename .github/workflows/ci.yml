@@ -31,9 +31,8 @@ jobs:
           args: --all-features --verbose
       - if: github.ref == 'refs/heads/master'
         name: Upload artifact
-        uses: actions/upload-artifact@main
+        uses: actions/upload-pages-artifact@v1
         with:
-          name: github-pages
           path: target/doc
           retention-days: 1
   lints:
