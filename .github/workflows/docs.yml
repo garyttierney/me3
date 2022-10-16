@@ -1,0 +1,46 @@
+on:
+  push:
+    branches: [master]
+
+name: Documentation
+
+jobs:
+  build-docs:
+    name: Build Documentation
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --all-features --verbose
+      - run: |
+          pushd target/docs
+          tar -czvf ../docs.tar.gz .
+          popd
+      - name: Upload artifact
+        uses: actions/upload-artifact@main
+        with:
+          name: github-pages
+          path: target/docs.tar.gz
+          retention-days: 1
+  deploy:
+    needs: build-docs
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: Documentation (latest)
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
