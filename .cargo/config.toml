@@ -1,0 +1,7 @@
+[build]
+target = "x86_64-pc-windows-msvc"
+
+[target.x86_64-pc-windows-msvc]
+linker = "lld"
+runner = "wine"
+rustflags = ["-C", "target-feature=+crt-static"]

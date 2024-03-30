@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ModProfile",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "profileVersion"
+      ],
+      "properties": {
+        "natives": {
+          "description": "Native modules (DLLs) that will be loaded.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Native"
+          }
+        },
+        "packages": {
+          "description": "A collection of packages containing assets that should be considered for loading before the DVDBND.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Package"
+          }
+        },
+        "profileVersion": {
+          "type": "string",
+          "enum": [
+            "v1"
+          ]
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "Native": {
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "enabled": {
+          "description": "Should this native be loaded?",
+          "default": true,
+          "type": "boolean"
+        },
+        "finalizer": {
+          "description": "An optional symbol to be called when this native successfully is queued for unload.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "initializer": {
+          "description": "An optional symbol to be called after this native succesfully loads.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "optional": {
+          "description": "If this native fails to load and this vakye is false, treat it as a critical error.",
+          "default": false,
+          "type": "boolean"
+        },
+        "path": {
+          "description": "Path to the DLL. Can be relative to the mod profile.",
+          "type": "string"
+        }
+      }
+    },
+    "Package": {
+      "description": "A package is a source for files that override files within the existing games DVDBND archives. It points to a local path containing assets matching the hierarchy they would be served under in the DVDBND.",
+      "type": "object",
+      "required": [
+        "id",
+        "source"
+      ],
+      "properties": {
+        "id": {
+          "description": "The unique identifier for this package..",
+          "type": "string"
+        },
+        "load_after": {
+          "description": "A list of package IDs that this package should load after.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "load_before": {
+          "description": "A list of packages that this package should load before.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source": {
+          "description": "A path to the source of this package.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/PackageSource"
+            }
+          ]
+        }
+      }
+    },
+    "PackageSource": {
+      "description": "A filesystem path to the contents of a package. May be relative to the [ModProfile] containing it.",
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+[workspace]
+members = [
+    "crates/launcher",
+    "crates/launcher-attach-protocol", "crates/mod-host",
+    "crates/mod-protocol",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/garyttierney/me3"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+dll-syringe = "0.15"
+me3-launcher-attach-protocol = { path = "crates/launcher-attach-protocol" }
+me3-mod-host = { path = "crates/mod-host" }
+me3-mod-protocol = { path = "crates/mod-protocol" }
+schemars = "0.8"
+serde = "1"
+serde_derive = "1"
+serde_json = "1"
+serde_yaml = "0.9"
+tracing-error = "0.2"
+tracing-subscriber = "0.3"
+tracing = "0.1"

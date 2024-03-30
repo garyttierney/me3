@@ -1,0 +1,22 @@
+[package]
+name = "me3-mod-host"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+dll-syringe = { workspace = true, features = ["payload-utils"] }
+me3-mod-protocol.workspace = true
+me3-launcher-attach-protocol.workspace = true
+windows = { version = "0.53.0", features = [
+    "Win32_System_Threading",
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_Memory",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_UI_WindowsAndMessaging",
+] }
