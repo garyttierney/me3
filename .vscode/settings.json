@@ -1,0 +1,11 @@
+{
+  "json.schemas": [
+    {
+      "fileMatch": ["**/*.me3.json"],
+      "url": "schemas/mod-profile.json"
+    }
+  ],
+  "yaml.schemas": {
+    "schemas/mod-profile.json": "*.me3.yaml"
+  }
+}
