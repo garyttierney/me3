@@ -1,15 +1,15 @@
-#![windows_subsystem = "windows"]
-
 use std::path::PathBuf;
 
 use clap::{command, Parser};
+use me3_launcher_attach_protocol::AttachRequest;
+use me3_mod_protocol::ModProfile;
 use tracing::info;
 
 use crate::game::Game;
 
 mod game;
 
-pub type LauncherResult<T> = eyre::Result<T>;
+pub type LauncherResult<T> = color_eyre::Result<T>;
 
 /// Launch a Steam game with the me3 mod loader attached.
 #[derive(Parser, Debug)]
@@ -29,14 +29,36 @@ struct LauncherArgs {
 }
 
 fn run() -> LauncherResult<()> {
-    let args = LauncherArgs::parse();
+    info!("Launcher started");
+
+    let args = match LauncherArgs::try_parse() {
+        Ok(args) => args,
+        Err(e) => e.exit(),
+    };
+
+    if args.profiles.is_empty() {
+        info!("No profiles provided");
+    } else {
+        info!("Loading profiles from {:?}", args.profiles);
+    }
+
+    let profiles: Vec<_> = args
+        .profiles
+        .iter()
+        .map(|path| ModProfile::from_file(path))
+        .collect::<Result<_, _>>()?;
+
+    let mut request = AttachRequest::default();
+    for profile in profiles {
+        request.profiles.push(profile)
+    }
 
     info!("Starting game at {:?} with DLL {:?}", args.exe, args.dll);
 
     let game_path = args.exe.parent();
     let mut game = Game::launch(&args.exe, game_path)?;
 
-    if let Err(e) = game.attach(&args.dll) {
+    if let Err(e) = game.attach(&args.dll, request) {
         println!("Attach error: {e:?}");
     }
 
@@ -73,6 +95,8 @@ fn install_panic_hook() {
 }
 
 fn main() {
+    println!("test");
+
     install_tracing();
     install_panic_hook();
 

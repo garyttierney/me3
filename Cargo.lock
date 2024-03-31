@@ -105,12 +105,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
-name = "bytemuck"
-version = "1.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d6d68c57235a3a081186990eca2867354726650f42f7516ca50c28d6281fd15"
-
-[[package]]
 name = "cc"
 version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -226,7 +220,7 @@ checksum = "bdc807201d54de75e9bd7ad199d0031048625059f84acfc94506bdb13c0b4f59"
 dependencies = [
  "bincode",
  "cstr",
- "goblin 0.6.1",
+ "goblin",
  "iced-x86",
  "konst",
  "num_enum",
@@ -292,18 +286,7 @@ checksum = "0d6b4de4a8eb6c46a8c77e1d3be942cb9a8bf073c22374578e5ba4b08ed0ff68"
 dependencies = [
  "log",
  "plain",
- "scroll 0.11.0",
-]
-
-[[package]]
-name = "goblin"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb07a4ffed2093b118a525b1d8f5204ae274faed5604537caf7135d0f18d9887"
-dependencies = [
- "log",
- "plain",
- "scroll 0.12.0",
+ "scroll",
 ]
 
 [[package]]
@@ -389,24 +372,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "launcher"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "clap",
- "color-eyre",
- "dll-syringe",
- "eyre",
- "goblin 0.8.0",
- "iced-x86",
- "me3-launcher-attach-protocol",
- "tracing",
- "tracing-error",
- "tracing-subscriber",
- "windows-sys",
-]
-
-[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -434,9 +399,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "me3-launcher"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "color-eyre",
+ "dll-syringe",
+ "eyre",
+ "me3-launcher-attach-protocol",
+ "me3-mod-protocol",
+ "tracing",
+ "tracing-error",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "me3-launcher-attach-protocol"
 version = "0.1.0"
 dependencies = [
+ "me3-mod-protocol",
  "serde",
  "serde_derive",
 ]
@@ -692,16 +673,7 @@ version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04c565b551bafbef4157586fa379538366e4385d42082f255bfd96e4fe8519da"
 dependencies = [
- "scroll_derive 0.11.1",
-]
-
-[[package]]
-name = "scroll"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ab8598aa408498679922eff7fa985c25d58a90771bd6be794434c5277eab1a6"
-dependencies = [
- "scroll_derive 0.12.0",
+ "scroll_derive",
 ]
 
 [[package]]
@@ -709,17 +681,6 @@ name = "scroll_derive"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1db149f81d46d2deba7cd3c50772474707729550221e69588478ebf9ada425ae"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.55",
-]
-
-[[package]]
-name = "scroll_derive"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f81c2fde025af7e69b1d1420531c8a8811ca898919db177141a85313b1cb932"
 dependencies = [
  "proc-macro2",
  "quote",

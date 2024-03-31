@@ -1,8 +1,9 @@
-use serde::{Deserialize, Serialize};
+use me3_mod_protocol::ModProfile;
+use serde_derive::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Default, Debug, Deserialize, Serialize)]
 pub struct AttachRequest {
-    pub name: String,
+    pub profiles: Vec<ModProfile>,
 }
 
 #[derive(Deserialize, Serialize)]

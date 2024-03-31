@@ -11,7 +11,7 @@ fn on() -> bool {
     true
 }
 
-#[derive(Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Native {
     /// Path to the DLL. Can be relative to the mod profile.
     path: PathBuf,

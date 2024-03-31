@@ -40,7 +40,7 @@ impl Game {
     }
 
     #[instrument]
-    pub fn attach(&mut self, dll_path: &Path) -> LauncherResult<AttachResponse> {
+    pub fn attach(&mut self, dll_path: &Path, request: AttachRequest) -> LauncherResult<AttachResponse> {
         let pid = self.child.id();
 
         info!("Attaching to process {pid}");
@@ -57,10 +57,7 @@ impl Game {
                 .ok_or_eyre("No symbol named `me_attach` found")?
         };
 
-        // TODO: reflective DLL injection instead, or something else that works at process launch
-        let response = payload.call(&AttachRequest {
-            name: "test".to_string(),
-        })?;
+        let response = payload.call(&request)?;
 
         info!("Successfully attached");
 

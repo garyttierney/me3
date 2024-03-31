@@ -3,12 +3,12 @@ use std::{fs::File, path::Path};
 use native::Native;
 use package::Package;
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde_derive::{Deserialize, Serialize};
 
 pub mod native;
 pub mod package;
 
-#[derive(Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(tag = "profileVersion")]
 pub enum ModProfile {
     #[serde(rename = "v1")]
@@ -28,7 +28,7 @@ impl ModProfile {
     }
 }
 
-#[derive(Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ModProfileV1 {
     /// Native modules (DLLs) that will be loaded.
     #[serde(default)]

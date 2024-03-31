@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "crates/launcher",
-    "crates/launcher-attach-protocol", "crates/mod-host",
+    "crates/launcher-attach-protocol", 
+    "crates/mod-host",
     "crates/mod-protocol",
 ]
 resolver = "2"

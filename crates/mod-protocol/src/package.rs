@@ -4,13 +4,13 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// A filesystem path to the contents of a package. May be relative to the [ModProfile] containing it.
-#[derive(Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct PackageSource(PathBuf);
 
 /// A package is a source for files that override files within the existing games DVDBND archives.
 /// It points to a local path containing assets matching the hierarchy they would be served under in
 /// the DVDBND.
-#[derive(Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Package {
     /// The unique identifier for this package..
     id: String,

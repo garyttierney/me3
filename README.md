@@ -120,7 +120,8 @@ Discussions Board: [https://github.com/garyttierney/me3/discussions](https://git
 
 * [Mod Engine](https://github.com/katalash/ModEngine/tree/master/DS3ModEngine) - prior art for runtime modification of FROMSOFTWARE games.
 * [Mod Organizer 2](https://github.com/ModOrganizer2/modorganizer/) - inspiration for the VFS framework.
-
+* [Elden Ring Reforged](https://www.nexusmods.com/eldenring/mods/541) - provided invaluable feedback on the end-user perspective
+* 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- MARKDOWN LINKS & IMAGES -->
