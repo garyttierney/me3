@@ -1,0 +1,41 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Launcher (SteamLinuxRuntime)",
+      "type": "process",
+      "command": "${config:steam.path}/steamapps/common/SteamLinuxRuntime_sniper/run",
+      "dependsOn": ["rust: cargo build"],
+      "args": [
+        "--batch",
+        "${config:steam.path}/steamapps/common/Proton - Experimental/proton",
+        "run",
+        "${workspaceFolder}/target/x86_64-pc-windows-msvc/debug/launcher.exe"
+      ],
+      "options": {
+        "env": {
+          "STEAM_COMPAT_DATA_PATH": "${config:steam.path}/steamapps/compatdata/1245620",
+          "STEAM_COMPAT_CLIENT_INSTALL_PATH": "${config:steam.path}"
+        }
+      }
+    },
+    {
+      "type": "process",
+      "command": "cargo",
+      "args": ["build", "--all"],
+      "problemMatcher": ["$rustc"],
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated",
+        "clear": false
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "label": "rust: cargo build"
+    }
+  ]
+}
