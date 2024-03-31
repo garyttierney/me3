@@ -87,10 +87,6 @@ fn install_panic_hook() {
     let _ = color_eyre::config::HookBuilder::default()
         .issue_url(concat!(env!("CARGO_PKG_REPOSITORY"), "/issues/new"))
         .add_issue_metadata("version", env!("CARGO_PKG_VERSION"))
-        .issue_filter(|kind| match kind {
-            color_eyre::ErrorKind::NonRecoverable(_) => false,
-            color_eyre::ErrorKind::Recoverable(_) => true,
-        })
         .install();
 }
 
