@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{io, os::windows, path::PathBuf};
 
 use clap::{command, Parser};
 use me3_launcher_attach_protocol::AttachRequest;
@@ -71,14 +71,16 @@ fn install_tracing() {
     use tracing_error::ErrorLayer;
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-    let fmt_layer = fmt::layer().with_target(false);
+    let file_layer = fmt::layer().with_writer(tracing_appender::rolling::never(".", "me3.log"));
+    let stdout_layer = fmt::layer().with_writer(io::stdout).with_target(false);
     let filter_layer = EnvFilter::try_from_default_env()
         .or_else(|_| EnvFilter::try_new("info"))
         .unwrap();
 
     tracing_subscriber::registry()
         .with(filter_layer)
-        .with(fmt_layer)
+        .with(stdout_layer)
+        .with(file_layer)
         .with(ErrorLayer::default())
         .init();
 }

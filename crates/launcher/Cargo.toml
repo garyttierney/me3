@@ -1,7 +1,8 @@
 [package]
-edition = "2021"
 name = "me3-launcher"
 version.workspace = true
+repository.workspace = true
+edition.workspace = true
 
 [dependencies]
 color-eyre = { version = "0.6", features = ["issue-url"] }
@@ -9,6 +10,7 @@ eyre = "0.6"
 dll-syringe.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
+tracing-appender = "0.2"
 tracing-error.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing.workspace = true
