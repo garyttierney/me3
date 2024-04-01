@@ -10,14 +10,21 @@
       "dependsOn": ["rust: cargo build"],
       "args": [
         "--batch",
+        "--",
         "${config:steam.path}/steamapps/common/Proton - Experimental/proton",
         "run",
-        "${workspaceFolder}/target/x86_64-pc-windows-msvc/debug/launcher.exe"
+        "${workspaceFolder}/target/x86_64-pc-windows-msvc/debug/me3-launcher.exe",
+        "--exe",
+        "${config:steam.path}/steamapps/common/ELDEN RING/Game/start_protected_game.exe",
+        "--dll",
+        "${workspaceFolder}/target/x86_64-pc-windows-msvc/debug/me3_mod_host.dll",
       ],
       "options": {
         "env": {
           "STEAM_COMPAT_DATA_PATH": "${config:steam.path}/steamapps/compatdata/1245620",
-          "STEAM_COMPAT_CLIENT_INSTALL_PATH": "${config:steam.path}"
+          "STEAM_COMPAT_CLIENT_INSTALL_PATH": "${config:steam.path}",
+          "SteamAppId": "1245620",
+          "SteamGameId": "1245620",
         }
       }
     },
