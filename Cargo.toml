@@ -13,6 +13,9 @@ edition = "2021"
 repository = "https://github.com/garyttierney/me3"
 license = "MIT OR Apache-2.0"
 
+[workspace.lints.rust]
+
+
 [workspace.dependencies]
 dll-syringe = "0.15"
 me3-launcher-attach-protocol = { path = "crates/launcher-attach-protocol" }

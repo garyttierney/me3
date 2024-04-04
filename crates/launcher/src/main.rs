@@ -1,4 +1,4 @@
-use std::{io, os::windows, path::PathBuf};
+use std::{io, path::PathBuf};
 
 use clap::{command, Parser};
 use me3_launcher_attach_protocol::AttachRequest;
@@ -71,8 +71,8 @@ fn install_tracing() {
     use tracing_error::ErrorLayer;
     use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
-    let file_layer = fmt::layer().with_writer(tracing_appender::rolling::never(".", "me3.log"));
-    let stdout_layer = fmt::layer().with_writer(io::stdout).with_target(false);
+    let file_layer = fmt::layer().with_ansi(false).with_writer(tracing_appender::rolling::never(".", "me3.log")).pretty();
+    let stdout_layer = fmt::layer().with_ansi(false).with_writer(io::stderr).with_target(false).compact();
     let filter_layer = EnvFilter::try_from_default_env()
         .or_else(|_| EnvFilter::try_new("info"))
         .unwrap();
@@ -93,8 +93,6 @@ fn install_panic_hook() {
 }
 
 fn main() {
-    println!("test");
-
     install_tracing();
     install_panic_hook();
 
