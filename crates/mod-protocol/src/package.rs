@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// A filesystem path to the contents of a package. May be relative to the [ModProfile] containing it.
+/// A filesystem path to the contents of a package. May be relative to the [ModProfile] containing
+/// it.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct PackageSource(PathBuf);
 

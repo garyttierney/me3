@@ -2,7 +2,7 @@ use std::{marker::Tuple, mem::MaybeUninit};
 
 use retour::{Function, GenericDetour};
 
-use self::thunk::ThunkAllocator;
+use self::thunk::ThunkPool;
 
 pub mod thunk;
 
@@ -14,7 +14,7 @@ pub trait HookInstaller {
 }
 
 pub fn install_hook<F>(
-    thunks: &ThunkAllocator,
+    thunks: &ThunkPool,
     target: F,
     hook: impl Fn<F::Arguments, Output = F::Output>,
 ) where
@@ -22,7 +22,7 @@ pub fn install_hook<F>(
     F::Arguments: Tuple,
 {
     let (thunk, mut trampoline_ptr) =
-        thunks.allocate_with_data::<F, _>(hook, MaybeUninit::<F>::uninit());
+        thunks.get_with_data::<F, _>(hook, MaybeUninit::<F>::uninit());
 
     let detour = unsafe { GenericDetour::<F>::new(target, thunk).unwrap() };
 
@@ -39,7 +39,7 @@ pub fn install_hook<F>(
 
 #[cfg(test)]
 mod test {
-    use super::{install_hook, thunk::ThunkAllocator};
+    use super::{install_hook, thunk::ThunkPool};
 
     extern "system" fn target_func() -> i32 {
         20
@@ -47,7 +47,7 @@ mod test {
 
     #[test]
     fn test1() {
-        let thunks = ThunkAllocator::new().expect("creating thunk allocator");
+        let thunks = ThunkPool::new().expect("creating thunk allocator");
         install_hook::<extern "system" fn() -> i32>(&thunks, target_func, || 42);
 
         assert_eq!(42, target_func());

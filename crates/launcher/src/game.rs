@@ -40,7 +40,11 @@ impl Game {
     }
 
     #[instrument]
-    pub fn attach(&mut self, dll_path: &Path, request: AttachRequest) -> LauncherResult<AttachResponse> {
+    pub fn attach(
+        &mut self,
+        dll_path: &Path,
+        request: AttachRequest,
+    ) -> LauncherResult<AttachResponse> {
         let pid = self.child.id();
 
         info!("Attaching to process {pid}");

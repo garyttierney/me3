@@ -12,7 +12,7 @@ use std::{
 
 use retour::Function;
 use windows::Win32::System::{
-    Diagnostics::Debug::{self, FlushInstructionCache},
+    Diagnostics::Debug::FlushInstructionCache,
     Memory::{
         VirtualAlloc, VirtualProtect, MEM_COMMIT, MEM_RESERVE, PAGE_EXECUTE_READ, PAGE_READWRITE,
     },
@@ -49,11 +49,11 @@ where
     std::ops::Fn::call(closure, args)
 }
 
-unsafe impl Sync for ThunkAllocator {}
-unsafe impl Send for ThunkAllocator {}
+unsafe impl Sync for ThunkPool {}
+unsafe impl Send for ThunkPool {}
 
 #[derive(Debug)]
-pub struct ThunkAllocator {
+pub struct ThunkPool {
     /// The number of thunks currently allocated.
     count: AtomicUsize,
 
@@ -79,7 +79,7 @@ pub struct ThunkInfo {
     data: Option<NonNull<()>>,
 }
 
-impl ThunkAllocator {
+impl ThunkPool {
     pub fn new() -> Result<Self, Box<dyn Error>> {
         use iced_x86::code_asm::*;
 
@@ -151,15 +151,15 @@ impl ThunkAllocator {
         })
     }
 
-    pub fn allocate<F: Function>(&self, closure: impl Fn<F::Arguments, Output = F::Output>) -> F
+    pub fn get<F: Function>(&self, closure: impl Fn<F::Arguments, Output = F::Output>) -> F
     where
         F::Arguments: Tuple,
     {
-        let (thunk, _) = self.allocate_with_data(closure, 0usize);
+        let (thunk, _) = self.get_with_data(closure, 0usize);
         thunk
     }
 
-    pub fn allocate_with_data<F: Function, T: Sized>(
+    pub fn get_with_data<F: Function, T: Sized>(
         &self,
         closure: impl Fn<F::Arguments, Output = F::Output>,
         extra_data: T,
@@ -199,9 +199,9 @@ mod test {
 
     #[test]
     fn test1() {
-        let allocator = ThunkAllocator::new().expect("failed to create allocator");
+        let allocator = ThunkPool::new().expect("failed to create allocator");
         let (func, _) =
-            allocator.allocate_with_data::<extern "system" fn(i32) -> i32, ()>(|value| value, ());
+            allocator.get_with_data::<extern "system" fn(i32) -> i32, ()>(|value| value, ());
         assert_eq!(1, func(1));
     }
 }

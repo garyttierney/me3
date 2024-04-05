@@ -4,7 +4,7 @@ use me3_launcher_attach_protocol::AttachRequest;
 use me3_mod_protocol::ModProfile;
 use retour::GenericDetour;
 
-use self::hook::{thunk::ThunkAllocator, HookInstaller};
+use self::hook::{thunk::ThunkPool, HookInstaller};
 
 pub mod hook;
 
@@ -13,7 +13,7 @@ static ATTACHED_INSTANCE: OnceLock<ModHost> = OnceLock::new();
 #[derive(Debug)]
 pub struct ModHost {
     profiles: Vec<ModProfile>,
-    thunks: ThunkAllocator,
+    thunks: ThunkPool,
 }
 
 impl HookInstaller for ModHost {
@@ -24,7 +24,7 @@ impl HookInstaller for ModHost {
     {
         let (thunk, mut trampoline_ptr) = self
             .thunks
-            .allocate_with_data::<F, _>(hook, MaybeUninit::<F>::uninit());
+            .get_with_data::<F, _>(hook, MaybeUninit::<F>::uninit());
 
         let detour =
             unsafe { GenericDetour::<F>::new(target, thunk).expect("failed to create detour") };
@@ -44,7 +44,7 @@ impl ModHost {
         let AttachRequest { profiles } = request;
         let host = ModHost {
             profiles,
-            thunks: ThunkAllocator::new().expect("failed to create thunk allocator"),
+            thunks: ThunkPool::new().expect("failed to create thunk allocator"),
         };
 
         ATTACHED_INSTANCE
