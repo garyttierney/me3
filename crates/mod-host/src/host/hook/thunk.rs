@@ -54,8 +54,8 @@ unsafe impl Send for ThunkPool {}
 
 #[derive(Debug)]
 pub struct ThunkPool {
-    /// The number of thunks currently allocated.
-    count: AtomicUsize,
+    /// A counter tracking the number of thunks handed out by this pool.
+    counter: ThunkCounter,
 
     /// Pointer to the code region for this allocator.
     code_ptr: *mut u8,
@@ -77,6 +77,12 @@ pub struct ThunkInfo {
     /// A pointer to any additional data that was stored alongside this thunk. May be retrieved by
     /// `[thunk_context]`
     data: Option<NonNull<()>>,
+}
+
+#[derive(Debug, Default)]
+pub struct ThunkCounter {
+    index: AtomicUsize,
+    capacity: usize,
 }
 
 impl ThunkPool {
@@ -146,7 +152,7 @@ impl ThunkPool {
         Ok(Self {
             code_ptr,
             data_ptr,
-            count: AtomicUsize::new(0),
+            counter: ThunkCounter::with_capacity(page_size / element_size),
             stride,
         })
     }
@@ -167,7 +173,7 @@ impl ThunkPool {
     where
         F::Arguments: Tuple,
     {
-        let index = self.count.fetch_add(1, Ordering::SeqCst);
+        let index = self.counter.advance().expect("capacity reached");
         let thunk_offset = index * self.stride;
 
         let hook = dispatcher::<F> as *const ();
@@ -193,6 +199,33 @@ impl ThunkPool {
     }
 }
 
+impl ThunkCounter {
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            index: AtomicUsize::default(),
+            capacity,
+        }
+    }
+
+    pub fn advance(&self) -> Option<usize> {
+        loop {
+            let index = self.index.load(Ordering::Relaxed);
+
+            if index >= self.capacity {
+                return None;
+            }
+
+            if self
+                .index
+                .compare_exchange(index, index + 1, Ordering::Acquire, Ordering::Relaxed)
+                .is_ok()
+            {
+                return Some(index);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -203,5 +236,13 @@ mod test {
         let (func, _) =
             allocator.get_with_data::<extern "system" fn(i32) -> i32, ()>(|value| value, ());
         assert_eq!(1, func(1));
+    }
+
+    #[test]
+    fn test_counter() {
+        let counter = ThunkCounter::with_capacity(2);
+        assert_eq!(Some(0), counter.advance());
+        assert_eq!(Some(1), counter.advance());
+        assert_eq!(None, counter.advance());
     }
 }
