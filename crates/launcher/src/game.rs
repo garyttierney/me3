@@ -11,7 +11,7 @@ use dll_syringe::{
     Syringe,
 };
 use eyre::OptionExt;
-use me3_launcher_attach_protocol::{AttachFunction, AttachRequest, AttachResponse};
+use me3_launcher_attach_protocol::{AttachFunction, AttachRequest, Attachment};
 use tracing::{info, instrument};
 
 use crate::LauncherResult;
@@ -44,7 +44,7 @@ impl Game {
         &mut self,
         dll_path: &Path,
         request: AttachRequest,
-    ) -> LauncherResult<AttachResponse> {
+    ) -> LauncherResult<Attachment> {
         let pid = self.child.id();
 
         info!("Attaching to process {pid}");
@@ -61,7 +61,7 @@ impl Game {
                 .ok_or_eyre("No symbol named `me_attach` found")?
         };
 
-        let response = payload.call(&request)?;
+        let response = payload.call(&request)?.map_err(|e| eyre::eyre!(e.0))?;
 
         info!("Successfully attached");
 

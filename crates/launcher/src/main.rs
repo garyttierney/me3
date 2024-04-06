@@ -1,8 +1,9 @@
 use std::{io, path::PathBuf};
 
 use clap::{command, Parser};
+use eyre::OptionExt;
 use me3_launcher_attach_protocol::AttachRequest;
-use me3_mod_protocol::ModProfile;
+use me3_mod_protocol::{dependency::sort_dependencies, ModProfile};
 use tracing::info;
 
 use crate::game::Game;
@@ -48,10 +49,22 @@ fn run() -> LauncherResult<()> {
         .map(|path| ModProfile::from_file(path))
         .collect::<Result<_, _>>()?;
 
-    let mut request = AttachRequest::default();
-    for profile in profiles {
-        request.profiles.push(profile)
+    let mut natives = vec![];
+    let mut packages = vec![];
+
+    // TODO: merge
+    if let Some(mut profile) = profiles.into_iter().next() {
+        let ordered_natives = sort_dependencies(profile.natives())
+            .ok_or_eyre("failed to create dependency graph for natives")?;
+
+        let ordered_packages = sort_dependencies(profile.packages())
+            .ok_or_eyre("failed to create dependency graph for packages")?;
+
+        natives.extend(ordered_natives);
+        packages.extend(ordered_packages);
     }
+
+    let request = AttachRequest { natives, packages };
 
     info!("Starting game at {:?} with DLL {:?}", args.exe, args.dll);
 

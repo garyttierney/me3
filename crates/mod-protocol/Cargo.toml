@@ -6,6 +6,7 @@ vesion.workspace = true
 repository.workspace = true
 
 [dependencies]
+topological-sort = "0.2.2"
 schemars.workspace = true
 serde.workspace = true
 serde_derive.workspace = true
