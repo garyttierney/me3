@@ -2,7 +2,6 @@ use std::{
     any::Any,
     arch::asm,
     cmp::max,
-    error::Error,
     marker::Tuple,
     mem::{offset_of, size_of, transmute},
     ptr::NonNull,
@@ -10,6 +9,7 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
+use eyre::OptionExt;
 use retour::Function;
 use windows::Win32::System::{
     Diagnostics::Debug::FlushInstructionCache,
@@ -30,12 +30,6 @@ pub unsafe fn thunk_data<T>() -> Option<NonNull<T>> {
         .as_ref()
         .and_then(|info| Some(info.data?.cast()))
 }
-
-// #[naked]
-// pub unsafe extern "C" fn thunk_context<T>() -> *const T {
-//     let data_ptr = get_thunk_data();
-//     let data = data_ptr.as_ref().expect("ThunkData was null?");
-// }
 
 pub unsafe extern "rust-call" fn dispatcher<F: Function + 'static>(args: F::Arguments) -> F::Output
 where
@@ -86,7 +80,7 @@ pub struct ThunkCounter {
 }
 
 impl ThunkPool {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
+    pub fn new() -> Result<Self, eyre::Error> {
         use iced_x86::code_asm::*;
 
         let mut sysinfo = SYSTEM_INFO::default();
@@ -115,7 +109,7 @@ impl ThunkPool {
                 )
                 .cast::<u8>(),
             )
-            .ok_or_else(|| "VirtualAlloc failed".to_string())?;
+            .ok_or_eyre("VirtualAlloc failed")?;
 
             let code_ptr = memory.as_ptr();
             let data_ptr = code_ptr.byte_add(page_size);
@@ -157,27 +151,30 @@ impl ThunkPool {
         })
     }
 
-    pub fn get<F: Function>(&self, closure: impl Fn<F::Arguments, Output = F::Output>) -> F
+    pub fn get<F: Function>(
+        &self,
+        closure: Box<dyn Fn<F::Arguments, Output = F::Output>>,
+    ) -> Option<F>
     where
         F::Arguments: Tuple,
     {
-        let (thunk, _) = self.get_with_data(closure, 0usize);
-        thunk
+        self.get_with_data(closure, 0usize).map(|(thunk, _)| thunk)
     }
 
-    pub fn get_with_data<F: Function, T: Sized>(
+    pub fn get_with_data<F, T>(
         &self,
-        closure: impl Fn<F::Arguments, Output = F::Output>,
+        boxed_closure: Box<dyn Fn<F::Arguments, Output = F::Output>>,
         extra_data: T,
-    ) -> (F, NonNull<T>)
+    ) -> Option<(F, NonNull<T>)>
     where
         F::Arguments: Tuple,
+        F: Function,
+        T: Sized,
     {
-        let index = self.counter.advance().expect("capacity reached");
+        let index = self.counter.advance()?;
         let thunk_offset = index * self.stride;
 
         let hook = dispatcher::<F> as *const ();
-        let boxed_closure = Box::new(closure) as Box<dyn Fn<F::Arguments, Output = F::Output>>;
         let closure = Box::into_raw(boxed_closure);
 
         let data = unsafe { NonNull::new_unchecked(Box::into_raw(Box::new(extra_data))) };
@@ -195,7 +192,7 @@ impl ThunkPool {
             std::mem::transmute_copy(&self.code_ptr.byte_add(thunk_offset))
         };
 
-        (thunk, data)
+        Some((thunk, data))
     }
 }
 
@@ -217,7 +214,7 @@ impl ThunkCounter {
 
             if self
                 .index
-                .compare_exchange(index, index + 1, Ordering::Acquire, Ordering::Relaxed)
+                .compare_exchange_weak(index, index + 1, Ordering::Relaxed, Ordering::Relaxed)
                 .is_ok()
             {
                 return Some(index);
@@ -233,8 +230,10 @@ mod test {
     #[test]
     fn test1() {
         let allocator = ThunkPool::new().expect("failed to create allocator");
-        let (func, _) =
-            allocator.get_with_data::<extern "system" fn(i32) -> i32, ()>(|value| value, ());
+        let (func, _) = allocator
+            .get_with_data::<extern "system" fn(i32) -> i32, ()>(Box::new(|value| value), ())
+            .expect("failed to get thunk");
+
         assert_eq!(1, func(1));
     }
 
