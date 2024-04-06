@@ -1,14 +1,17 @@
 [package]
 name = "me3-mod-protocol"
-version = "0.1.0"
 edition = "2021"
-vesion.workspace = true
+version.workspace = true
 repository.workspace = true
 
 [dependencies]
-topological-sort = "0.2.2"
 schemars.workspace = true
 serde.workspace = true
 serde_derive.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
+thiserror.workspace = true
+topological-sort = "0.2.2"
+
+[lints]
+workspace = true

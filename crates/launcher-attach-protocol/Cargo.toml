@@ -1,8 +1,7 @@
 [package]
 name = "me3-launcher-attach-protocol"
-version = "0.1.0"
 edition = "2021"
-vesion.workspace = true
+version.workspace = true
 repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -12,3 +11,6 @@ eyre = "0.6"
 me3-mod-protocol.workspace = true
 serde.workspace = true
 serde_derive.workspace = true
+
+[lints]
+workspace = true

@@ -15,3 +15,6 @@ tracing-error.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing.workspace = true
 clap = { version = "4.5.4", features = ["derive", "env"] }
+
+[lints]
+workspace = true
