@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Duration};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -11,6 +11,16 @@ fn off() -> bool {
 
 fn on() -> bool {
     true
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub enum NativeInitializerCondition {
+    #[serde(rename = "delay")]
+    Delay {
+        ms: usize,
+    },
+    #[serde(rename = "function")]
+    Function(String),
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
@@ -33,7 +43,7 @@ pub struct Native {
     load_after: Vec<Dependent<String>>,
 
     /// An optional symbol to be called after this native succesfully loads.
-    initializer: Option<String>,
+    initializer: Option<NativeInitializerCondition>,
 
     /// An optional symbol to be called when this native successfully is queued for unload.
     finalizer: Option<String>,
