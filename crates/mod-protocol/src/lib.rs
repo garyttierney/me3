@@ -1,9 +1,10 @@
-use std::{fs::File, path::Path};
+use std::{fs::File, io::Read, path::Path};
 
 use native::Native;
 use package::Package;
 use schemars::JsonSchema;
-use serde_derive::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde_derive::Serialize;
 
 pub mod native;
 pub mod package;
@@ -17,10 +18,17 @@ pub enum ModProfile {
 
 impl ModProfile {
     pub fn from_file(path: &Path) -> Result<Self, std::io::Error> {
-        let file = File::open(path)?;
+        let mut file = File::open(path)?;
 
         match path.extension().and_then(|path| path.to_str()) {
-            Some("yml" | "yaml") | None => {
+            Some("toml") | None => {
+                let mut file_contents = String::new();
+                let _ = file.read_to_string(&mut file_contents)?;
+
+                toml::from_str(file_contents.as_str())
+                    .map_err(std::io::Error::other)
+            }
+            Some("yml" | "yaml") => {
                 serde_yaml::from_reader(file).map_err(std::io::Error::other)
             }
             Some(format) => Err(std::io::Error::other(format!("{format} is unsupported"))),
