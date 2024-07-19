@@ -1,54 +1,63 @@
-use std::{mem::MaybeUninit, sync::OnceLock};
+use std::{
+    marker::{FnPtr, Tuple},
+    sync::{Arc, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
+};
 
-use me3_launcher_attach_protocol::AttachRequest;
 use me3_mod_protocol::ModProfile;
-use retour::GenericDetour;
+use retour::Function;
 
-use self::hook::{thunk::ThunkAllocator, HookInstaller};
+use self::hook::{thunk::ThunkPool, HookInstaller};
+use crate::detour::UntypedDetour;
 
 pub mod hook;
 
-static ATTACHED_INSTANCE: OnceLock<ModHost> = OnceLock::new();
+static ATTACHED_INSTANCE: OnceLock<RwLock<ModHost>> = OnceLock::new();
 
 #[derive(Debug)]
 pub struct ModHost {
+    hooks: Vec<Arc<UntypedDetour>>,
     profiles: Vec<ModProfile>,
-    thunks: ThunkAllocator,
-}
-
-impl HookInstaller for ModHost {
-    fn install<F>(&mut self, target: F, hook: impl Fn<F::Arguments, Output = F::Output>)
-    where
-        F: retour::Function,
-        F::Arguments: std::marker::Tuple,
-    {
-        let (thunk, mut trampoline_ptr) = self
-            .thunks
-            .allocate_with_data::<F, _>(hook, MaybeUninit::<F>::uninit());
-
-        let detour =
-            unsafe { GenericDetour::<F>::new(target, thunk).expect("failed to create detour") };
-
-        unsafe {
-            trampoline_ptr
-                .as_mut()
-                .write(F::from_ptr(detour.trampoline()));
-
-            detour.enable().expect("failed to enable detour");
-        }
-    }
+    thunk_pool: ThunkPool,
 }
 
 impl ModHost {
-    pub fn attach(request: AttachRequest) {
-        let AttachRequest { profiles } = request;
-        let host = ModHost {
-            profiles,
-            thunks: ThunkAllocator::new().expect("failed to create thunk allocator"),
-        };
+    pub fn new(thunk_pool: ThunkPool) -> Self {
+        Self {
+            hooks: vec![],
+            profiles: vec![],
+            thunk_pool,
+        }
+    }
 
+    pub fn get_attached() -> RwLockReadGuard<'static, ModHost> {
+        let lock = ATTACHED_INSTANCE.get().expect("not attached");
+
+        match lock.read() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        }
+    }
+
+    pub fn get_attached_mut() -> RwLockWriteGuard<'static, ModHost> {
+        let lock = ATTACHED_INSTANCE.get().expect("not attached");
+
+        match lock.write() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        }
+    }
+
+    pub fn attach(self) {
         ATTACHED_INSTANCE
-            .set(host)
-            .expect("attach called before detaching previous instance");
+            .set(RwLock::new(self))
+            .expect("already attached");
+    }
+
+    pub fn hook<F>(&mut self, target: F) -> HookInstaller<F>
+    where
+        F: Function + FnPtr,
+        F::Arguments: Tuple,
+    {
+        HookInstaller::new(Some(&mut self.hooks), &self.thunk_pool, target)
     }
 }

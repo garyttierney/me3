@@ -6,6 +6,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_derive::Serialize;
 
+pub mod dependency;
 pub mod native;
 pub mod package;
 
@@ -14,6 +15,12 @@ pub mod package;
 pub enum ModProfile {
     #[serde(rename = "v1")]
     V1(ModProfileV1),
+}
+
+impl Default for ModProfile {
+    fn default() -> Self {
+        ModProfile::V1(ModProfileV1::default())
+    }
 }
 
 impl ModProfile {
@@ -34,9 +41,21 @@ impl ModProfile {
             Some(format) => Err(std::io::Error::other(format!("{format} is unsupported"))),
         }
     }
+
+    pub fn natives(&mut self) -> Vec<Native> {
+        match self {
+            ModProfile::V1(v1) => v1.natives.drain(..).collect(),
+        }
+    }
+
+    pub fn packages(&mut self) -> Vec<Package> {
+        match self {
+            ModProfile::V1(v1) => v1.packages.drain(..).collect(),
+        }
+    }
 }
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct ModProfileV1 {
     /// Native modules (DLLs) that will be loaded.
     #[serde(default)]

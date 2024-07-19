@@ -4,9 +4,7 @@
   "oneOf": [
     {
       "type": "object",
-      "required": [
-        "profileVersion"
-      ],
+      "required": ["profileVersion"],
       "properties": {
         "natives": {
           "description": "Native modules (DLLs) that will be loaded.",
@@ -26,19 +24,27 @@
         },
         "profileVersion": {
           "type": "string",
-          "enum": [
-            "v1"
-          ]
+          "enum": ["v1"]
         }
       }
     }
   ],
   "definitions": {
+    "Dependent_for_String": {
+      "type": "object",
+      "required": ["id", "optional"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "optional": {
+          "type": "boolean"
+        }
+      }
+    },
     "Native": {
       "type": "object",
-      "required": [
-        "path"
-      ],
+      "required": ["path"],
       "properties": {
         "enabled": {
           "description": "Should this native be loaded?",
@@ -47,17 +53,32 @@
         },
         "finalizer": {
           "description": "An optional symbol to be called when this native successfully is queued for unload.",
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "initializer": {
           "description": "An optional symbol to be called after this native succesfully loads.",
-          "type": [
-            "string",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/definitions/NativeInitializerCondition"
+            },
+            {
+              "type": "null"
+            }
           ]
+        },
+        "load_after": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Dependent_for_String"
+          }
+        },
+        "load_before": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Dependent_for_String"
+          }
         },
         "optional": {
           "description": "If this native fails to load and this vakye is false, treat it as a critical error.",
@@ -70,13 +91,42 @@
         }
       }
     },
+    "NativeInitializerCondition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["delay"],
+          "properties": {
+            "delay": {
+              "type": "object",
+              "required": ["ms"],
+              "properties": {
+                "ms": {
+                  "type": "integer",
+                  "format": "uint",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["function"],
+          "properties": {
+            "function": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "Package": {
       "description": "A package is a source for files that override files within the existing games DVDBND archives. It points to a local path containing assets matching the hierarchy they would be served under in the DVDBND.",
       "type": "object",
-      "required": [
-        "id",
-        "source"
-      ],
+      "required": ["id", "source"],
       "properties": {
         "id": {
           "description": "The unique identifier for this package..",
@@ -87,7 +137,7 @@
           "default": [],
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/definitions/Dependent_for_String"
           }
         },
         "load_before": {
@@ -95,7 +145,7 @@
           "default": [],
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/definitions/Dependent_for_String"
           }
         },
         "source": {

@@ -1,7 +1,9 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Duration};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use crate::dependency::{Dependency, Dependent};
 
 fn off() -> bool {
     false
@@ -9,6 +11,16 @@ fn off() -> bool {
 
 fn on() -> bool {
     true
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub enum NativeInitializerCondition {
+    #[serde(rename = "delay")]
+    Delay {
+        ms: usize,
+    },
+    #[serde(rename = "function")]
+    Function(String),
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
@@ -24,9 +36,34 @@ pub struct Native {
     #[serde(default = "on")]
     enabled: bool,
 
+    #[serde(default)]
+    load_before: Vec<Dependent<String>>,
+
+    #[serde(default)]
+    load_after: Vec<Dependent<String>>,
+
     /// An optional symbol to be called after this native succesfully loads.
-    initializer: Option<String>,
+    initializer: Option<NativeInitializerCondition>,
 
     /// An optional symbol to be called when this native successfully is queued for unload.
     finalizer: Option<String>,
+}
+
+impl Dependency for Native {
+    type UniqueId = String;
+
+    fn id(&self) -> Self::UniqueId {
+        self.path
+            .file_name()
+            .map(|f| f.to_string_lossy().to_string())
+            .expect("native had no file name")
+    }
+
+    fn loads_after(&self) -> &[Dependent<Self::UniqueId>] {
+        &self.load_after
+    }
+
+    fn loads_before(&self) -> &[Dependent<Self::UniqueId>] {
+        &self.load_before
+    }
 }

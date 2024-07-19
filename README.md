@@ -50,7 +50,7 @@ TODO: write me
 <!-- GETTING STARTED -->
 ## Getting Started
 
-me3 is a mod launcher and loader for the Dark Souls series of games from FROMSOFTWARE and similar titles.
+me3 is a launcher and mod loader for the Dark Souls series of games from FROMSOFTWARE and similar titles.
 
 ### Prerequisites
 
@@ -64,7 +64,7 @@ me3 is a mod launcher and loader for the Dark Souls series of games from FROMSOF
   - Windows: download and run [vs_BuildTools.exe][buildtools-installer] then follow the onscreen instructions.
   - Linux: while me3 can be built against mingw64, this generally isn't recommended. Instead acquire the Windows SDK using `xwin`
     ```bash
-    cargo install xwin &&  xwin --accept-license 1 splat --output ~/.xwin
+    cargo install xwin && xwin --accept-license splat --output ~/.xwin
     ```
     And configure Cargo to link with LLD and use the binaries from xwin in `~/.cargo/config.toml`
     ```toml
