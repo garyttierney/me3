@@ -1,0 +1,25 @@
+V1(
+    ModProfileV1 {
+        natives: [
+            Native {
+                path: "my_native.dll",
+                optional: true,
+                enabled: true,
+                load_before: [],
+                load_after: [],
+                initializer: None,
+                finalizer: None,
+            },
+        ],
+        packages: [
+            Package {
+                id: "my-mod",
+                source: PackageSource(
+                    "mod/",
+                ),
+                load_after: [],
+                load_before: [],
+            },
+        ],
+    },
+)
