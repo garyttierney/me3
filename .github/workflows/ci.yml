@@ -1,0 +1,38 @@
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          sudo dpkg --add-architecture i386
+          wget -qO - https://dl.winehq.org/wine-builds/winehq.key | sudo apt-key add -
+          sudo apt-add-repository "deb https://dl.winehq.org/wine-builds/ubuntu $(lsb_release -cs) main"
+          sudo apt install --install-recommends winehq-stable lld
+          set -eux
+          cargo install xwin
+          xwin --accept-license splat --output "${{ github.workspace }}/xwin"
+          cat > ~/.cargo/config.toml <<EOF
+            [target.x86_64-pc-windows-msvc]
+            linker = "lld"
+            runner = ["env", "WINEDEBUG=-all", "wine"]
+            rustflags = [
+                "-Lnative=${{ github.workspace }}/xwin/crt/lib/x86_64",
+                "-Lnative=${{ github.workspace }}/xwin/sdk/lib/um/x86_64",
+                "-Lnative=${{ github.workspace }}/xwin/sdk/lib/ucrt/x86_64"
+            ]
+          EOF
+        if: matrix.os == 'ubuntu-latest'
+      - run: cargo test --all-features
