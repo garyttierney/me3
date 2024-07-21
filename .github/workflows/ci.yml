@@ -17,6 +17,7 @@ jobs:
           targets: x86_64-pc-windows-msvc
       - uses: Swatinem/rust-cache@v2
       - run: |
+          sudo apt-get install lld
           set -eux
           cargo install xwin
           xwin --accept-license splat --output "${{ github.workspace }}/xwin"
