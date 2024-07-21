@@ -7,5 +7,8 @@
   ],
   "yaml.schemas": {
     "schemas/mod-profile.json": "*.me3.yaml"
+  },
+  "evenBetterToml.schema.associations": {
+    "^.*\\.me3\\.toml$": "file://schemas/mod-profile.json"
   }
 }
