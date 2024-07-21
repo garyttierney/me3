@@ -32,12 +32,9 @@ impl ModProfile {
                 let mut file_contents = String::new();
                 let _ = file.read_to_string(&mut file_contents)?;
 
-                toml::from_str(file_contents.as_str())
-                    .map_err(std::io::Error::other)
+                toml::from_str(file_contents.as_str()).map_err(std::io::Error::other)
             }
-            Some("yml" | "yaml") => {
-                serde_yaml::from_reader(file).map_err(std::io::Error::other)
-            }
+            Some("yml" | "yaml") => serde_yaml::from_reader(file).map_err(std::io::Error::other),
             Some(format) => Err(std::io::Error::other(format!("{format} is unsupported"))),
         }
     }
@@ -65,4 +62,40 @@ pub struct ModProfileV1 {
     /// before the DVDBND.
     #[serde(default)]
     packages: Vec<Package>,
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fmt::format;
+
+    use expect_test::expect_file;
+
+    use super::*;
+
+    macro_rules! test_case {
+        ($fname:expr) => {
+            concat!(env!("CARGO_MANIFEST_DIR"), "/test-data/", $fname)
+        };
+    }
+
+    fn check(test_case_name: &str) {
+        let test_data_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data");
+        let test_case = test_data_dir.join(test_case_name);
+        let test_snapshot = test_data_dir.join(format!("{}.expected", test_case_name));
+
+        let actual_profile = ModProfile::from_file(&test_case).expect("parse failure");
+        let expected_profile = expect_file![test_snapshot];
+
+        expected_profile.assert_debug_eq(&actual_profile);
+    }
+
+    #[test]
+    fn basic_config_toml() {
+        check("basic_config.me3.toml");
+    }
+
+    #[test]
+    fn basic_config_yaml() {
+        check("basic_config.me3.yaml");
+    }
 }

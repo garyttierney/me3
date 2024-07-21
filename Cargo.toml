@@ -18,6 +18,7 @@ unused = "allow"
 
 [workspace.dependencies]
 dll-syringe = "0.15"
+expect-test = "1.5.0"
 me3-launcher-attach-protocol = { path = "crates/launcher-attach-protocol" }
 me3-mod-host = { path = "crates/mod-host" }
 me3-mod-protocol = { path = "crates/mod-protocol" }
