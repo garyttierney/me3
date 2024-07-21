@@ -72,12 +72,6 @@ mod tests {
 
     use super::*;
 
-    macro_rules! test_case {
-        ($fname:expr) => {
-            concat!(env!("CARGO_MANIFEST_DIR"), "/test-data/", $fname)
-        };
-    }
-
     fn check(test_case_name: &str) {
         let test_data_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data");
         let test_case = test_data_dir.join(test_case_name);
