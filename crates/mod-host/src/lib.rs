@@ -4,13 +4,29 @@
 #![feature(unboxed_closures)]
 #![feature(naked_functions)]
 
-use std::sync::OnceLock;
+use std::{
+    sync::{Arc, Mutex, OnceLock},
+    time::Duration,
+};
 
-use me3_launcher_attach_protocol::{AttachRequest, AttachResult, Attachment};
+use crash_handler::CrashEventResult;
+use futures_util::{future::err};
+use ipc_channel::ipc::IpcSender;
+use log::error;
+use me3_launcher_attach_protocol::{
+    AttachError, AttachRequest, AttachResult, Attachment, HostMessage,
+};
+use minidumper::Client;
+use tracing::info;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, FmtSubscriber};
 
-use crate::host::{hook::thunk::ThunkPool, ModHost};
+use crate::{
+    diagnostics::HostTracingLayer,
+    host::{hook::thunk::ThunkPool, ModHost},
+};
 
 mod detour;
+mod diagnostics;
 mod host;
 
 static INSTANCE: OnceLock<usize> = OnceLock::new();
@@ -19,14 +35,53 @@ const DLL_PROCESS_ATTACH: u32 = 1;
 
 dll_syringe::payload_procedure! {
     fn me_attach(request: AttachRequest) -> AttachResult {
-        let host = ModHost::new(ThunkPool::new()?);
-        host.attach();
-
-
-        let host = ModHost::get_attached_mut();
-
-        Ok(Attachment)
+        on_attach(request)
     }
+}
+
+fn on_attach(request: AttachRequest) -> AttachResult {
+    let AttachRequest {
+        monitor_name,
+        ..
+    } = request;
+
+    let socket = IpcSender::connect(monitor_name).unwrap();
+    let mut socket = Arc::new(Mutex::new(socket));
+    let mut crash_handler_socket = socket.clone();
+
+    let crash_handler_attached = crash_handler::CrashHandler::attach(unsafe {
+        crash_handler::make_crash_event(move |crash_context: &crash_handler::CrashContext| {
+            let _ = crash_handler_socket
+                .lock()
+                .unwrap()
+                .send(HostMessage::CrashDumpRequest {
+                    exception_pointers: crash_context.exception_pointers as u64,
+                    process_id: crash_context.process_id,
+                    thread_id: crash_context.thread_id,
+                    exception_code: crash_context.exception_code,
+                });
+
+            // TODO: we need a safe way keep the process alive until the minidump is captured.
+            std::thread::sleep(Duration::from_secs(5));
+
+            CrashEventResult::Handled(true)
+        })
+    });
+
+    socket.lock().unwrap().send(HostMessage::Attached).unwrap();
+
+    tracing_subscriber::registry().with(HostTracingLayer { socket }).init();
+
+    info!("Host attachd and monitoring configured");
+
+    if let Err(e) = crash_handler_attached {
+        error!("Failed to attach crash handler: {:?}", e);
+    }
+
+    let host = ModHost::new(ThunkPool::new()?);
+    host.attach();
+
+    Ok(Attachment)
 }
 
 #[no_mangle]

@@ -5,11 +5,15 @@ repository.workspace = true
 edition.workspace = true
 
 [dependencies]
-color-eyre = { version = "0.6", features = ["issue-url"] }
+stable-eyre = { version = "0.2" }
+crash-context.workspace = true
 eyre = "0.6"
 dll-syringe.workspace = true
+ipc-channel.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
+minidumper.workspace = true
+minidump-writer = "0.10"
 tracing-appender = "0.2"
 tracing-error.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }

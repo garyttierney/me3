@@ -8,6 +8,8 @@ repository.workspace = true
 
 [dependencies]
 eyre = "0.6"
+crash-context = "0.6"
+ipc-channel.workspace = true
 me3-mod-protocol.workspace = true
 serde.workspace = true
 serde_derive.workspace = true
