@@ -16,9 +16,7 @@ fn on() -> bool {
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub enum NativeInitializerCondition {
     #[serde(rename = "delay")]
-    Delay {
-        ms: usize,
-    },
+    Delay { ms: usize },
     #[serde(rename = "function")]
     Function(String),
 }
