@@ -3,5 +3,4 @@ target = "x86_64-pc-windows-msvc"
 
 [target.x86_64-pc-windows-msvc]
 linker = "lld"
-runner = "wine"
-rustflags = ["-C", "target-feature=+crt-static"]
+rustflags = ["-C", "target-feature=+crt-static", "--cfg", "windows_raw_dylib", "--cfg", "windows_debugger_visualizer"]
