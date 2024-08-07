@@ -52,7 +52,7 @@ impl Game {
         let process = OwnedProcess::from_pid(pid)?;
 
         // TODO: no hardcoded timeout.
-        let _ = process.wait_for_module_by_name("kernel32", Duration::from_secs(5));
+        let _ = process.wait_for_module_by_name("kernel32", Duration::from_secs(300));
         let injector = Syringe::for_process(process);
         let module = injector.inject(dll_path)?;
         let payload: RemotePayloadProcedure<AttachFunction> = unsafe {

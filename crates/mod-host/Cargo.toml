@@ -15,6 +15,7 @@ eyre = "0.6"
 iced-x86 = "1.21.0"
 me3-mod-protocol.workspace = true
 me3-launcher-attach-protocol.workspace = true
+me3-mod-host-assets.workspace = true
 retour = { git = "https://github.com/Hpmason/retour-rs", features = ["static-detour"] }
 thiserror.workspace = true
 windows = { version = "0.54", features = [
@@ -22,6 +23,8 @@ windows = { version = "0.54", features = [
     "Win32_System_Diagnostics_Debug",
     "Win32_System_Threading",
     "Win32_System_SystemInformation",
+    "Win32_System_Kernel",
+    "Win32_Foundation",
 ] }
 
 [lints]

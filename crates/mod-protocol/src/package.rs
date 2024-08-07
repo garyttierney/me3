@@ -8,7 +8,7 @@ use crate::dependency::{Dependency, Dependent};
 /// A filesystem path to the contents of a package. May be relative to the [ModProfile] containing
 /// it.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
-pub struct PackageSource(PathBuf);
+pub struct PackageSource(pub PathBuf);
 
 /// A package is a source for files that override files within the existing games DVDBND archives.
 /// It points to a local path containing assets matching the hierarchy they would be served under in
@@ -19,7 +19,7 @@ pub struct Package {
     id: String,
 
     /// A path to the source of this package.
-    source: PackageSource,
+    pub source: PackageSource,
 
     /// A list of package IDs that this package should load after.
     #[serde(default)]
