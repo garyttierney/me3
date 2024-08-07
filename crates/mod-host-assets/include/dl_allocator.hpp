@@ -44,14 +44,12 @@ public:
     }
 
     template <typename T1, typename T2>
-    friend bool operator==(const DLAllocatorAdapter<T1>& lhs, const DLAllocatorAdapter<T2>& rhs) noexcept;
+    friend bool operator==(const DLAllocatorAdapter<T1>& lhs, const DLAllocatorAdapter<T2>& rhs) noexcept {
+        return &lhs.allocator == &rhs.allocator;
+    }
 
 private:
     DLAllocationInterface& allocator;
 };
 
-template <typename T1, typename T2>
-bool operator==(const DLAllocatorAdapter<T1>& lhs, const DLAllocatorAdapter<T2>& rhs) noexcept {
-    return &lhs.allocator == &rhs.allocator;
-}
 }
