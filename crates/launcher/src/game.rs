@@ -55,7 +55,6 @@ impl Game {
         let _ = process.wait_for_module_by_name("kernel32", Duration::from_secs(300));
         let injector = Syringe::for_process(process);
         let module = injector.inject(dll_path)?;
-        info!("Pushing request: {request:?}");
         let payload: RemotePayloadProcedure<AttachFunction> = unsafe {
             injector
                 .get_payload_procedure::<AttachFunction>(module, "me_attach")?
