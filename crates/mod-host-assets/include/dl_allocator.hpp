@@ -1,5 +1,4 @@
-#ifndef DANTELION_DL_ALLOCATOR_H
-#define DANTELION_DL_ALLOCATOR_H
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -56,5 +55,3 @@ bool operator==(const DLAllocatorAdapter<T1>& lhs, const DLAllocatorAdapter<T2>&
     return &lhs.allocator == &rhs.allocator;
 }
 }
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef DANTELION_DL_STRING_BRIDGE_H
-#define DANTELION_DL_STRING_BRIDGE_H
+#pragma once
 
 #include <string>
 #include <rust/cxx.h>
@@ -26,5 +25,3 @@ void set_dlwstring_contents(const DLWString& str, rust::slice<const uint16_t> co
     size_t length = contents.size();
     str.inner.assign(first, length);
 }
-
-#endif
