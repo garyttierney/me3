@@ -12,7 +12,7 @@ use std::{
 use clap::{command, Parser};
 use crash_context::CrashContext;
 use eyre::OptionExt;
-use ipc_channel::ipc::{IpcOneShotServer, IpcReceiver};
+use ipc_channel::ipc::{IpcError, IpcOneShotServer, IpcReceiver};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
 use me3_mod_protocol::{dependency::sort_dependencies, ModProfile};
 use minidump_writer::{minidump_writer::MinidumpWriter, MinidumpType};
@@ -78,7 +78,11 @@ fn run() -> LauncherResult<()> {
     }
 
     let (monitor_server, monitor_name) = IpcOneShotServer::new()?;
-    let request = AttachRequest { monitor_name, natives, packages };
+    let request = AttachRequest {
+        monitor_name,
+        natives,
+        packages,
+    };
 
     info!("Starting game at {:?} with DLL {:?}", args.exe, args.dll);
 
@@ -96,7 +100,6 @@ fn run() -> LauncherResult<()> {
             match receiver.recv() {
                 Ok(msg) => match msg {
                     HostMessage::Trace(message) => {
-                        println!("{}", message);
                         info!(message);
                     }
                     HostMessage::CrashDumpRequest {
@@ -105,6 +108,11 @@ fn run() -> LauncherResult<()> {
                         thread_id,
                         exception_code,
                     } => {
+                        info!(
+                            "Host requested a crashdump for exception {:x}",
+                            exception_code
+                        );
+
                         let start = SystemTime::now();
                         let timestamp = start
                             .duration_since(UNIX_EPOCH)
@@ -128,6 +136,7 @@ fn run() -> LauncherResult<()> {
                     }
                     HostMessage::Attached => info!("Attach completed"),
                 },
+                Err(IpcError::Disconnected) => break,
                 Err(e) => {
                     error!("Error from monitor channel {:?}", e);
                     break;
@@ -137,7 +146,7 @@ fn run() -> LauncherResult<()> {
     });
 
     if let Err(e) = game.attach(&args.dll, request) {
-        println!("Faild to attach to game: {e:?}");
+        println!("Failed to attach to game: {e:?}");
     }
 
     game.join();

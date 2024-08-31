@@ -10,7 +10,7 @@ use std::{
 };
 
 use crash_handler::CrashEventResult;
-use futures_util::{future::err};
+use futures_util::future::err;
 use ipc_channel::ipc::IpcSender;
 use log::error;
 use me3_launcher_attach_protocol::{
@@ -40,17 +40,15 @@ dll_syringe::payload_procedure! {
 }
 
 fn on_attach(request: AttachRequest) -> AttachResult {
-    let AttachRequest {
-        monitor_name,
-        ..
-    } = request;
+    let AttachRequest { monitor_name, .. } = request;
 
     let socket = IpcSender::connect(monitor_name).unwrap();
     let mut socket = Arc::new(Mutex::new(socket));
     let mut crash_handler_socket = socket.clone();
 
-    let crash_handler_attached = crash_handler::CrashHandler::attach(unsafe {
+    let crash_handler = crash_handler::CrashHandler::attach(unsafe {
         crash_handler::make_crash_event(move |crash_context: &crash_handler::CrashContext| {
+            info!("Handling crash event");
             let _ = crash_handler_socket
                 .lock()
                 .unwrap()
@@ -64,22 +62,26 @@ fn on_attach(request: AttachRequest) -> AttachResult {
             // TODO: we need a safe way keep the process alive until the minidump is captured.
             std::thread::sleep(Duration::from_secs(5));
 
-            CrashEventResult::Handled(true)
+            CrashEventResult::Handled(false)
         })
-    });
+    })
+    .expect("failed to attach crash handler");
+
 
     socket.lock().unwrap().send(HostMessage::Attached).unwrap();
 
-    tracing_subscriber::registry().with(HostTracingLayer { socket }).init();
+    tracing_subscriber::registry()
+        .with(HostTracingLayer { socket })
+        .init();
 
-    info!("Host attachd and monitoring configured");
+    info!("Host monitoring configured");
 
-    if let Err(e) = crash_handler_attached {
-        error!("Failed to attach crash handler: {:?}", e);
-    }
-
-    let host = ModHost::new(ThunkPool::new()?);
+    let host = ModHost::new(crash_handler, ThunkPool::new()?);
+    host.panic();
     host.attach();
+
+    info!("Host successfully attached");
+
 
     Ok(Attachment)
 }
