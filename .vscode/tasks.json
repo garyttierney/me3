@@ -15,7 +15,7 @@
         "run",
         "${workspaceFolder}/target/x86_64-pc-windows-msvc/debug/me3-launcher.exe",
         "--exe",
-        "${config:steam.path}/steamapps/common/ELDEN RING/Game/start_protected_game.exe",
+        "${config:steam.path}/steamapps/common/ELDEN RING/Game/eldenring.exe",
         "--dll",
         "${workspaceFolder}/target/x86_64-pc-windows-msvc/debug/me3_mod_host.dll",
       ],
