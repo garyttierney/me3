@@ -1,0 +1,7 @@
+[[patterns]]
+pattern = "4c 8b c7 48 c7 44 24 20 00 00 00 00 33 d2 49 8b cf e8 $ { ' }"
+captures = ["", "ASSET_HOOK_ARCHIVE_LOOKUP"]
+
+[[patterns]]
+pattern = "4c 89 74 24 28 48 8b 84 24 90 00 00 00 48 89 44 24 20 4c 8b ce 45 8b c4 49 8b d7 48 8b cd e8 $ { ' } 8b d8"
+captures = ["", "ASSET_HOOK_SOUND_ARCHIVE_LOOKUP"]

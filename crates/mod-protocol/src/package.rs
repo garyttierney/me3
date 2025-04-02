@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -43,5 +43,15 @@ impl Dependency for Package {
 
     fn loads_before(&self) -> &[crate::dependency::Dependent<Self::UniqueId>] {
         &self.load_before
+    }
+}
+
+pub trait AssetOverrideSource {
+    fn asset_path(&self) -> &Path;
+}
+
+impl AssetOverrideSource for &Package {
+    fn asset_path(&self) -> &Path {
+        self.source.0.as_path()
     }
 }

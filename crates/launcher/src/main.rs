@@ -54,14 +54,16 @@ fn run() -> LauncherResult<()> {
 
     // TODO: merge
     if let Some(mut profile) = profiles.into_iter().next() {
-        let ordered_natives = sort_dependencies(profile.natives())
-            .ok_or_eyre("failed to create dependency graph for natives")?;
-
-        let ordered_packages = sort_dependencies(profile.packages())
-            .ok_or_eyre("failed to create dependency graph for packages")?;
-
-        natives.extend(ordered_natives);
-        packages.extend(ordered_packages);
+        // let ordered_natives = sort_dependencies(profile.natives())
+        //     .ok_or_eyre("failed to create dependency graph for natives")?;
+        //
+        // let ordered_packages = sort_dependencies(profile.packages())
+        //     .ok_or_eyre("failed to create dependency graph for packages")?;
+        //
+        // natives.extend(ordered_natives);
+        // packages.extend(ordered_packages);
+        natives.extend(profile.natives());
+        packages.extend(profile.packages());
     }
 
     let request = AttachRequest { natives, packages };

@@ -1,0 +1,18 @@
+[package]
+name = "me3-mod-host-assets"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+cxx = { version = "1.0", features = ["c++17"] }
+thiserror.workspace = true
+me3-mod-protocol.workspace = true
+tracing.workspace = true
+
+[build-dependencies]
+cxx-build = "1.0"
+
+[lints]
+workspace = true
