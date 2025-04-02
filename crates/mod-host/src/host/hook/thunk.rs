@@ -1,6 +1,6 @@
 use std::{
     any::Any,
-    arch::{asm, naked_asm},
+    arch::naked_asm,
     cmp::max,
     marker::Tuple,
     mem::{offset_of, size_of, transmute},
