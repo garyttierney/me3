@@ -1,6 +1,6 @@
 use std::{
     any::Any,
-    arch::asm,
+    arch::naked_asm,
     cmp::max,
     marker::Tuple,
     mem::{offset_of, size_of, transmute},
@@ -22,7 +22,7 @@ use windows::Win32::System::{
 
 #[naked]
 pub unsafe extern "C" fn thunk_info() -> *const ThunkInfo {
-    asm!("mov rax, gs:[0]", "ret", options(noreturn))
+    naked_asm!("mov rax, gs:[0]", "ret")
 }
 
 pub unsafe fn thunk_data<T>() -> Option<NonNull<T>> {
