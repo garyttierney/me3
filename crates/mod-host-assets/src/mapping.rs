@@ -43,7 +43,7 @@ impl ArchiveOverrideMapping {
     }
 
     ///  Traverses a folder structure, mapping discovered assets into itself.
-    fn scan_directory<P: AsRef<Path>>(
+    pub fn scan_directory<P: AsRef<Path>>(
         &mut self,
         base_directory: P,
     ) -> Result<(), ArchiveOverrideMappingError> {

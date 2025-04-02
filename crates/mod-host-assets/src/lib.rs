@@ -7,6 +7,8 @@ use std::{
 use ffi::DLWString;
 
 pub mod mapping;
+pub mod rva;
+pub mod wwise;
 
 #[cxx::bridge]
 pub mod ffi {
