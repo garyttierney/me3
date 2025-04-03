@@ -4,6 +4,8 @@ members = [
     "crates/launcher-attach-protocol", 
     "crates/mod-host",
     "crates/mod-protocol",
+    "crates/mod-host-assets",
+    "crates/binary-mapper",
 ]
 resolver = "2"
 
@@ -22,6 +24,8 @@ expect-test = "1.5.0"
 me3-launcher-attach-protocol = { path = "crates/launcher-attach-protocol" }
 me3-mod-host = { path = "crates/mod-host" }
 me3-mod-protocol = { path = "crates/mod-protocol" }
+me3-mod-host-assets = { path = "crates/mod-host-assets" }
+me3-binary-analysis = { path = "crates/binary-analysis" }
 schemars = "0.8"
 serde = "1"
 serde_derive = "1"

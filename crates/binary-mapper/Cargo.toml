@@ -1,0 +1,18 @@
+[package]
+name = "me3-binary-mapper"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+pelite = "0.10"
+clap = { version = "4.5.4", features = ["derive", "env"] }
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+memmap = "0.7"
+rayon = "1"
+
+[lints]
+workspace = true
