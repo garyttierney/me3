@@ -43,27 +43,35 @@ fn run() -> LauncherResult<()> {
         info!("Loading profiles from {:?}", args.profiles);
     }
 
-    let profiles: Vec<_> = args
-        .profiles
-        .iter()
-        .map(|path| ModProfile::from_file(path))
-        .collect::<Result<_, _>>()?;
-
     let mut natives = vec![];
     let mut packages = vec![];
 
     // TODO: merge
-    if let Some(mut profile) = profiles.into_iter().next() {
+    if let Some(path) = args.profiles.into_iter().next() {
+        let base = path
+            .parent()
+            .ok_or_eyre("failed to acquire base directory for mod profile")?;
+
+        let mut profile = ModProfile::from_file(&path)?;
+
+        let mut profile_packages = profile.packages();
+
+        // Make relative paths absolute
+        profile_packages
+            .iter_mut()
+            .filter(|e| e.is_relative())
+            .for_each(|e| e.make_absolute(base));
+
+        // TODO: debug issue with dep sorting
+        //
         // let ordered_natives = sort_dependencies(profile.natives())
         //     .ok_or_eyre("failed to create dependency graph for natives")?;
         //
         // let ordered_packages = sort_dependencies(profile.packages())
         //     .ok_or_eyre("failed to create dependency graph for packages")?;
-        //
-        // natives.extend(ordered_natives);
-        // packages.extend(ordered_packages);
+
         natives.extend(profile.natives());
-        packages.extend(profile.packages());
+        packages.extend(profile_packages);
     }
 
     let request = AttachRequest { natives, packages };
