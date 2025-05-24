@@ -1,13 +1,24 @@
-use std::{marker::Tuple, mem::MaybeUninit, sync::Arc};
+use std::{
+    marker::{PhantomData, Tuple},
+    mem::MaybeUninit,
+    sync::Arc,
+};
 
+use curried::Prepend;
 use retour::Function;
+use thunk::thunk_info;
 
 use crate::{
     detour::{install_detour, Detour, DetourError, UntypedDetour},
     host::hook::thunk::ThunkPool,
 };
 
+pub mod curried;
 pub mod thunk;
+
+pub struct HookContext<F: Function> {
+    pub trampoline: F,
+}
 
 pub enum HookSource<F: Function>
 where
@@ -55,12 +66,20 @@ where
         }
     }
 
-    pub fn with_closure(
-        self,
-        closure: impl Fn<F::Arguments, Output = F::Output> + 'static,
-    ) -> Self {
+    pub fn with_closure<C>(self, closure: C) -> Self
+    where
+        F::Arguments: Prepend<HookContext<F>>,
+        C: Fn<<F::Arguments as Prepend<HookContext<F>>>::Output, Output = F::Output> + 'static,
+    {
+        let curried = curried::Curried::new(closure, || {
+            let thunk_info = unsafe { thunk_info().as_ref().unwrap() };
+            let trampoline = unsafe { F::from_ptr(thunk_info.trampoline()) };
+
+            HookContext { trampoline }
+        });
+
         Self {
-            source: Some(HookSource::Closure(Box::new(closure))),
+            source: Some(HookSource::Closure(Box::new(curried))),
             ..self
         }
     }

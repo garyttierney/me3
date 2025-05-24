@@ -73,6 +73,12 @@ pub struct ThunkInfo {
     data: Option<NonNull<()>>,
 }
 
+impl ThunkInfo {
+    pub fn trampoline(&self) -> *const () {
+        self.trampoline
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct ThunkCounter {
     index: AtomicUsize,

@@ -4,15 +4,19 @@
 #![feature(unboxed_closures)]
 #![feature(naked_functions)]
 
-use std::{collections::HashMap, sync::{Arc, OnceLock}};
+use std::{
+    collections::HashMap,
+    sync::{Arc, OnceLock},
+};
 
 use me3_launcher_attach_protocol::{AttachError, AttachRequest, AttachResult, Attachment};
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
+
 use crate::host::{hook::thunk::ThunkPool, ModHost};
 
+mod asset_archive;
 mod detour;
 mod host;
-mod asset_archive;
 
 static INSTANCE: OnceLock<usize> = OnceLock::new();
 /// https://learn.microsoft.com/en-us/windows/win32/dlls/dllmain#parameters

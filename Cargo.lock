@@ -269,6 +269,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "currying"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba921f2d4c71d38da4523720ae7bf64a115814f3805583ea1c7469768c58b5d2"
+dependencies = [
+ "moddef",
+ "tupleops",
+]
+
+[[package]]
 name = "cxx"
 version = "1.0.153"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -814,6 +824,7 @@ dependencies = [
 name = "me3-mod-host"
 version = "0.1.0"
 dependencies = [
+ "currying",
  "dll-syringe",
  "dynasmrt",
  "eyre",
@@ -822,8 +833,10 @@ dependencies = [
  "me3-mod-host-assets",
  "me3-mod-protocol",
  "retour",
+ "seq-macro",
  "thiserror",
  "tracing",
+ "tupleops",
  "windows",
 ]
 
@@ -896,6 +909,12 @@ dependencies = [
  "libc",
  "winapi",
 ]
+
+[[package]]
+name = "moddef"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e519fd9c6131c1c9a4a67f8bdc4f32eb4105b16c1468adea1b8e68c98c85ec4"
 
 [[package]]
 name = "no-std-compat"
@@ -1245,6 +1264,12 @@ dependencies = [
  "quote",
  "syn 2.0.100",
 ]
+
+[[package]]
+name = "seq-macro"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1bc711410fbe7399f390ca1c3b60ad0f53f80e95c5eb935e52268a0e2cd49acc"
 
 [[package]]
 name = "serde"
@@ -1617,6 +1642,31 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "tupleops"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e290078fe0f775c39aebc49987d4aac90c3b9539316acb240dc9ec2a4611156"
+dependencies = [
+ "tupleops-macros",
+]
+
+[[package]]
+name = "tupleops-generator"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "136120de3f8963f0d6e1d736aead1c3ed0632c72f5a97f5ed1854818d69b6271"
+
+[[package]]
+name = "tupleops-macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae3b0b025de1c76e24a54d30c8b0a0f4c019de78f5ed525d708bafd4b4717caa"
+dependencies = [
+ "syn 1.0.109",
+ "tupleops-generator",
 ]
 
 [[package]]

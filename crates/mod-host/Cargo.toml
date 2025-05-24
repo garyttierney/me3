@@ -26,6 +26,9 @@ windows = { version = "0.54", features = [
     "Win32_System_SystemInformation",
     "Win32_System_LibraryLoader",
 ] }
+tupleops = "0.1.1"
+currying = "0.3.5"
+seq-macro = "0.3.6"
 
 [lints]
 workspace = true
