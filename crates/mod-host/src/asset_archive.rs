@@ -60,7 +60,6 @@ pub fn attach(host: &mut ModHost, mapping: Arc<ArchiveOverrideMapping>) -> Resul
             .install()?
     };
 
-    let wwise_hook_instance: Arc<OnceCell<Arc<Detour<WwisePathFn>>>> = Default::default();
     let wwise_hook = {
         let mapping = mapping.clone();
 

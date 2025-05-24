@@ -8,9 +8,9 @@ pub trait Prepend<T>: Tuple {
     fn prepend(self, value: T) -> Self::Output;
 }
 
-macro_rules! prepend_impl {
-    ($max:expr) => {
-        seq!(N in 0..=$max {
+seq!(M in 1..16 {
+    #(
+        seq!(N in 0..M {
             impl<V, #(T~N,)*> Prepend<V> for (#(T~N,)*) {
                 type Output = (V, #(T~N,)*);
 
@@ -19,17 +19,8 @@ macro_rules! prepend_impl {
                 }
             }
         });
-    };
-}
-
-prepend_impl!(1);
-prepend_impl!(2);
-prepend_impl!(3);
-prepend_impl!(4);
-prepend_impl!(5);
-prepend_impl!(6);
-prepend_impl!(7);
-prepend_impl!(8);
+    )*
+});
 
 impl<T> Prepend<T> for () {
     type Output = (T,);
