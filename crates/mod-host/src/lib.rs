@@ -10,9 +10,7 @@ use std::{
 
 use crash_handler::CrashEventResult;
 use ipc_channel::ipc::IpcSender;
-use me3_launcher_attach_protocol::{
-    AttachRequest, AttachResult, Attachment, HostMessage,
-};
+use me3_launcher_attach_protocol::{AttachRequest, AttachResult, Attachment, HostMessage};
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};

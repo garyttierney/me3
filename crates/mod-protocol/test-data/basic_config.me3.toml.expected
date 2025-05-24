@@ -1,5 +1,6 @@
 V1(
     ModProfileV1 {
+        supports: [],
         natives: [
             Native {
                 path: "my_native.dll",
