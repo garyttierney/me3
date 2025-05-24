@@ -20,7 +20,7 @@ use windows::Win32::System::{
     Threading::GetCurrentProcess,
 };
 
-#[naked]
+#[unsafe(naked)]
 pub unsafe extern "C" fn thunk_info() -> *const ThunkInfo {
     naked_asm!("mov rax, gs:[0]", "ret")
 }
