@@ -8,7 +8,7 @@ use crate::dependency::{Dependency, Dependent};
 /// A filesystem path to the contents of a package. May be relative to the [ModProfile] containing
 /// it.
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
-pub struct PackageSource(PathBuf);
+pub struct PackageSource(pub(crate) PathBuf);
 
 /// A package is a source for files that override files within the existing games DVDBND archives.
 /// It points to a local path containing assets matching the hierarchy they would be served under in
@@ -16,18 +16,18 @@ pub struct PackageSource(PathBuf);
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Package {
     /// The unique identifier for this package..
-    id: String,
+    pub(crate) id: String,
 
     /// A path to the source of this package.
-    source: PackageSource,
+    pub(crate) source: PackageSource,
 
     /// A list of package IDs that this package should load after.
     #[serde(default)]
-    load_after: Vec<Dependent<String>>,
+    pub(crate) load_after: Vec<Dependent<String>>,
 
     /// A list of packages that this package should load before.
     #[serde(default)]
-    load_before: Vec<Dependent<String>>,
+    pub(crate) load_before: Vec<Dependent<String>>,
 }
 
 impl Package {

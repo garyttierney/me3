@@ -14,7 +14,7 @@ use crash_context::CrashContext;
 use eyre::OptionExt;
 use ipc_channel::ipc::{IpcError, IpcOneShotServer};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
-use me3_mod_protocol::ModProfile;
+use me3_mod_protocol::{dependency::sort_dependencies, ModProfile};
 use minidump_writer::minidump_writer::MinidumpWriter;
 use tracing::{error, info};
 
@@ -76,11 +76,11 @@ fn run() -> LauncherResult<()> {
 
         // TODO: debug issue with dep sorting
         //
-        // let ordered_natives = sort_dependencies(profile.natives())
-        //     .ok_or_eyre("failed to create dependency graph for natives")?;
-        //
-        // let ordered_packages = sort_dependencies(profile.packages())
-        //     .ok_or_eyre("failed to create dependency graph for packages")?;
+        let ordered_natives = sort_dependencies(profile.natives())
+            .ok_or_eyre("failed to create dependency graph for natives")?;
+
+        let ordered_packages = sort_dependencies(profile.packages())
+            .ok_or_eyre("failed to create dependency graph for packages")?;
 
         natives.extend(profile.natives());
         packages.extend(profile_packages);
@@ -190,11 +190,8 @@ fn install_tracing() {
         .init();
 }
 
-fn install_panic_hook() {}
-
 fn main() {
     install_tracing();
-    install_panic_hook();
 
     run().expect("Failed to successfully run launcher");
 }

@@ -31,7 +31,6 @@ impl<E: Into<eyre::Report>> From<E> for AttachError {
     }
 }
 
-
 #[derive(Debug, Deserialize, Serialize)]
 pub enum HostMessage {
     Attached,

@@ -92,9 +92,117 @@ pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Option<Vec<T>> {
         remaining.remove(&key);
     }
 
-    if !remaining.is_empty() {
-        panic!("Dependency Graph has cycles");
+    if sorter.len() > 0 {
+        return None;
     }
 
+    sorted.extend(
+        remaining
+            .into_iter()
+            .map(|key| all.remove(&key).expect("item already removed?")),
+    );
+
     Some(sorted)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::{sort_dependencies, Dependent};
+    use crate::package::{Package, PackageSource};
+
+    fn mock_package(
+        id: &str,
+        load_after: Vec<Dependent<String>>,
+        load_before: Vec<Dependent<String>>,
+    ) -> Package {
+        Package {
+            id: id.to_owned(),
+            source: PackageSource(PathBuf::from(id)),
+            load_after,
+            load_before,
+        }
+    }
+
+    #[test]
+    fn detect_cycles() {
+        let pkg1 = mock_package(
+            "pkg1",
+            vec![Dependent {
+                id: "pkg2".to_owned(),
+                optional: false,
+            }],
+            vec![],
+        );
+
+        let pkg2 = mock_package(
+            "pkg2",
+            vec![Dependent {
+                id: "pkg1".to_owned(),
+                optional: false,
+            }],
+            vec![],
+        );
+
+        assert!(sort_dependencies(vec![pkg1, pkg2]).is_none())
+    }
+
+    #[test]
+    fn loads_before_and_after() {
+        let pkg1 = mock_package(
+            "pkg1",
+            vec![Dependent {
+                id: "pkg2".to_owned(),
+                optional: false,
+            }],
+            vec![],
+        );
+
+        let pkg2 = mock_package("pkg2", vec![], vec![]);
+        let pkg3 = mock_package(
+            "pkg3",
+            vec![Dependent {
+                id: "pkg2".to_owned(),
+                optional: false,
+            }],
+            vec![Dependent {
+                id: "pkg1".to_owned(),
+                optional: false,
+            }],
+        );
+        let sorted_pkgs = sort_dependencies(vec![pkg1, pkg2, pkg3]).expect("failed to sort");
+
+        assert_eq!("pkg2", sorted_pkgs[0].id);
+        assert_eq!("pkg3", sorted_pkgs[1].id);
+        assert_eq!("pkg1", sorted_pkgs[2].id);
+    }
+
+    #[test]
+    fn loads_after() {
+        let pkg1 = mock_package(
+            "pkg1",
+            vec![Dependent {
+                id: "pkg2".to_owned(),
+                optional: false,
+            }],
+            vec![],
+        );
+
+        let pkg2 = mock_package("pkg2", vec![], vec![]);
+        let pkg3 = mock_package("pkg3", vec![], vec![]);
+        let sorted_pkgs = sort_dependencies(vec![pkg1, pkg2, pkg3]).expect("failed to sort");
+
+        assert_eq!("pkg2", sorted_pkgs[0].id);
+        assert_eq!("pkg1", sorted_pkgs[1].id);
+    }
+
+    #[test]
+    fn smoke_test() {
+        let pkg1 = mock_package("pkg1", vec![], vec![]);
+        let pkg2 = mock_package("pkg2", vec![], vec![]);
+        let pkg3 = mock_package("pkg3", vec![], vec![]);
+
+        sort_dependencies(vec![pkg1, pkg2, pkg3]).expect("failed to sort");
+    }
 }
