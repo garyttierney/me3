@@ -31,8 +31,9 @@ jobs:
           scoop install nsis
 
       - run: |
-          echo "version=$(cargo pkgid | cut -d '@' -f2)" >> $GITHUB_OUTPUT
+          echo "version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)" >> $GITHUB_OUTPUT
         id: get_version
+        shell: bash
 
       - name: Build installer
         run: makensis /DTARGET_DIR="${{ github.workspace }}\target\x86_64-pc-windows-msvc\release\" /DVERSION=${{ steps.get_version.outputs.version }} installer.nsi
