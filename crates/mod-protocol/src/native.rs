@@ -13,7 +13,7 @@ fn on() -> bool {
     true
 }
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub enum NativeInitializerCondition {
     #[serde(rename = "delay")]
     Delay { ms: usize },
@@ -21,7 +21,7 @@ pub enum NativeInitializerCondition {
     Function(String),
 }
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Native {
     /// Path to the DLL. Can be relative to the mod profile.
     path: PathBuf,

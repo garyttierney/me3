@@ -31,4 +31,4 @@ jobs:
           scoop install nsis
           
       - name: Build installer
-        run: makensis /DTARGET_DIR=target/x86_64-pc-windows-msvc/release /DVERSION=0.1.0 installer.nsi
+        run: makensis /DTARGET_DIR=${{ github.workspace }}/target/x86_64-pc-windows-msvc/release /DVERSION=0.1.0 installer.nsi

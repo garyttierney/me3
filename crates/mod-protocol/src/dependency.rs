@@ -10,7 +10,7 @@ use topological_sort::TopologicalSort;
 pub trait DependencyId: Eq + PartialEq + Hash + Clone {}
 impl<T: Eq + PartialEq + Hash + Clone + for<'de> Deserialize<'de> + Serialize> DependencyId for T {}
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Dependent<T: DependencyId> {
     id: T,
     optional: bool,

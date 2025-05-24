@@ -17,7 +17,7 @@ pub enum ModProfile {
     V1(ModProfileV1),
 }
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, JsonSchema)]
 pub enum Game {
     #[serde(rename = "elden-ring")]
     EldenRing,
@@ -29,7 +29,7 @@ pub enum Game {
     DarkSouls3,
 }
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Supports {
     #[serde(rename = "game")]
     game: Game,
@@ -60,15 +60,21 @@ impl ModProfile {
         }
     }
 
-    pub fn natives(&mut self) -> Vec<Native> {
+    pub fn supports(&self) -> Vec<Supports> {
         match self {
-            ModProfile::V1(v1) => v1.natives.drain(..).collect(),
+            ModProfile::V1(v1) => v1.supports.iter().cloned().collect(),
         }
     }
 
-    pub fn packages(&mut self) -> Vec<Package> {
+    pub fn natives(&self) -> Vec<Native> {
         match self {
-            ModProfile::V1(v1) => v1.packages.drain(..).collect(),
+            ModProfile::V1(v1) => v1.natives.iter().cloned().collect(),
+        }
+    }
+
+    pub fn packages(&self) -> Vec<Package> {
+        match self {
+            ModProfile::V1(v1) => v1.packages.iter().cloned().collect(),
         }
     }
 }
