@@ -12,11 +12,10 @@ use std::{
 use clap::{command, Parser};
 use crash_context::CrashContext;
 use eyre::OptionExt;
-use ipc_channel::ipc::{IpcError, IpcOneShotServer, IpcReceiver};
+use ipc_channel::ipc::{IpcError, IpcOneShotServer};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
-use me3_mod_protocol::{dependency::sort_dependencies, ModProfile};
-use minidump_writer::{minidump_writer::MinidumpWriter, MinidumpType};
-use minidumper::Server;
+use me3_mod_protocol::ModProfile;
+use minidump_writer::minidump_writer::MinidumpWriter;
 use tracing::{error, info};
 
 use crate::game::Game;
@@ -129,7 +128,7 @@ fn run() -> LauncherResult<()> {
                             .expect("system clock is broken")
                             .as_secs();
 
-                        let mut file = File::create_new(format!("me3_crash_{}.dmp", timestamp))
+                        let mut file = File::create_new(format!("me3_crash_{timestamp}.dmp"))
                             .expect("unable to create crash dump file");
 
                         MinidumpWriter::dump_crash_context(

@@ -48,7 +48,7 @@ impl ArchiveOverrideMapping {
         base_directory: P,
     ) -> Result<(), ArchiveOverrideMappingError> {
         let base_directory = normalize_path(base_directory.as_ref());
-        if (!base_directory.is_dir()) {
+        if !base_directory.is_dir() {
             return Err(ArchiveOverrideMappingError::InvalidDirectory(
                 base_directory.clone(),
             ));

@@ -15,7 +15,7 @@ use me3_launcher_attach_protocol::{
 };
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use tracing::info;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, FmtSubscriber};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
     diagnostics::HostTracingLayer,
@@ -41,8 +41,8 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     let AttachRequest { monitor_name, .. } = request;
 
     let socket = IpcSender::connect(monitor_name).unwrap();
-    let mut socket = Arc::new(Mutex::new(socket));
-    let mut crash_handler_socket = socket.clone();
+    let socket = Arc::new(Mutex::new(socket));
+    let crash_handler_socket = socket.clone();
 
     let crash_handler = crash_handler::CrashHandler::attach(unsafe {
         crash_handler::make_crash_event(move |crash_context: &crash_handler::CrashContext| {

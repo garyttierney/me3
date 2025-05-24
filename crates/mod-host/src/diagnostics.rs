@@ -1,13 +1,10 @@
-use std::{
-    fmt::Debug,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use ipc_channel::ipc::IpcSender;
 use me3_launcher_attach_protocol::HostMessage;
-use tracing::{field::AsField, span::Record, Id, Subscriber};
+use tracing::Subscriber;
 use tracing_subscriber::{
-    field::VisitOutput, fmt::format::JsonVisitor, layer::Context, registry::LookupSpan, Layer,
+    field::VisitOutput, fmt::format::JsonVisitor, registry::LookupSpan, Layer,
 };
 
 pub struct HostTracingLayer {

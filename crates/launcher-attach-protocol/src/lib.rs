@@ -1,6 +1,5 @@
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 
-use ipc_channel::ipc::IpcSender;
 use me3_mod_protocol::{native::Native, package::Package};
 use serde_derive::{Deserialize, Serialize};
 
@@ -13,7 +12,6 @@ pub struct AttachRequest {
 
     /// An ordered list of packages to be loaded on attach.
     pub packages: Vec<Package>,
-
 }
 
 #[derive(Deserialize, Serialize)]
@@ -28,7 +26,7 @@ pub struct AttachError(pub String);
 
 impl From<eyre::Report> for AttachError {
     fn from(value: eyre::Report) -> Self {
-        AttachError(format!("{:#?}", value ))
+        AttachError(format!("{value:#?}"))
     }
 }
 

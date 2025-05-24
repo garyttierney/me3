@@ -1,4 +1,4 @@
-use std::marker::{PhantomData, Tuple};
+use std::marker::Tuple;
 
 use seq_macro::seq;
 

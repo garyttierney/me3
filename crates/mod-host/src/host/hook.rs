@@ -1,8 +1,4 @@
-use std::{
-    marker::{PhantomData, Tuple},
-    mem::MaybeUninit,
-    sync::Arc,
-};
+use std::{marker::Tuple, mem::MaybeUninit, sync::Arc};
 
 use curried::Prepend;
 use retour::Function;

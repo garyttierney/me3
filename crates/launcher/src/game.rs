@@ -61,7 +61,10 @@ impl Game {
                 .ok_or_eyre("No symbol named `me_attach` found")?
         };
 
-        let response = payload.call(&request)?.inspect_err(|e| info!("{:#?}", e)).map_err(|e| eyre::eyre!(e.0))?;
+        let response = payload
+            .call(&request)?
+            .inspect_err(|e| info!("{:#?}", e))
+            .map_err(|e| eyre::eyre!(e.0))?;
 
         info!("Successfully attached");
 

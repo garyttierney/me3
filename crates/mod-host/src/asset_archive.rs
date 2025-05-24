@@ -1,9 +1,4 @@
-use std::{
-    cell::OnceCell,
-    fs::File,
-    io::Write,
-    sync::{Arc, LazyLock, Mutex},
-};
+use std::{cell::OnceCell, sync::Arc};
 
 use me3_mod_host_assets::{
     ffi::{get_dlwstring_contents, set_dlwstring_contents, DLWString},
@@ -17,10 +12,7 @@ use windows::{
     Win32::System::LibraryLoader::GetModuleHandleA,
 };
 
-use crate::{
-    detour::{Detour, DetourError},
-    host::ModHost,
-};
+use crate::{detour::Detour, host::ModHost};
 
 /// This is a heavily obfuscated std::basic_string replace-esque. It's only
 /// used when the game wants to expand a path as part of the archive lookup.
@@ -64,7 +56,7 @@ pub fn attach(host: &mut ModHost, mapping: Arc<ArchiveOverrideMapping>) -> Resul
         let mapping = mapping.clone();
 
         host.hook(wwise_hook_location())
-            .with_closure(move |ctx, p1, path, mut open_mode, p4, p5, p6| {
+            .with_closure(move |ctx, p1, path, open_mode, p4, p5, p6| {
                 let path_string = unsafe { path.to_string().unwrap() };
 
                 debug!("Wwise asset requested: {path_string}");
