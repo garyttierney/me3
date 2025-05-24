@@ -4,7 +4,7 @@
 !define PRODUCT_URL "https://github.com/garyttierney/me3"
 
 !ifndef TARGET_DIR
-  !define TARGET_DIR "target/x86_64-pc-windows-msvc/release"
+  !define TARGET_DIR "target/x86_64-pc-windows-msvc/release/"
 !endif
 
 !ifndef VERSION
@@ -43,8 +43,8 @@ Section "Main Application" SEC01
     SectionIn RO
 
     SetOutPath "$INSTDIR"
-    File "${TARGET_DIR}/me3-launcher.exe"
-    File "${TARGET_DIR}/me3_mod_host.dll"
+    File "${TARGET_DIR}me3-launcher.exe"
+    File "${TARGET_DIR}me3_mod_host.dll"
     File "LICENSE-APACHE"
     File "LICENSE-MIT"
     File "CHANGELOG.md"
