@@ -1,16 +1,29 @@
-use std::{io, path::PathBuf};
+use std::{
+    fs::File,
+    io,
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering::SeqCst},
+        Arc,
+    },
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use clap::{command, Parser};
+use crash_context::CrashContext;
 use eyre::OptionExt;
-use me3_launcher_attach_protocol::AttachRequest;
+use ipc_channel::ipc::{IpcError, IpcOneShotServer, IpcReceiver};
+use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
 use me3_mod_protocol::{dependency::sort_dependencies, ModProfile};
-use tracing::info;
+use minidump_writer::{minidump_writer::MinidumpWriter, MinidumpType};
+use minidumper::Server;
+use tracing::{error, info};
 
 use crate::game::Game;
 
 mod game;
 
-pub type LauncherResult<T> = color_eyre::Result<T>;
+pub type LauncherResult<T> = stable_eyre::Result<T>;
 
 /// Launch a Steam game with the me3 mod loader attached.
 #[derive(Parser, Debug)]
@@ -74,18 +87,81 @@ fn run() -> LauncherResult<()> {
         packages.extend(profile_packages);
     }
 
-    let request = AttachRequest { natives, packages };
+    let (monitor_server, monitor_name) = IpcOneShotServer::new()?;
+    let request = AttachRequest {
+        monitor_name,
+        natives,
+        packages,
+    };
 
     info!("Starting game at {:?} with DLL {:?}", args.exe, args.dll);
+
+    let shutdown_requested = Arc::new(AtomicBool::new(false));
 
     let game_path = args.exe.parent();
     let mut game = Game::launch(&args.exe, game_path)?;
 
+    let monitor_thread = std::thread::spawn(move || {
+        info!("Starting monitor thread");
+        let (receiver, client) = monitor_server.accept().unwrap();
+        info!("Host connected to monitor with message {:?}", client);
+
+        loop {
+            match receiver.recv() {
+                Ok(msg) => match msg {
+                    HostMessage::Trace(message) => {
+                        info!(message);
+                    }
+                    HostMessage::CrashDumpRequest {
+                        exception_pointers,
+                        process_id,
+                        thread_id,
+                        exception_code,
+                    } => {
+                        info!(
+                            "Host requested a crashdump for exception {:x}",
+                            exception_code
+                        );
+
+                        let start = SystemTime::now();
+                        let timestamp = start
+                            .duration_since(UNIX_EPOCH)
+                            .expect("system clock is broken")
+                            .as_secs();
+
+                        let mut file = File::create_new(format!("me3_crash_{}.dmp", timestamp))
+                            .expect("unable to create crash dump file");
+
+                        MinidumpWriter::dump_crash_context(
+                            CrashContext {
+                                exception_pointers: unsafe { exception_pointers as *const _ },
+                                exception_code,
+                                process_id,
+                                thread_id,
+                            },
+                            None,
+                            &mut file,
+                        )
+                        .expect("faild to write crash dump to file");
+                    }
+                    HostMessage::Attached => info!("Attach completed"),
+                },
+                Err(IpcError::Disconnected) => break,
+                Err(e) => {
+                    error!("Error from monitor channel {:?}", e);
+                    break;
+                }
+            }
+        }
+    });
+
     if let Err(e) = game.attach(&args.dll, request) {
-        println!("Attach error: {e:?}");
+        println!("Failed to attach to game: {e:?}");
     }
 
     game.join();
+    shutdown_requested.store(true, SeqCst);
+    monitor_thread.join();
 
     Ok(())
 }
@@ -115,12 +191,7 @@ fn install_tracing() {
         .init();
 }
 
-fn install_panic_hook() {
-    let _ = color_eyre::config::HookBuilder::default()
-        .issue_url(concat!(env!("CARGO_PKG_REPOSITORY"), "/issues/new"))
-        .add_issue_metadata("version", env!("CARGO_PKG_VERSION"))
-        .install();
-}
+fn install_panic_hook() {}
 
 fn main() {
     install_tracing();

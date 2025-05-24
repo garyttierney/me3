@@ -29,7 +29,7 @@ pub type ExpandArchivePathFn = extern "C" fn(*mut DLWString, usize, usize, usize
 /// This function is part of FS's implementation of IAkLowLevelIOHook.
 pub type WwisePathFn = extern "C" fn(usize, PCWSTR, u64, usize, usize, usize) -> usize;
 
-pub fn attach(host: &mut ModHost, mapping: Arc<ArchiveOverrideMapping>) -> Result<(), DetourError> {
+pub fn attach(host: &mut ModHost, mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Error> {
     let asset_hook_instance: Arc<OnceCell<Arc<Detour<ExpandArchivePathFn>>>> = Default::default();
     let asset_hook = {
         let mapping = mapping.clone();

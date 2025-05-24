@@ -1,8 +1,9 @@
 [workspace]
 members = [
     "crates/launcher",
-    "crates/launcher-attach-protocol", 
+    "crates/launcher-attach-protocol",
     "crates/mod-host",
+    "crates/mod-host-watchdog",
     "crates/mod-protocol",
     "crates/mod-host-assets",
     "crates/binary-mapper",
@@ -19,8 +20,11 @@ license = "MIT OR Apache-2.0"
 unused = "warn"
 
 [workspace.dependencies]
+crash-context = "0.6.3"
 dll-syringe = "0.15"
 expect-test = "1.5.0"
+ipc-channel = "0.18"
+minidumper = "0.8"
 me3-launcher-attach-protocol = { path = "crates/launcher-attach-protocol" }
 me3-mod-host = { path = "crates/mod-host" }
 me3-mod-protocol = { path = "crates/mod-protocol" }
