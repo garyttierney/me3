@@ -26,9 +26,13 @@ impl<F: Function> Detour<F> {
     pub fn trampoline(&self) -> F {
         unsafe { F::from_ptr(self.detour.trampoline() as *const _) }
     }
+}
 
-    pub fn untyped(self) -> UntypedDetour {
-        unsafe { std::mem::transmute(self) }
+impl<F: Function> Drop for Detour<F> {
+    fn drop(&mut self) {
+        unsafe {
+            let _ = self.disable();
+        }
     }
 }
 

@@ -66,7 +66,7 @@ fn get_override<'a>(mapping: &'a ArchiveOverrideMapping, input: &str) -> Option<
 
 #[cfg(test)]
 mod test {
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
 
     use crate::{mapping::ArchiveOverrideMapping, wwise::find_override};
 

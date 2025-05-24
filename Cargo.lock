@@ -407,7 +407,7 @@ checksum = "8975ffdaa0ef3661bfe02dbdcc06c9f829dfafe6a3c474de366a8d5e44276921"
 [[package]]
 name = "dll-syringe"
 version = "0.15.2"
-source = "git+https://github.com/fry/dll-syringe.git#0a8b18efccbfd5b31553d7be8e8e48ecb1991ff4"
+source = "git+https://github.com/fry/dll-syringe.git?rev=0a8b18efccbfd5b31553d7be8e8e48ecb1991ff4#0a8b18efccbfd5b31553d7be8e8e48ecb1991ff4"
 dependencies = [
  "bincode",
  "cstr",
@@ -694,9 +694,9 @@ dependencies = [
 
 [[package]]
 name = "ipc-channel"
-version = "0.18.3"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7f4c80f2df4fc64fb7fc2cff69fc034af26e6e6617ea9f1313131af464b9ca0"
+checksum = "6fb8251fb7bcd9ccd3725ed8deae9fe7db8e586495c9eb5b0c52e6233e5e75ea"
 dependencies = [
  "bincode",
  "crossbeam-channel",
@@ -910,13 +910,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "me3-mod-host-watchdog"
-version = "0.1.0"
-dependencies = [
- "minidumper",
-]
-
-[[package]]
 name = "me3-mod-protocol"
 version = "0.1.0"
 dependencies = [
@@ -1085,14 +1078,14 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "1.0.3"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2886843bf800fba2e3377cff24abf6379b4c4d5c6681eaf9ea5b0d15090450bd"
+checksum = "78bed444cc8a2160f01cbcf811ef18cac863ad68ae8ca62092e8db51d51c761c"
 dependencies = [
  "libc",
  "log",
  "wasi 0.11.0+wasi-snapshot-preview1",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

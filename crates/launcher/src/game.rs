@@ -71,65 +71,6 @@ impl Game {
         Ok(response)
     }
 
-    // pub fn metadata(&self) -> LauncherResult<ImageMetadata> {
-    //     let mut pbi: PROCESS_BASIC_INFORMATION = unsafe { mem::zeroed() };
-
-    //     unsafe {
-    //         let result = NtQueryInformationProcess(
-    //             self.info.hProcess,
-    //             ProcessBasicInformation,
-    //             addr_of_mut!(pbi).cast(),
-    //             size_of::<PROCESS_BASIC_INFORMATION>() as u32,
-    //             null_mut(),
-    //         );
-
-    //         if result == 0 {
-    //             bail!("NtQueryInformationProcess");
-    //         }
-
-    //         let peb = remote_ptr::read_ptr(self.info.hProcess, pbi.PebBaseAddress)?;
-
-    //         ImageMetadata::new(self.info.hProcess, peb)
-    //     }
-    //     // Pointer to IMAGE_DOS_HEADER is at PEB+0x10
-    // }
-
-    // pub fn virtual_alloc(&self, requested_size: usize) -> LauncherResult<RemoteAllocator> {
-    //     let allocation = unsafe {
-    //         VirtualAllocEx(
-    //             self.info.hProcess,
-    //             null(),
-    //             requested_size,
-    //             MEM_COMMIT | MEM_RESERVE,
-    //             PAGE_READWRITE,
-    //         )
-    //     };
-
-    //     if allocation.is_null() {
-    //         bail!("VirtualAllocEx failure");
-    //     }
-
-    //     let mut mbi: MEMORY_BASIC_INFORMATION = unsafe { mem::zeroed() };
-    //     let mbi_read = unsafe {
-    //         VirtualQueryEx(
-    //             self.info.hProcess,
-    //             allocation,
-    //             &mut mbi,
-    //             size_of::<MEMORY_BASIC_INFORMATION>(),
-    //         )
-    //     };
-
-    //     if mbi_read == 0 {
-    //         bail!("VirtualQueryEx failure");
-    //     }
-
-    //     Ok(RemoteAllocator::new(
-    //         self.info.hProcess,
-    //         allocation.cast(),
-    //         mbi.RegionSize,
-    //     ))
-    // }
-
     pub fn join(mut self) {
         let _ = self.child.wait();
     }

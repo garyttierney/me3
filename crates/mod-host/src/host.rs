@@ -32,6 +32,7 @@ impl Debug for ModHost {
     }
 }
 
+#[allow(unused)]
 impl ModHost {
     pub fn new(crash_handler: CrashHandler, thunk_pool: ThunkPool) -> Self {
         Self {

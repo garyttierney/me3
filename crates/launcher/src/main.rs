@@ -65,7 +65,6 @@ fn run() -> LauncherResult<()> {
             .ok_or_eyre("failed to acquire base directory for mod profile")?;
 
         let mut profile = ModProfile::from_file(&path)?;
-
         let mut profile_packages = profile.packages();
 
         // Make relative paths absolute
@@ -74,16 +73,14 @@ fn run() -> LauncherResult<()> {
             .filter(|e| e.is_relative())
             .for_each(|e| e.make_absolute(base));
 
-        // TODO: debug issue with dep sorting
-        //
         let ordered_natives = sort_dependencies(profile.natives())
             .ok_or_eyre("failed to create dependency graph for natives")?;
 
         let ordered_packages = sort_dependencies(profile.packages())
             .ok_or_eyre("failed to create dependency graph for packages")?;
 
-        natives.extend(profile.natives());
-        packages.extend(profile_packages);
+        natives.extend(ordered_natives);
+        packages.extend(ordered_packages);
     }
 
     let (monitor_server, monitor_name) = IpcOneShotServer::new()?;
@@ -133,7 +130,7 @@ fn run() -> LauncherResult<()> {
 
                         MinidumpWriter::dump_crash_context(
                             CrashContext {
-                                exception_pointers: unsafe { exception_pointers as *const _ },
+                                exception_pointers: exception_pointers as *const _,
                                 exception_code,
                                 process_id,
                                 thread_id,
@@ -160,7 +157,7 @@ fn run() -> LauncherResult<()> {
 
     game.join();
     shutdown_requested.store(true, SeqCst);
-    monitor_thread.join();
+    let _ = monitor_thread.join();
 
     Ok(())
 }

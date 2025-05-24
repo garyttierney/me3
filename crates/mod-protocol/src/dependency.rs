@@ -92,7 +92,7 @@ pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Option<Vec<T>> {
         remaining.remove(&key);
     }
 
-    if sorter.len() > 0 {
+    if !sorter.is_empty() {
         return None;
     }
 

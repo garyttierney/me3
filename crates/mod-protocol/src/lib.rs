@@ -66,8 +66,6 @@ pub struct ModProfileV1 {
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::format;
-
     use expect_test::expect_file;
 
     use super::*;

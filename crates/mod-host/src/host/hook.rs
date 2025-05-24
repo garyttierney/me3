@@ -55,6 +55,7 @@ where
         }
     }
 
+    #[allow(unused)]
     pub fn with(self, source: F) -> Self {
         Self {
             source: Some(HookSource::FunctionPointer(source)),
@@ -87,7 +88,7 @@ where
             HookSource::Closure(closure) => {
                 let (thunk, thunk_trampoline_ptr) = self
                     .thunk_pool
-                    .get_with_data::<F, _>(closure, MaybeUninit::<F>::uninit())
+                    .get::<F, _>(closure, MaybeUninit::<F>::uninit())
                     .expect("no free thunks available in pool");
 
                 trampoline_ptr = Some(thunk_trampoline_ptr);

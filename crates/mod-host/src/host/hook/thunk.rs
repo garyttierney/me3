@@ -25,6 +25,7 @@ pub unsafe extern "C" fn thunk_info() -> *const ThunkInfo {
     naked_asm!("mov rax, gs:[0]", "ret")
 }
 
+#[allow(unused)]
 pub unsafe fn thunk_data<T>() -> Option<NonNull<T>> {
     thunk_info()
         .as_ref()
@@ -157,17 +158,7 @@ impl ThunkPool {
         })
     }
 
-    pub fn get<F: Function>(
-        &self,
-        closure: Box<dyn Fn<F::Arguments, Output = F::Output>>,
-    ) -> Option<F>
-    where
-        F::Arguments: Tuple,
-    {
-        self.get_with_data(closure, 0usize).map(|(thunk, _)| thunk)
-    }
-
-    pub fn get_with_data<F, T>(
+    pub fn get<F, T>(
         &self,
         boxed_closure: Box<dyn Fn<F::Arguments, Output = F::Output>>,
         extra_data: T,
@@ -237,7 +228,7 @@ mod test {
     fn test1() {
         let allocator = ThunkPool::new().expect("failed to create allocator");
         let (func, _) = allocator
-            .get_with_data::<extern "system" fn(i32) -> i32, ()>(Box::new(|value| value), ())
+            .get::<extern "system" fn(i32) -> i32, ()>(Box::new(|value| value), ())
             .expect("failed to get thunk");
 
         assert_eq!(1, func(1));
