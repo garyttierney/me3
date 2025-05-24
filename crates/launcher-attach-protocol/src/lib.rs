@@ -24,11 +24,13 @@ pub type AttachFunction = fn(AttachRequest) -> AttachResult;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AttachError(pub String);
 
-impl From<eyre::Report> for AttachError {
-    fn from(value: eyre::Report) -> Self {
-        AttachError(format!("{value:#?}"))
+impl<E: Into<eyre::Report>> From<E> for AttachError {
+    fn from(value: E) -> Self {
+        let err = value.into();
+        AttachError(format!("{err:#?}"))
     }
 }
+
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum HostMessage {

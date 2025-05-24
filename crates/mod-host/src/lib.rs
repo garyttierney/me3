@@ -76,10 +76,8 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     let mut host = ModHost::new(crash_handler, ThunkPool::new()?);
 
     let mut override_mapping = ArchiveOverrideMapping::default();
-    override_mapping
-        .scan_directories(request.packages.iter())
-        .map_err(|_| AttachError("Failed to scan asset folder. {e:?}".to_string()))?;
-    asset_archive::attach(&mut host, Arc::new(override_mapping));
+    override_mapping.scan_directories(request.packages.iter())?;
+    asset_archive::attach(&mut host, Arc::new(override_mapping))?;
 
     host.attach();
 
