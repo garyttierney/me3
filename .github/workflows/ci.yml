@@ -25,7 +25,10 @@ jobs:
           sudo apt install --install-recommends winehq-stable lld
           set -eux
           cargo install xwin
+
           xwin --accept-license splat --output "${{ github.workspace }}/xwin"
+          echo "CFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS" >> "$GITHUB_ENV"
+          echo "CXXFLAGS_x86_64_pc_windows_msv=$CL_FLAGS" >> "$GITHUB_ENV"
           cat > ~/.cargo/config.toml <<EOF
             [target.x86_64-pc-windows-msvc]
             linker = "lld"
@@ -37,4 +40,14 @@ jobs:
             ]
           EOF
         if: matrix.os == 'ubuntu-latest'
+        env:
+          CC_x86_64_pc_windows_msvc: clang-cl
+          CXX_x86_64_pc_windows_msvc: clang-cl
+          CL_FLAGS: >-
+            -Wno-unused-command-line-argument -fuse-ld=lld-link 
+            /imsvc${{ github.workspace }}/xwin/crt/include 
+            /imsvc${{ github.workspace }}/xwin/sdk/include/ucrt 
+            /imsvc${{ github.workspace }}/xwin/sdk/include/um 
+            /imsvc${{ github.workspace }}/xwin/sdk/include/shared 
+            /EHsc"
       - run: cargo test --all-features
