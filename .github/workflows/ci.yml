@@ -31,12 +31,16 @@ jobs:
           echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS" >> "$GITHUB_ENV"
           cat > ~/.cargo/config.toml <<EOF
             [target.x86_64-pc-windows-msvc]
-            linker = "lld"
+            linker = "lld-link"
             runner = ["env", "WINEDEBUG=-all", "wine"]
             rustflags = [
                 "-Lnative=${{ github.workspace }}/xwin/crt/lib/x86_64",
                 "-Lnative=${{ github.workspace }}/xwin/sdk/lib/um/x86_64",
-                "-Lnative=${{ github.workspace }}/xwin/sdk/lib/ucrt/x86_64"
+                "-Lnative=${{ github.workspace }}/xwin/sdk/lib/ucrt/x86_64",
+                "-C",
+                "target-feature=+crt-static",
+                "--cfg", "windows_raw_dylib",
+                "--cfg", "windows_debugger_visualizer"
             ]
           EOF
         if: matrix.os == 'ubuntu-latest'
