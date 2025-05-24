@@ -17,6 +17,27 @@ pub enum ModProfile {
     V1(ModProfileV1),
 }
 
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub enum Game {
+    #[serde(rename = "elden-ring")]
+    EldenRing,
+
+    #[serde(rename = "sekiro")]
+    Sekiro,
+
+    #[serde(rename = "dark-souls-3")]
+    DarkSouls3,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct Supports {
+    #[serde(rename = "game")]
+    game: Game,
+
+    #[serde(rename = "since")]
+    since_version: String,
+}
+
 impl Default for ModProfile {
     fn default() -> Self {
         ModProfile::V1(ModProfileV1::default())
@@ -54,6 +75,10 @@ impl ModProfile {
 
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct ModProfileV1 {
+    /// The games that this profile supports.
+    #[serde(default)]
+    supports: Vec<Supports>,
+
     /// Native modules (DLLs) that will be loaded.
     #[serde(default)]
     natives: Vec<Native>,

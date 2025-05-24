@@ -4,7 +4,9 @@
   "oneOf": [
     {
       "type": "object",
-      "required": ["profileVersion"],
+      "required": [
+        "profileVersion"
+      ],
       "properties": {
         "natives": {
           "description": "Native modules (DLLs) that will be loaded.",
@@ -24,7 +26,17 @@
         },
         "profileVersion": {
           "type": "string",
-          "enum": ["v1"]
+          "enum": [
+            "v1"
+          ]
+        },
+        "supports": {
+          "description": "The games that this profile supports.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Supports"
+          }
         }
       }
     }
@@ -32,7 +44,10 @@
   "definitions": {
     "Dependent_for_String": {
       "type": "object",
-      "required": ["id", "optional"],
+      "required": [
+        "id",
+        "optional"
+      ],
       "properties": {
         "id": {
           "type": "string"
@@ -42,9 +57,19 @@
         }
       }
     },
+    "Game": {
+      "type": "string",
+      "enum": [
+        "elden-ring",
+        "sekiro",
+        "dark-souls-3"
+      ]
+    },
     "Native": {
       "type": "object",
-      "required": ["path"],
+      "required": [
+        "path"
+      ],
       "properties": {
         "enabled": {
           "description": "Should this native be loaded?",
@@ -53,7 +78,10 @@
         },
         "finalizer": {
           "description": "An optional symbol to be called when this native successfully is queued for unload.",
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "initializer": {
           "description": "An optional symbol to be called after this native succesfully loads.",
@@ -95,11 +123,15 @@
       "oneOf": [
         {
           "type": "object",
-          "required": ["delay"],
+          "required": [
+            "delay"
+          ],
           "properties": {
             "delay": {
               "type": "object",
-              "required": ["ms"],
+              "required": [
+                "ms"
+              ],
               "properties": {
                 "ms": {
                   "type": "integer",
@@ -113,7 +145,9 @@
         },
         {
           "type": "object",
-          "required": ["function"],
+          "required": [
+            "function"
+          ],
           "properties": {
             "function": {
               "type": "string"
@@ -126,7 +160,10 @@
     "Package": {
       "description": "A package is a source for files that override files within the existing games DVDBND archives. It points to a local path containing assets matching the hierarchy they would be served under in the DVDBND.",
       "type": "object",
-      "required": ["id", "source"],
+      "required": [
+        "id",
+        "source"
+      ],
       "properties": {
         "id": {
           "description": "The unique identifier for this package..",
@@ -161,6 +198,21 @@
     "PackageSource": {
       "description": "A filesystem path to the contents of a package. May be relative to the [ModProfile] containing it.",
       "type": "string"
+    },
+    "Supports": {
+      "type": "object",
+      "required": [
+        "game",
+        "since"
+      ],
+      "properties": {
+        "game": {
+          "$ref": "#/definitions/Game"
+        },
+        "since": {
+          "type": "string"
+        }
+      }
     }
   }
 }
