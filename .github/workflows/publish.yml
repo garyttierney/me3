@@ -1,0 +1,34 @@
+on:
+  push:
+    branches:
+      - release-process
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+            cache-on-failure: true
+      - run: cargo build --target x86_64-pc-windows-msvc --all --release
+
+      - run: |
+          ls target/
+          ls target/release
+          ls target/x86_64-pc-windows-msvc/release
+
+      - name: Install NSIS
+        run: |
+          iwr -useb get.scoop.sh -outfile 'install.ps1'
+          .\install.ps1 -RunAsAdmin
+          scoop update
+          scoop bucket add extras
+          scoop install nsis
+          
+      - name: Build installer
+        run: makensis /DTARGET_DIR=target/x86_64-pc-windows-msvc/release /DVERSION=0.1.0 installer.nsi

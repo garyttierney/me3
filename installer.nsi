@@ -2,9 +2,15 @@
 
 !define PRODUCT "me3"
 !define PRODUCT_URL "https://github.com/garyttierney/me3"
-!ifndef VERSION
-!define VERSION unknown
+
+!ifndef TARGET_DIR
+  !define TARGET_DIR "target/x86_64-pc-windows-msvc/release"
 !endif
+
+!ifndef VERSION
+  !define VERSION unknown
+!endif
+
 !define MUI_ABORTWARNING
 
 Unicode true
@@ -37,8 +43,11 @@ Section "Main Application" SEC01
     SectionIn RO
 
     SetOutPath "$INSTDIR"
-    File "target/x86_64-pc-windows-msvc/release/me3-launcher.exe"
-    File "target/x86_64-pc-windows-msvc/release/me3_mod_host.dll"
+    File "${TARGET_DIR}/me3-launcher.exe"
+    File "${TARGET_DIR}/me3_mod_host.dll"
+    File "LICENSE-APACHE"
+    File "LICENSE-MIT"
+    File "CHANGELOG.md"
 
     WriteRegStr HKLM "$UNINSTALL_REG_KEY" "DisplayName" "me3"
     WriteRegStr HKLM "$UNINSTALL_REG_KEY" "UninstallString" '"$INSTDIR\uninstall.exe"'
@@ -55,6 +64,9 @@ Section "Uninstall"
     Delete "$INSTDIR\me3-launcher.exe"
     Delete "$INSTDIR\me3_host.dll"
     Delete "$INSTDIR\uninstall.exe"
+    Delete "$INSTDIR\LICENSE-APACHE"
+    Delete "$INSTDIR\LICENSE-MIT"
+    Delete "$INSTDIR\CHANGELOG.md"
 
     RMDir "$INSTDIR"
 

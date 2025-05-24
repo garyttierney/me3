@@ -29,6 +29,8 @@ jobs:
           xwin --accept-license splat --output "${{ github.workspace }}/xwin"
           echo "CFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS" >> "$GITHUB_ENV"
           echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS" >> "$GITHUB_ENV"
+          echo "CC_x86_64_pc_windows_msvc=clang-cl" >> "$GITHUB_ENV"
+          echo "CXX_x86_64_pc_windows_msvc=clang-cl" >> "$GITHUB_ENV"
           cat > ~/.cargo/config.toml <<EOF
             [target.x86_64-pc-windows-msvc]
             linker = "lld-link"
@@ -45,8 +47,6 @@ jobs:
           EOF
         if: matrix.os == 'ubuntu-latest'
         env:
-          CC_x86_64_pc_windows_msvc: clang-cl
-          CXX_x86_64_pc_windows_msvc: clang-cl
           CL_FLAGS: >-
             -Wno-unused-command-line-argument -fuse-ld=lld-link 
             /imsvc${{ github.workspace }}/xwin/crt/include 
