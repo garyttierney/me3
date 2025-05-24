@@ -29,6 +29,15 @@ jobs:
           scoop update
           scoop bucket add extras
           scoop install nsis
-          
+
+      - run: |
+          echo "version=$(cargo pkgid | cut -d '@' -f2)" >> $GITHUB_OUTPUT
+        id: get_version
+
       - name: Build installer
-        run: makensis /DTARGET_DIR="${{ github.workspace }}\target\x86_64-pc-windows-msvc\release\" /DVERSION=0.1.0 installer.nsi
+        run: makensis /DTARGET_DIR="${{ github.workspace }}\target\x86_64-pc-windows-msvc\release\" /DVERSION=${{ steps.get_version.outputs.version }} installer.nsi
+      - name: "Upload installer"
+        uses: actions/upload-artifact@v4
+        with:
+          name: me3-installer-${{ steps.get_version.outputs.version }}
+          path: me3_installer_*.exe
