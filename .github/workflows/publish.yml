@@ -1,7 +1,8 @@
 on:
+  release:
+    types:
+      - created
   push:
-    branches:
-      - release-process
 
 name: Publishing
 concurrency:
@@ -12,7 +13,10 @@ jobs:
   publish-installer:
     name: Installer
     runs-on: windows-latest
-
+    permissions:
+      id-token: write
+      attestations: write
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -44,8 +48,18 @@ jobs:
 
       - name: Build installer
         run: makensis /DTARGET_DIR="${{ github.workspace }}\target\x86_64-pc-windows-msvc\release\" /DVERSION=${{ steps.get_version.outputs.version }} installer.nsi
-      - name: "Upload installer"
+
+      - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
           name: me3-installer-${{ steps.get_version.outputs.version }}
           path: me3_installer_*.exe
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: me3_installer_${{ steps.get_version.outputs.version }}.exe
+          
+      - name: Upload installer to release
+        run: gh release upload --clobber -R garyttierney/me3 ${{ github.event.release.name }} me3_installer_${{ steps.get_version.outputs.version }}.exe
+        if: ${{ github.event_name == 'release' }}
