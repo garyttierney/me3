@@ -1,7 +1,9 @@
 use std::{
+    env,
     fs::File,
     io,
     path::PathBuf,
+    process::exit,
     sync::{
         atomic::{AtomicBool, Ordering::SeqCst},
         Arc,
@@ -9,9 +11,8 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use clap::{command, Parser};
 use crash_context::CrashContext;
-use eyre::OptionExt;
+use eyre::{Context, OptionExt};
 use ipc_channel::ipc::{IpcError, IpcOneShotServer};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
 use me3_mod_protocol::{dependency::sort_dependencies, package::WithPackageSource, ModProfile};
@@ -25,28 +26,36 @@ mod game;
 pub type LauncherResult<T> = stable_eyre::Result<T>;
 
 /// Launch a Steam game with the me3 mod loader attached.
-#[derive(Parser, Debug)]
-#[command(version)]
 struct LauncherArgs {
     /// Path to the game EXE that should be launched.
-    #[arg(long, env("ME3_GAME_EXE"))]
     exe: PathBuf,
 
     /// Path to the me3 that should be attached to the game.
-    #[arg(long, env("ME3_DLL"))]
     dll: PathBuf,
 
     /// A list of paths to ModProfile configuration files.
-    #[arg(short, long, action = clap::ArgAction::Append)]
     profiles: Vec<PathBuf>,
+}
+
+impl LauncherArgs {
+    pub fn from_env() -> Result<Self, eyre::Error> {
+        let exe = PathBuf::from(env::var("ME3_GAME_EXE").wrap_err("game exe wasn't set")?);
+        let dll = PathBuf::from(env::var("ME3_DLL").wrap_err("me3 host dll wasn't set")?);
+        let profiles = env::args().skip(1).map(PathBuf::from).collect();
+
+        Ok(LauncherArgs { exe, dll, profiles })
+    }
 }
 
 fn run() -> LauncherResult<()> {
     info!("Launcher started");
 
-    let args = match LauncherArgs::try_parse() {
+    let args = match LauncherArgs::from_env() {
         Ok(args) => args,
-        Err(e) => e.exit(),
+        Err(e) => {
+            error!(%e);
+            exit(1)
+        }
     };
 
     if args.profiles.is_empty() {
