@@ -13,7 +13,7 @@ The easiest way to install me3 on Windows is by using the installer provided wit
     - Navigate to [GitHub releases](https://github.com/garyttierney/me3/releases/latest).
     - Find and download the `me3_installer` exe file.
 
-    !!! tip "Choosing a Release"
+    ???+ tip "Choosing a Release"
 
         It's recommended to use the latest stable release unless you have a specific reason to use an older version or a pre-release.
 
@@ -59,7 +59,7 @@ A **Mod Profile** tells me3 which mods to load and how to load them. These profi
     # optional = true
     ```
 
-    !!! tip "Understanding Paths"
+    ???+ tip "Understanding Paths"
 
         Any paths referenced in a mod profile (`source` in `[[packages]]` and `path` in `[[natives]]`) are relative to the location of the `.me3.toml` file itself
 
@@ -72,7 +72,7 @@ You can define two main types of mod entries:
 *   **Natives (`[[natives]]`)**: Use this to load custom DLL files (`.dll`) that inject new code or functionality into the game. Each native entry specifies the `path` to the DLL.
 
 
-!!! info "Advanced profile configuration"
+???+ info "Advanced profile configuration"
 
     The mod profile system is flexible and allows multiple profiles to specify dependencies between their packages and natives. For a complete list of all available options and their detailed descriptions, please    refer to the [configuration reference](./configuration-reference.md).
 
