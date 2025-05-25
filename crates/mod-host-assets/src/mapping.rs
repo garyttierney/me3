@@ -1,8 +1,10 @@
 use std::{
     collections::{HashMap, VecDeque},
+    ffi::OsString,
     fs::read_dir,
     os::windows::ffi::OsStrExt,
     path::{Path, PathBuf, StripPrefixError},
+    str::FromStr,
 };
 
 use me3_mod_protocol::package::AssetOverrideSource;
@@ -66,11 +68,11 @@ impl ArchiveOverrideMapping {
                 } else {
                     let override_path = normalize_path(dir_entry);
                     let vfs_path = path_to_asset_lookup_key(&base_directory, &override_path)?;
+                    let mut override_value = OsString::from_str("system:").unwrap();
+                    override_value.push(override_path.as_os_str());
 
-                    self.map.insert(
-                        vfs_path,
-                        override_path.into_os_string().encode_wide().collect(),
-                    );
+                    self.map
+                        .insert(vfs_path, override_value.encode_wide().collect());
                 }
             }
         }

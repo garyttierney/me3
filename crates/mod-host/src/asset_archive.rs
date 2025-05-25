@@ -47,6 +47,9 @@ pub fn attach(
                 debug!("Supplied override: {resource_path_string} -> {}", unsafe {
                     get_dlwstring_contents(path.as_ref().unwrap())
                 });
+
+                // Re-execut path normalization since we returned a system: prefix
+                (ctx.trampoline)(path, p2, p3, p4, p5, p6);
             }
         })
         .install()?;
