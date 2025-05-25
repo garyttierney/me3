@@ -14,7 +14,9 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: 
+          # - ubuntu-latest - todo: fix clang-cl under ubuntu builds
+          - windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -62,7 +64,17 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Build | Test
-        run: "cargo llvm-cov
-          --locked
-          --workspace
-          --lcov --output-path lcov.info"
+        run: |
+          cargo llvm-cov --workspace --locked nextest
+          cargo llvm-cov --workspace --locked report --codecov --output-path codecov.json
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          files: ./target/nextest/default/junit.xml
+          name: me3-windows-test-results
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: codecov.json
+          fail_ci_if_error: false
