@@ -16,10 +16,10 @@ theme:
     - search.suggest
     - search.share
     - navigation.sections
+    - navigation.indexes
     - navigation.tabs
     - navigation.tabs.sticky
     - toc.follow
-    - toc.integrate
   icon:
     repo: fontawesome/brands/github
   palette:
@@ -33,7 +33,7 @@ extra_javascript:
   - javascripts/readthedocs.js
 
 nav:
-  - index.md
+  - Home: index.md
   - Blog:
     - blog/index.md
 
