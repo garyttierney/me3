@@ -4,6 +4,7 @@ use std::{
     io,
     path::PathBuf,
     process::exit,
+    str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering::SeqCst},
         Arc,
@@ -17,13 +18,13 @@ use ipc_channel::ipc::{IpcError, IpcOneShotServer};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
 use me3_mod_protocol::{dependency::sort_dependencies, package::WithPackageSource, ModProfile};
 use minidump_writer::minidump_writer::MinidumpWriter;
-
+use sentry::types::Dsn;
 #[cfg(feature = "sentry")]
 use sentry::{
     protocol::{Attachment, AttachmentType, Event},
     Level,
 };
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::game::Game;
 
@@ -65,13 +66,19 @@ fn run() -> LauncherResult<()> {
     };
 
     #[cfg(feature = "sentry")]
-    let sentry = sentry::init((
-        env!("SENTRY_DSN"),
-        sentry::ClientOptions {
+    let _sentry = {
+        let sentry_dsn = option_env!("SENTRY_DSN").and_then(|dsn| Dsn::from_str(dsn).ok());
+
+        if sentry_dsn.is_none() {
+            warn!("No Sentry DSN provider, but crash reporting was enabled");
+        }
+
+        sentry::init(sentry::ClientOptions {
             release: sentry::release_name!(),
+            dsn: sentry_dsn,
             ..Default::default()
-        },
-    ));
+        })
+    };
 
     if args.profiles.is_empty() {
         info!("No profiles provided");
