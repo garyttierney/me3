@@ -12,6 +12,10 @@ env:
   RUST_BACKTRACE: 1
   RUSTUP_MAX_RETRIES: 10
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   cargo-deny:
     name: Check dependencies
