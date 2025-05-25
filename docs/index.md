@@ -2,6 +2,8 @@
 
 **me<sup>3</sup>** is a framework designed for runtime modification of games, with a focus on ELDEN RING and other titles from FROMSOFTWARE.
 
+[Download :fontawesome-solid-download:](https://github.com/garyttierney/me3){ .md-button .md-button--primary }
+
 ## Getting Started
 
 Check the guides below to find the most appropriate documentation for your use-case.

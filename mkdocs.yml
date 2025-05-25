@@ -71,7 +71,7 @@ nav:
   - Blog:
     - blog/index.md
   - Configuration reference: configuration-reference.md
-
+  - Download: https://github.com/garyttierney/me3/releases/latest
 
 plugins:
   - blog
