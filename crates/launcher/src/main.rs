@@ -61,6 +61,7 @@ fn run() -> LauncherResult<()> {
     for profile_path in args.profiles {
         let base = profile_path
             .parent()
+            .and_then(|parent| parent.canonicalize().ok())
             .ok_or_eyre("failed to acquire base directory for mod profile")?;
 
         let profile = ModProfile::from_file(&profile_path)?;
@@ -71,10 +72,10 @@ fn run() -> LauncherResult<()> {
 
         packages
             .iter_mut()
-            .for_each(|pkg| pkg.source_mut().make_absolute(base));
+            .for_each(|pkg| pkg.source_mut().make_absolute(&base));
         natives
             .iter_mut()
-            .for_each(|pkg| pkg.source_mut().make_absolute(base));
+            .for_each(|pkg| pkg.source_mut().make_absolute(&base));
     }
 
     let ordered_natives = sort_dependencies(all_natives)?;
