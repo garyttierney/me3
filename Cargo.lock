@@ -892,7 +892,7 @@ dependencies = [
  "retour",
  "seq-macro",
  "serde_json",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "tracing",
  "tracing-subscriber",
  "windows 0.54.0",
@@ -905,7 +905,7 @@ dependencies = [
  "cxx",
  "cxx-build",
  "me3-mod-protocol",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "tracing",
 ]
 
@@ -919,7 +919,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "serde_yaml",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "toml",
  "topological-sort",
 ]

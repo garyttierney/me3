@@ -5,10 +5,29 @@ use serde::{Deserialize, Serialize};
 
 use crate::dependency::{Dependency, Dependent};
 
+pub trait WithPackageSource {
+    fn source(&self) -> &ModFile;
+
+    fn source_mut(&mut self) -> &mut ModFile;
+}
+
 /// A filesystem path to the contents of a package. May be relative to the [ModProfile] containing
 /// it.
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-pub struct PackageSource(pub(crate) PathBuf);
+pub struct ModFile(pub(crate) PathBuf);
+
+impl ModFile {
+    /// Returns whether or not the package's source description is relative to the mod profile.
+    pub fn is_relative(&self) -> bool {
+        self.0.is_relative()
+    }
+
+    pub fn make_absolute(&mut self, base: &Path) {
+        if self.0.is_relative() {
+            self.0 = base.join(&self.0);
+        }
+    }
+}
 
 /// A package is a source for files that override files within the existing games DVDBND archives.
 /// It points to a local path containing assets matching the hierarchy they would be served under in
@@ -19,7 +38,7 @@ pub struct Package {
     pub(crate) id: String,
 
     /// A path to the source of this package.
-    pub(crate) source: PackageSource,
+    pub(crate) source: ModFile,
 
     /// A list of package IDs that this package should load after.
     #[serde(default)]
@@ -31,15 +50,20 @@ pub struct Package {
 }
 
 impl Package {
-    /// Returns whether or not the package's source description is relative to the mod profile.
-    pub fn is_relative(&self) -> bool {
-        self.source.0.is_relative()
-    }
-
     /// Makes the package's source absolute using a given base directory (this is usually the mod
     /// profile's parent path).
     pub fn make_absolute(&mut self, base: &Path) {
-        self.source = PackageSource(base.join(&self.source.0));
+        self.source = ModFile(base.join(&self.source.0));
+    }
+}
+
+impl WithPackageSource for Package {
+    fn source(&self) -> &ModFile {
+        &self.source
+    }
+
+    fn source_mut(&mut self) -> &mut ModFile {
+        &mut self.source
     }
 }
 

@@ -62,19 +62,19 @@ impl ModProfile {
 
     pub fn supports(&self) -> Vec<Supports> {
         match self {
-            ModProfile::V1(v1) => v1.supports.iter().cloned().collect(),
+            ModProfile::V1(v1) => v1.supports.to_vec(),
         }
     }
 
     pub fn natives(&self) -> Vec<Native> {
         match self {
-            ModProfile::V1(v1) => v1.natives.iter().cloned().collect(),
+            ModProfile::V1(v1) => v1.natives.to_vec(),
         }
     }
 
     pub fn packages(&self) -> Vec<Package> {
         match self {
-            ModProfile::V1(v1) => v1.packages.iter().cloned().collect(),
+            ModProfile::V1(v1) => v1.packages.to_vec(),
         }
     }
 }

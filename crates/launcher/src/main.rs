@@ -14,7 +14,7 @@ use crash_context::CrashContext;
 use eyre::OptionExt;
 use ipc_channel::ipc::{IpcError, IpcOneShotServer};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
-use me3_mod_protocol::{dependency::sort_dependencies, ModProfile};
+use me3_mod_protocol::{dependency::sort_dependencies, package::WithPackageSource, ModProfile};
 use minidump_writer::minidump_writer::MinidumpWriter;
 use tracing::{error, info};
 
@@ -55,39 +55,36 @@ fn run() -> LauncherResult<()> {
         info!("Loading profiles from {:?}", args.profiles);
     }
 
-    let mut natives = vec![];
-    let mut packages = vec![];
+    let all_natives = vec![];
+    let all_packages = vec![];
 
-    // TODO: merge
-    if let Some(path) = args.profiles.into_iter().next() {
-        let base = path
+    for profile_path in args.profiles {
+        let base = profile_path
             .parent()
             .ok_or_eyre("failed to acquire base directory for mod profile")?;
 
-        let mut profile = ModProfile::from_file(&path)?;
-        let mut profile_packages = profile.packages();
+        let profile = ModProfile::from_file(&profile_path)?;
+        // TODO: check profile.supports
 
-        // Make relative paths absolute
-        profile_packages
+        let mut packages = profile.packages();
+        let mut natives = profile.natives();
+
+        packages
             .iter_mut()
-            .filter(|e| e.is_relative())
-            .for_each(|e| e.make_absolute(base));
-
-        let ordered_natives = sort_dependencies(profile.natives())
-            .ok_or_eyre("failed to create dependency graph for natives")?;
-
-        let ordered_packages = sort_dependencies(profile.packages())
-            .ok_or_eyre("failed to create dependency graph for packages")?;
-
-        natives.extend(ordered_natives);
-        packages.extend(ordered_packages);
+            .for_each(|pkg| pkg.source_mut().make_absolute(base));
+        natives
+            .iter_mut()
+            .for_each(|pkg| pkg.source_mut().make_absolute(base));
     }
+
+    let ordered_natives = sort_dependencies(all_natives)?;
+    let ordered_packages = sort_dependencies(all_packages)?;
 
     let (monitor_server, monitor_name) = IpcOneShotServer::new()?;
     let request = AttachRequest {
         monitor_name,
-        natives,
-        packages,
+        natives: ordered_natives,
+        packages: ordered_packages,
     };
 
     info!("Starting game at {:?} with DLL {:?}", args.exe, args.dll);

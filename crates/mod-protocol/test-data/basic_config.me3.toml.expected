@@ -3,7 +3,9 @@ V1(
         supports: [],
         natives: [
             Native {
-                path: "my_native.dll",
+                path: ModFile(
+                    "my_native.dll",
+                ),
                 optional: true,
                 enabled: true,
                 load_before: [],
@@ -15,7 +17,7 @@ V1(
         packages: [
             Package {
                 id: "my-mod",
-                source: PackageSource(
+                source: ModFile(
                     "mod/",
                 ),
                 load_after: [],

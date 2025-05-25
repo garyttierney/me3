@@ -58,7 +58,16 @@ pub trait Dependency {
     fn loads_before(&self) -> &[Dependent<Self::UniqueId>];
 }
 
-pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Option<Vec<T>> {
+#[derive(Debug, thiserror::Error)]
+pub enum DependencyError<T: Dependency> {
+    #[error("Required dependency is unavailable: {0}")]
+    MissingDependency(T::UniqueId),
+
+    #[error("Dependencies resulted in cycles, remaining dependencies: {0:?}")]
+    Cyclic(Vec<T::UniqueId>),
+}
+
+pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Result<Vec<T>, DependencyError<T>> {
     let mut sorter = TopologicalSort::<T::UniqueId>::new();
     let mut all = HashMap::new();
     all.extend(items.into_iter().map(|item| (item.id(), item)));
@@ -67,7 +76,7 @@ pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Option<Vec<T>> {
         for dep in item.dependencies() {
             if !all.contains_key(&dep.id) {
                 if !dep.optional {
-                    panic!("Missing required dependency");
+                    return Err(DependencyError::MissingDependency(dep.id.clone()));
                 }
 
                 continue;
@@ -93,7 +102,7 @@ pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Option<Vec<T>> {
     }
 
     if !sorter.is_empty() {
-        return None;
+        return Err(DependencyError::Cyclic(remaining.into_iter().collect()));
     }
 
     sorted.extend(
@@ -102,7 +111,7 @@ pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Option<Vec<T>> {
             .map(|key| all.remove(&key).expect("item already removed?")),
     );
 
-    Some(sorted)
+    Ok(sorted)
 }
 
 #[cfg(test)]
@@ -110,7 +119,7 @@ mod tests {
     use std::path::PathBuf;
 
     use super::{sort_dependencies, Dependent};
-    use crate::package::{Package, PackageSource};
+    use crate::package::{ModFile, Package};
 
     fn mock_package(
         id: &str,
@@ -119,7 +128,7 @@ mod tests {
     ) -> Package {
         Package {
             id: id.to_owned(),
-            source: PackageSource(PathBuf::from(id)),
+            source: ModFile(PathBuf::from(id)),
             load_after,
             load_before,
         }
@@ -145,7 +154,7 @@ mod tests {
             vec![],
         );
 
-        assert!(sort_dependencies(vec![pkg1, pkg2]).is_none())
+        assert!(sort_dependencies(vec![pkg1, pkg2]).is_err())
     }
 
     #[test]

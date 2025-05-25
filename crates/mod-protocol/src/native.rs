@@ -1,9 +1,10 @@
-use std::path::PathBuf;
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::dependency::{Dependency, Dependent};
+use crate::{
+    dependency::{Dependency, Dependent},
+    package::{ModFile, WithPackageSource},
+};
 
 fn off() -> bool {
     false
@@ -24,7 +25,7 @@ pub enum NativeInitializerCondition {
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Native {
     /// Path to the DLL. Can be relative to the mod profile.
-    path: PathBuf,
+    path: ModFile,
 
     /// If this native fails to load and this vakye is false, treat it as a critical error.
     #[serde(default = "off")]
@@ -47,11 +48,22 @@ pub struct Native {
     finalizer: Option<String>,
 }
 
+impl WithPackageSource for Native {
+    fn source(&self) -> &crate::package::ModFile {
+        &self.path
+    }
+
+    fn source_mut(&mut self) -> &mut crate::package::ModFile {
+        &mut self.path
+    }
+}
+
 impl Dependency for Native {
     type UniqueId = String;
 
     fn id(&self) -> Self::UniqueId {
         self.path
+            .0
             .file_name()
             .map(|f| f.to_string_lossy().to_string())
             .expect("native had no file name")
