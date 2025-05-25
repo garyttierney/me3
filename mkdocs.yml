@@ -1,5 +1,5 @@
 # Define the site name
-site_name: me3
+site_name: me3 - FROMSOFTWARE mod loader
 
 # Set the site URL by using a Read the Docs environment variable:
 # https://docs.readthedocs.io/en/stable/reference/environment-variables.html

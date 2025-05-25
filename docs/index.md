@@ -1,3 +1,6 @@
+---
+comments: false
+---
 # Welcome to me3
 
 **me<sup>3</sup>** is a framework designed for runtime modification of games, with a focus on ELDEN RING and other titles from FROMSOFTWARE.
