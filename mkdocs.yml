@@ -39,6 +39,7 @@ nav:
     - Installation: getting-started.md
   - Blog:
     - blog/index.md
+  - Configuration reference: configuration-reference.md
 
 
 plugins:
