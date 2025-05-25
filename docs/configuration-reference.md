@@ -2,7 +2,7 @@
 
 ## Example configuration
 
-```toml
+``` toml
 profileVersion = "v1" # (1)!
 
 [[packages]] # (2)!
