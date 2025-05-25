@@ -18,7 +18,7 @@ if ! git diff --exit-code; then
     exit 1
 fi
 
-git worktree add mkrelease
+git worktree add -B "release-$tag_name" mkrelease HEAD
 (
     pushd mkrelease || exit 1
 
