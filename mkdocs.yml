@@ -10,6 +10,9 @@ theme:
   name: material
   features:
     - content.action.edit
+    - search.highlight
+    - search.suggest
+    - search.share
   icon:
     repo: fontawesome/brands/github
   palette:
@@ -22,8 +25,14 @@ edit_uri: edit/docs/docs/
 extra_javascript:
   - javascripts/readthedocs.js
 
+nav:
+  - index.md
+  - Blog:
+    - blog/index.md
+
+
 plugins:
   - blog
   - offline
   - meta
-  - git-authors
+  - search
