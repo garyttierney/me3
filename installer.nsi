@@ -45,7 +45,9 @@ Section "Main Application" SEC01
 
     SetOutPath "$INSTDIR"
     File "${TARGET_DIR}me3-launcher.exe"
+    File "${TARGET_DIR}me3_launcher.pdb"
     File "${TARGET_DIR}me3_mod_host.dll"
+    File "${TARGET_DIR}me3_mod_host.pdb"
     File "LICENSE-APACHE"
     File "LICENSE-MIT"
     File "CHANGELOG.md"
@@ -70,6 +72,7 @@ Section "Uninstall"
     Delete "$INSTDIR\LICENSE-APACHE"
     Delete "$INSTDIR\LICENSE-MIT"
     Delete "$INSTDIR\CHANGELOG.md"
+    Delete "$INSTDIR\*.pdb"
 
     RMDir "$INSTDIR"
 
