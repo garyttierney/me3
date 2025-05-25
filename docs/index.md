@@ -4,9 +4,9 @@
 
 ## Getting Started
 
-Ready to dive in? Here’s how you can get started with me3:
+Check the guides below to find the most appropriate documentation for your use-case.
 
-- **[Getting started](./getting-started.md)**: Learn how to install me3 and get started. For most users.
+- **[Getting started](./getting-started.md)**: Get started with running mods by installing me3. For most users.
 - **[Building from Source](./building-from-source.md)**: For developers, this guide will walk you through compiling me3.
 
 ## Key Features
