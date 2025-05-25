@@ -23,6 +23,7 @@ theme:
   icon:
     repo: fontawesome/brands/github
   palette:
+    primary: black
     scheme: slate
   # https://squidfunk.github.io/mkdocs-material/customization/
   custom_dir: docs/overrides
