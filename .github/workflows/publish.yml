@@ -84,10 +84,8 @@ jobs:
           SENTRY_PROJECT: me3
         with:
           release: "${{ github.event.release.tag_name }}"
-          sourcemaps: target/x86_64-pc-windows-msvc/release/
         if: github.event_name == 'release'
 
       - name: Upload debug symbols to sentry
         run: |
           sentry-cli debug-files upload --include-sources -o modengine -p me3 target/x86_64-pc-windows-msvc/release/
-        if: github.event_name == 'release'
