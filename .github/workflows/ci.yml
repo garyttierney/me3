@@ -68,15 +68,17 @@ jobs:
       - name: Build | Test
         run: |
           cargo llvm-cov --workspace --locked nextest
-          cargo llvm-cov --workspace --locked report --codecov --output-path codecov.json
+          cargo llvm-cov --locked report --codecov --output-path codecov.json
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/test-results-action@v1
         with:
           files: ./target/nextest/default/junit.xml
           name: me3-windows-test-results
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
           files: codecov.json
           fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
