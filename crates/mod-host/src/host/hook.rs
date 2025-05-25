@@ -2,7 +2,7 @@ use std::{marker::Tuple, mem::MaybeUninit, sync::Arc};
 
 use curried::Prepend;
 use retour::Function;
-use thunk::thunk_info;
+use thunk::{thunk_data, thunk_info};
 
 use crate::{
     detour::{install_detour, Detour, DetourError, UntypedDetour},
@@ -69,8 +69,8 @@ where
         C: Fn<<F::Arguments as Prepend<HookContext<F>>>::Output, Output = F::Output> + 'static,
     {
         let curried = curried::Curried::new(closure, || {
-            let thunk_info = unsafe { thunk_info().as_ref().unwrap() };
-            let trampoline = unsafe { F::from_ptr(thunk_info.trampoline()) };
+            let trampoline_ptr = unsafe { thunk_data::<F>().expect("no thunk data present") };
+            let trampoline = unsafe { F::from_ptr(trampoline_ptr.as_ptr() as *const _) };
 
             HookContext { trampoline }
         });
