@@ -63,6 +63,8 @@ jobs:
             /EHsc"
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@cargo-nextest
       - name: Build | Test
         run: |
           cargo llvm-cov --workspace --locked nextest
