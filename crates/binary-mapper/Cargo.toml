@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 repository.workspace = true
 license.workspace = true
+description = "Create a mapping of symbols for a game binary"
+[package.metadata.release]
+consolidate-commits = true
+shared-version = true
 
 [dependencies]
 pelite = "0.10"

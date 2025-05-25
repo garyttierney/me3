@@ -43,6 +43,17 @@ tracing-error = "0.2"
 tracing-subscriber = "0.3"
 tracing = "0.1"
 
+[workspace.metadata.release]
+shared-version = true
+consolidate-commits = true
+pre-release-replacements = [
+  {file="CHANGELOG.md", search="Unreleased", replace="{{version}}"},
+  {file="CHANGELOG.md", search="\\.\\.\\.HEAD", replace="...{{tag_name}}", exactly=1},
+  {file="CHANGELOG.md", search="ReleaseDate", replace="{{date}}"},
+  {file="CHANGELOG.md", search="<!-- next-header -->", replace="<!-- next-header -->\n\n## [Unreleased] - ReleaseDate", exactly=1},
+  {file="CHANGELOG.md", search="<!-- next-url -->", replace="<!-- next-url -->\n[Unreleased]: https://github.com/garyttierney/me3/compare/{{tag_name}}...HEAD", exactly=1},
+]
+
 [patch.crates-io]
 # MaybeUninit::uninit_array was removed in recent nightly. dll-syringe is yet to fix their usages.
 # PR with fix: https://github.com/OpenByteDev/dll-syringe/pull/35

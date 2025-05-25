@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 repository.workspace = true
 license.workspace = true
+description = "Host DLL providing game extension functionality"
+[package.metadata.release]
+consolidate-commits = true
+shared-version = true
 
 [lib]
 crate-type = ["cdylib"]

@@ -3,6 +3,11 @@ name = "me3-launcher"
 version.workspace = true
 repository.workspace = true
 edition.workspace = true
+license.workspace = true
+description = "Launcher for me3"
+[package.metadata.release]
+consolidate-commits = true
+shared-version = true
 
 [dependencies]
 stable-eyre = { version = "0.2" }

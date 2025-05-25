@@ -3,8 +3,12 @@ name = "me3-launcher-attach-protocol"
 edition = "2021"
 version.workspace = true
 repository.workspace = true
-
+license.workspace = true
+description = "Wire protocol for me3 launcher<->host traffic"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[package.metadata.release]
+consolidate-commits = true
+shared-version = true
 
 [dependencies]
 eyre = "0.6"

@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 repository.workspace = true
 license.workspace = true
+description = "Override game assets with local versions"
+[package.metadata.release]
+consolidate-commits = true
+shared-version = true
 
 [dependencies]
 cxx = { version = "1.0", features = ["c++17"] }
