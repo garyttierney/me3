@@ -3,12 +3,14 @@ on:
     branches:
       - release-process
 
+name: Publishing
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  publish-installer:
+    name: Installer
     runs-on: windows-latest
 
     steps:

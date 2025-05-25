@@ -6,12 +6,14 @@ on:
     branches:
       - main
 
+name: CI
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
+    name: Tests
     strategy:
       matrix:
         os: 
