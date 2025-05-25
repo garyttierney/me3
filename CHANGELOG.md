@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [v0.1.0] - 2025-05-25
+
 ### Added
 
 - Loading game assets from local disk by @vswarte in [#22](https://github.com/garyttierney/me3/issues/22)
@@ -16,3 +18,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Crash handling and host<->launcher log transport by @garyttierney in [#24](https://github.com/garyttierney/me3/issues/24)
 
 <!-- next-url -->
+[Unreleased]: https://github.com/assert-rs/predicates-rs/compare/v0.1.0...HEAD
