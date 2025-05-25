@@ -74,7 +74,7 @@ You can define two main types of mod entries:
 
 ???+ info "Advanced profile configuration"
 
-    The mod profile system is flexible and allows multiple profiles to specify dependencies between their packages and natives. For a complete list of all available options and their detailed descriptions, please    refer to the [configuration reference](./configuration-reference.md).
+    The mod profile system is flexible and allows multiple profiles to specify dependencies between their packages and natives. For a complete list of all available options and their detailed descriptions, please  refer to the [configuration reference](./configuration-reference.md).
 
 ## Running your mod profile
 
