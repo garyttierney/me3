@@ -6,7 +6,7 @@ on:
 
 name: Publishing
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.release.name || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -64,6 +64,8 @@ jobs:
 
       - name: Upload installer to release
         run: gh release upload --clobber -R garyttierney/me3 ${{ github.event.release.tag_name }} me3_installer_${{ steps.get_version.outputs.version }}.exe
+        env:
+          GH_TOKEN: ${{ github.token }}
         if: github.event_name == 'release'
 
       - name: Setup Sentry CLI

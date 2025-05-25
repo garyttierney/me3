@@ -35,7 +35,7 @@ git worktree add -B "release-$tag_name" mkrelease HEAD
 
     git add CHANGELOG.md && git commit -m "Release: $version"
 
-    git tag --sign -u 'gary.tierney@fastmail.com' -a "$tag_name" -m "$release_notes" --cleanup=verbatim
+    git tag --sign -a "$tag_name" -m "$release_notes" --cleanup=verbatim
     git push origin HEAD:main --force
     git push origin "$tag_name" --force
     gh release create --prerelease "$tag_name" --notes-from-tag --verify-tag
