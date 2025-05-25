@@ -1,22 +1,25 @@
 #!/bin/bash
 
-set -xe
+set -x
 
 trap "git worktree remove mkrelease || true" EXIT
 
-release_notes=$(awk '/^## /{f=1;next} f{if(/^## /){f=0;exit} print}' CHANGELOG.md)
-version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
-tag_name="v$version"
-
-if git rev-parse "$tag_name" >/dev/null 2>&1; then
-    echo "Tag already exists for $tag_name"
-    exit 1
-fi
-
-git fetch
-git worktree add -B "release-$tag_name" mkrelease origin/main
+git fetch origin main:main
+git worktree add -B "release-prep" mkrelease main
 (
     pushd mkrelease || exit 1
+
+    git fetch origin --tags
+    release_notes=$(awk '/^## /{f=1;next} f{if(/^## /){f=0;exit} print}' CHANGELOG.md)
+    version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
+    tag_name="v$version"
+
+    if git rev-parse "$tag_name" >/dev/null 2>&1; then
+        echo "Tag already exists for $tag_name"
+        exit 1
+    fi
+
+    git branch -m "release-$tag_name" -f
 
     readarray -t replacements < <(cargo metadata --format-version 1 | jq --compact-output '.metadata.release.pre_release_replacements[]')
 
@@ -26,9 +29,36 @@ git worktree add -B "release-$tag_name" mkrelease origin/main
         replacement=$(TAG_NAME="$tag_name" DATE=$(date +"%Y-%m-%d") envsubst <<<"$template")
         changelog=$(<CHANGELOG.md)
 
+        set +x
         echo "${changelog//"$search"/"$replacement"}" >CHANGELOG.md
+        set -x
     done
 
-    git add CHANGELOG.md && git commit -S -s -m "Release: $version" && git push origin "HEAD:release-$tag_name" --force
-    gh pr create -B main -b "$release_notes" --title "Release: $version"
+    git add CHANGELOG.md && git commit -S -s -m "Release: $version"
+    tag_sha=$(git rev-parse --verify HEAD)
+    read -r -d '' tag_command_template <<'EOF'
+---
+### Create and publish the tag:
+
+```
+git tag --sign -a $TAG_NAME $TAG_SHA
+git push origin $TAG_NAME
+gh release create $TAG_NAME --notes-from-tag --verify-tag
+git fetch origin main:main
+git merge -ff-only --into-name main "release-$TAG_NAME"
+```
+EOF
+
+    echo "$tag_command_template"
+    tag_command=$(TAG_NAME="$tag_name" TAG_SHA="$tag_sha" envsubst <<<"$tag_command_template")
+
+    cargo set-version --bump minor
+    new_version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
+
+    git add Cargo.* && git commit -S -s -m "Release: Start $new_version development"
+
+    if [ -n "$RELEASE_PUSH" ]; then 
+        git push origin "HEAD:release-$tag_name" --force
+        gh pr create -B main -b "$release_notes\n$tag_command" --title "Release: $version"
+    fi
 )
