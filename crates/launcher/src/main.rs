@@ -17,6 +17,12 @@ use ipc_channel::ipc::{IpcError, IpcOneShotServer};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
 use me3_mod_protocol::{dependency::sort_dependencies, package::WithPackageSource, ModProfile};
 use minidump_writer::minidump_writer::MinidumpWriter;
+
+#[cfg(feature = "sentry")]
+use sentry::{
+    protocol::{Attachment, AttachmentType, Event},
+    Level,
+};
 use tracing::{error, info};
 
 use crate::game::Game;
@@ -57,6 +63,15 @@ fn run() -> LauncherResult<()> {
             exit(1)
         }
     };
+
+    #[cfg(feature = "sentry")]
+    let sentry = sentry::init((
+        env!("SENTRY_DSN"),
+        sentry::ClientOptions {
+            release: sentry::release_name!(),
+            ..Default::default()
+        },
+    ));
 
     if args.profiles.is_empty() {
         info!("No profiles provided");
@@ -132,8 +147,9 @@ fn run() -> LauncherResult<()> {
                             .expect("system clock is broken")
                             .as_secs();
 
-                        let mut file = File::create_new(format!("me3_crash_{timestamp}.dmp"))
-                            .expect("unable to create crash dump file");
+                        let file_path = format!("me3_crash_{timestamp}.dmp");
+                        let mut file =
+                            File::create_new(&file_path).expect("unable to create crash dump file");
 
                         MinidumpWriter::dump_crash_context(
                             CrashContext {
@@ -146,6 +162,30 @@ fn run() -> LauncherResult<()> {
                             &mut file,
                         )
                         .expect("faild to write crash dump to file");
+
+                        #[cfg(feature = "sentry")]
+                        sentry::with_scope(
+                            move |scope| {
+                                // Remove event.process because this event came from the
+                                // main app process
+                                scope.remove_extra("event.process");
+
+                                if let Ok(buffer) = std::fs::read(&file_path) {
+                                    scope.add_attachment(Attachment {
+                                        buffer,
+                                        filename: "minidump.dmp".to_string(),
+                                        ty: Some(AttachmentType::Minidump),
+                                        ..Default::default()
+                                    });
+                                }
+                            },
+                            || {
+                                sentry::capture_event(Event {
+                                    level: Level::Fatal,
+                                    ..Default::default()
+                                })
+                            },
+                        );
                     }
                     HostMessage::Attached => info!("Attach completed"),
                 },
