@@ -47,6 +47,8 @@ plugins:
   - offline
   - meta
   - search
+
+markdown_extensions:
   - abbr
   - admonition
   - attr_list
