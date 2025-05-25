@@ -10,9 +10,16 @@ theme:
   name: material
   features:
     - content.action.edit
+    - content.action.view
+    - content.code.annotate
     - search.highlight
     - search.suggest
     - search.share
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - toc.follow
+    - toc.integrate
   icon:
     repo: fontawesome/brands/github
   palette:
