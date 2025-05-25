@@ -47,3 +47,8 @@ plugins:
   - offline
   - meta
   - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
