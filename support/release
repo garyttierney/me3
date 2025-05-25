@@ -1,0 +1,42 @@
+#!/bin/bash
+
+set -xe
+
+trap "git worktree remove mkrelease || true" EXIT
+
+release_notes=$(awk '/^## /{f=1;next} f{if(/^## /){f=0;exit} print}' CHANGELOG.md)
+version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
+tag_name="v$version"
+
+if git rev-parse "$tag_name" >/dev/null 2>&1; then
+    echo "Tag already exists for $tag_name"
+    exit 1
+fi
+
+if ! git diff --exit-code; then
+    echo "Local repository contains uncommitted changes"
+    exit 1
+fi
+
+git worktree add mkrelease
+(
+    pushd mkrelease || exit 1
+
+    readarray -t replacements < <(cargo metadata --format-version 1 | jq --compact-output '.metadata.release.pre_release_replacements[]')
+
+    for replacement_json in "${replacements[@]}"; do
+        search=$(echo "$replacement_json" | jq -r .search)
+        template=$(echo "$replacement_json" | jq -r .replace)
+        replacement=$(TAG_NAME="$tag_name" DATE=$(date +"%Y-%m-%d") envsubst <<<"$template")
+        changelog=$(<CHANGELOG.md)
+
+        echo "${changelog//"$search"/"$replacement"}" >CHANGELOG.md
+    done
+
+    git add CHANGELOG.md && git commit -m "Release: $version"
+
+    git tag --sign -u 'gary.tierney@fastmail.com' -a "$tag_name" -m "$release_notes" --cleanup=verbatim
+    git push origin HEAD:main --force
+    git push origin "$tag_name" --force
+    gh release create --prerelease "$tag_name" --notes-from-tag --verify-tag
+)

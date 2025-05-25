@@ -1,0 +1,8 @@
+#!/bin/bash
+
+TAG=$1
+if [ -z "$TAG" ]; then
+  echo "Usage: release-update-changelog <tag>"
+  exit 1
+fi
+
