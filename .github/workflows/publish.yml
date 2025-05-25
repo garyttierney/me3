@@ -87,4 +87,5 @@ jobs:
 
       - name: Upload debug symbols to sentry
         run: |
-          sentry-cli debug-files upload -o modengine -p me3
+          sentry-cli debug-files upload --include-sources -o modengine -p me3 target/x86_64-pc-windows-msvc/release/
+        if: github.event_name == 'release'
