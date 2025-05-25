@@ -65,6 +65,10 @@
         "dark-souls-3"
       ]
     },
+    "ModFile": {
+      "description": "A filesystem path to the contents of a package. May be relative to the [ModProfile] containing it.",
+      "type": "string"
+    },
     "Native": {
       "type": "object",
       "required": [
@@ -115,7 +119,11 @@
         },
         "path": {
           "description": "Path to the DLL. Can be relative to the mod profile.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/definitions/ModFile"
+            }
+          ]
         }
       }
     },
@@ -189,15 +197,11 @@
           "description": "A path to the source of this package.",
           "allOf": [
             {
-              "$ref": "#/definitions/PackageSource"
+              "$ref": "#/definitions/ModFile"
             }
           ]
         }
       }
-    },
-    "PackageSource": {
-      "description": "A filesystem path to the contents of a package. May be relative to the [ModProfile] containing it.",
-      "type": "string"
     },
     "Supports": {
       "type": "object",
