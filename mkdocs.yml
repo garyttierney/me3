@@ -35,6 +35,8 @@ extra_javascript:
 
 nav:
   - Home: index.md
+  - Getting started:
+    - Installation: getting-started.md
   - Blog:
     - blog/index.md
 

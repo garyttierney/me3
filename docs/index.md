@@ -1,17 +1,18 @@
-# Welcome to MkDocs
+# Welcome to me3
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+**me<sup>3</sup>** is a framework designed for runtime modification of games, with a focus on ELDEN RING and other titles from FROMSOFTWARE.
 
-## Commands
+## Getting Started
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+Ready to dive in? Here’s how you can get started with me3:
 
-## Project layout
+- **[Getting started](./getting-started.md)**: Learn how to install me3 and get started. For most users.
+- **[Building from Source](./building-from-source.md)**: For developers, this guide will walk you through compiling me3.
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+## Key Features
+
+- **Mod asset overrides**: Replace game assets with those from mod profiles.
+
+## Explore Further
+
+- **[Report a Bug or Request a Feature](https://github.com/garyttierney/me3/discussions)**: Have feedback or found an issue? Let us know on our GitHub discussions board.
