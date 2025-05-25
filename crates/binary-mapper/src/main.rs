@@ -81,7 +81,7 @@ fn main() {
         OutputFormat::Rust => {
             let lines = result
                 .iter()
-                .map(|r| format!("pub const RVA_{}: u32 = {:#x};", r.name, r.rva))
+                .map(|r| format!("pub const RVA_{}: isize = {:#x};", r.name, r.rva))
                 .collect::<Vec<_>>();
             println!("{}", lines.join("\n"));
         }

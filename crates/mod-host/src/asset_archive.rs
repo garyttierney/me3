@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ffi::c_void, sync::Arc};
 
 use me3_mod_host_assets::{
     ffi::{get_dlwstring_contents, set_dlwstring_contents, DLWString},
@@ -79,21 +79,22 @@ pub fn attach(
     Ok(())
 }
 
-fn game_base() -> isize {
+fn game_base() -> *const c_void {
     unsafe { GetModuleHandleA(PCSTR(std::ptr::null() as _)) }
         .expect("Could not retrieve game base for asset loader")
         .0
+        .cast()
 }
 
 fn asset_hook_location() -> ExpandArchivePathFn {
     unsafe {
-        std::mem::transmute::<isize, ExpandArchivePathFn>(game_base() + RVA_ASSET_LOOKUP as isize)
+        std::mem::transmute::<*const c_void, ExpandArchivePathFn>(game_base().offset(RVA_ASSET_LOOKUP))
     }
 }
 
 fn wwise_hook_location() -> WwisePathFn {
     unsafe {
-        std::mem::transmute::<isize, WwisePathFn>(game_base() + RVA_WWISE_ASSET_LOOKUP as isize)
+        std::mem::transmute::<*const  c_void, WwisePathFn>(game_base().offset(RVA_WWISE_ASSET_LOOKUP))
     }
 }
 
