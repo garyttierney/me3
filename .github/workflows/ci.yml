@@ -55,4 +55,10 @@ jobs:
             /imsvc${{ github.workspace }}/xwin/sdk/include/um 
             /imsvc${{ github.workspace }}/xwin/sdk/include/shared 
             /EHsc"
-      - run: cargo test --all-features
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Build | Test
+        run: "cargo llvm-cov
+          --locked
+          --workspace
+          --lcov --output-path lcov.info"

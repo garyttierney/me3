@@ -1,0 +1,94 @@
+name: Checks
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
+  CARGO_NET_RETRY: 10
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  RUSTUP_MAX_RETRIES: 10
+
+jobs:
+  cargo-deny:
+    name: Check dependencies
+    runs-on: windows-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly
+          targets: x86_64-pc-windows-msvc
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - run: cargo deny check
+
+  check_if_config_schema_up_to_date:
+    name: Check if config schema is up to date
+    runs-on: windows-latest
+    permissions:
+      checks: write
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup | Rust
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Setup | Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run | Generate Schema
+        run: cargo run --locked --package me3-mod-protocol --bin schema > schemas/mod-profile.json
+
+      - name: Check | Detect Changes
+        uses: reviewdog/action-suggester@v1.21.0
+        with:
+          tool_name: me3-mod-protocol schema
+          filter_mode: nofilter
+
+  clippy:
+    name: Clippy
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly
+          targets: x86_64-pc-windows-msvc
+          components: clippy
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: clippy-sarif, sarif-fmt
+      - run: cargo clippy --workspace --all-targets --all-features --message-format=json -- -Aunused | clippy-sarif | tee results.sarif | sarif-fmt
+        shell: bash
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+
+  fmt:
+    name: Formatting
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+          targets: x86_64-pc-windows-msvc
+      - run: cargo +nightly fmt --all --check
