@@ -29,6 +29,24 @@ git worktree add -B "release-$tag_name" mkrelease origin/main
         echo "${changelog//"$search"/"$replacement"}" >CHANGELOG.md
     done
 
-    git add CHANGELOG.md && git commit -S -s -m "Release: $version" && git push origin "HEAD:release-$tag_name" --force
-    gh pr create -B main -b "$release_notes" --title "Release: $version"
+    git add CHANGELOG.md && git commit -S -s -m "Release: $version\n$release_notes"
+    tag_sha=$(git rev-parse --verify HEAD)
+    read -r -d '' tag_command_template <<'EOF'
+# Create and publish the tag:
+
+```
+git tag --sign -a $TAG_NAME $TAG_SHA
+gh release create --prerelease $TAG_NAME --notes-from-tag --verify-tag
+```
+EOF
+
+    tag_command=$(TAG_NAME="$tag_name" TAG_SHA="$tag_sha" envsubst <<<"$tag_command_template")
+
+    cargo set-version --bump minor
+    new_version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
+
+    git add Cargo.* && git commit -S -s -m "Release: Start $new_version development"
+    git push origin "HEAD:release-$tag_name" --force
+
+    gh pr create -B main -b "$release_notes\n$tag_command" --title "Release: $version"
 )
