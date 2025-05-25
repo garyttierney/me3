@@ -1,7 +1,10 @@
 use std::{
+    env,
     fs::File,
     io,
     path::PathBuf,
+    process::exit,
+    str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering::SeqCst},
         Arc,
@@ -9,14 +12,19 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use clap::{command, Parser};
 use crash_context::CrashContext;
-use eyre::OptionExt;
+use eyre::{Context, OptionExt};
 use ipc_channel::ipc::{IpcError, IpcOneShotServer};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
 use me3_mod_protocol::{dependency::sort_dependencies, package::WithPackageSource, ModProfile};
 use minidump_writer::minidump_writer::MinidumpWriter;
-use tracing::{error, info};
+use sentry::types::Dsn;
+#[cfg(feature = "sentry")]
+use sentry::{
+    protocol::{Attachment, AttachmentType, Event},
+    Level,
+};
+use tracing::{error, info, warn};
 
 use crate::game::Game;
 
@@ -25,28 +33,51 @@ mod game;
 pub type LauncherResult<T> = stable_eyre::Result<T>;
 
 /// Launch a Steam game with the me3 mod loader attached.
-#[derive(Parser, Debug)]
-#[command(version)]
 struct LauncherArgs {
     /// Path to the game EXE that should be launched.
-    #[arg(long, env("ME3_GAME_EXE"))]
     exe: PathBuf,
 
     /// Path to the me3 that should be attached to the game.
-    #[arg(long, env("ME3_DLL"))]
     dll: PathBuf,
 
     /// A list of paths to ModProfile configuration files.
-    #[arg(short, long, action = clap::ArgAction::Append)]
     profiles: Vec<PathBuf>,
+}
+
+impl LauncherArgs {
+    pub fn from_env() -> Result<Self, eyre::Error> {
+        let exe = PathBuf::from(env::var("ME3_GAME_EXE").wrap_err("game exe wasn't set")?);
+        let dll = PathBuf::from(env::var("ME3_DLL").wrap_err("me3 host dll wasn't set")?);
+        let profiles = env::args().skip(1).map(PathBuf::from).collect();
+
+        Ok(LauncherArgs { exe, dll, profiles })
+    }
 }
 
 fn run() -> LauncherResult<()> {
     info!("Launcher started");
 
-    let args = match LauncherArgs::try_parse() {
+    let args = match LauncherArgs::from_env() {
         Ok(args) => args,
-        Err(e) => e.exit(),
+        Err(e) => {
+            error!(%e);
+            exit(1)
+        }
+    };
+
+    #[cfg(feature = "sentry")]
+    let _sentry = {
+        let sentry_dsn = option_env!("SENTRY_DSN").and_then(|dsn| Dsn::from_str(dsn).ok());
+
+        if sentry_dsn.is_none() {
+            warn!("No Sentry DSN provider, but crash reporting was enabled");
+        }
+
+        sentry::init(sentry::ClientOptions {
+            release: sentry::release_name!(),
+            dsn: sentry_dsn,
+            ..Default::default()
+        })
     };
 
     if args.profiles.is_empty() {
@@ -123,8 +154,9 @@ fn run() -> LauncherResult<()> {
                             .expect("system clock is broken")
                             .as_secs();
 
-                        let mut file = File::create_new(format!("me3_crash_{timestamp}.dmp"))
-                            .expect("unable to create crash dump file");
+                        let file_path = format!("me3_crash_{timestamp}.dmp");
+                        let mut file =
+                            File::create_new(&file_path).expect("unable to create crash dump file");
 
                         MinidumpWriter::dump_crash_context(
                             CrashContext {
@@ -137,6 +169,30 @@ fn run() -> LauncherResult<()> {
                             &mut file,
                         )
                         .expect("faild to write crash dump to file");
+
+                        #[cfg(feature = "sentry")]
+                        sentry::with_scope(
+                            move |scope| {
+                                // Remove event.process because this event came from the
+                                // main app process
+                                scope.remove_extra("event.process");
+
+                                if let Ok(buffer) = std::fs::read(&file_path) {
+                                    scope.add_attachment(Attachment {
+                                        buffer,
+                                        filename: "minidump.dmp".to_string(),
+                                        ty: Some(AttachmentType::Minidump),
+                                        ..Default::default()
+                                    });
+                                }
+                            },
+                            || {
+                                sentry::capture_event(Event {
+                                    level: Level::Fatal,
+                                    ..Default::default()
+                                })
+                            },
+                        );
                     }
                     HostMessage::Attached => info!("Attach completed"),
                 },

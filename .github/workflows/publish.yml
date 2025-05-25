@@ -1,7 +1,8 @@
 on:
+  release:
+    types:
+      - created
   push:
-    branches:
-      - release-process
 
 name: Publishing
 concurrency:
@@ -12,7 +13,10 @@ jobs:
   publish-installer:
     name: Installer
     runs-on: windows-latest
-
+    permissions:
+      id-token: write
+      attestations: write
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -21,8 +25,10 @@ jobs:
           targets: x86_64-pc-windows-msvc
       - uses: Swatinem/rust-cache@v2
         with:
-            cache-on-failure: true
-      - run: cargo build --target x86_64-pc-windows-msvc --all --release
+          cache-on-failure: true
+      - run: cargo build --target x86_64-pc-windows-msvc --all --release --features=sentry
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       - run: |
           ls target/
@@ -44,8 +50,42 @@ jobs:
 
       - name: Build installer
         run: makensis /DTARGET_DIR="${{ github.workspace }}\target\x86_64-pc-windows-msvc\release\" /DVERSION=${{ steps.get_version.outputs.version }} installer.nsi
-      - name: "Upload installer"
+
+      - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
           name: me3-installer-${{ steps.get_version.outputs.version }}
           path: me3_installer_*.exe
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: me3_installer_${{ steps.get_version.outputs.version }}.exe
+
+      - name: Upload installer to release
+        run: gh release upload --clobber -R garyttierney/me3 ${{ github.event.release.tag_name }} me3_installer_${{ steps.get_version.outputs.version }}.exe
+        if: github.event_name == 'release'
+
+      - name: Setup Sentry CLI
+        uses: matbour/setup-sentry-cli@v1
+        with:
+          version: latest # optional if 'latest'
+          token: ${{ secrets.SENTRY_AUTH_TOKEN }} # from GitHub secrets
+          organization: modengine
+          project: me3
+
+      - name: Create Sentry release
+        uses: getsentry/action-release@v3
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: modengine
+          SENTRY_PROJECT: me3
+        with:
+          release: "${{ github.event.release.tag_name }}"
+          sourcemaps: target/x86_64-pc-windows-msvc/release/
+        if: github.event_name == 'release'
+
+      - name: Upload debug symbols to sentry
+        run: |
+          sentry-cli debug-files upload --include-sources -o modengine -p me3 target/x86_64-pc-windows-msvc/release/
+        if: github.event_name == 'release'

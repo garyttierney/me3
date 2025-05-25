@@ -1,2 +1,6 @@
 /.idea/
+/mkrelease
 target/
+
+.errorviz-version
+*.log
