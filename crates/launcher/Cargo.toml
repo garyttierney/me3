@@ -8,7 +8,7 @@ description = "Launcher for me3"
 
 [features]
 sentry = ["dep:sentry"]
-default = []
+default = ["sentry"]
 
 [dependencies]
 stable-eyre = { version = "0.2" }

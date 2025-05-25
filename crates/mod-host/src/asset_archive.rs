@@ -88,13 +88,17 @@ fn game_base() -> *const c_void {
 
 fn asset_hook_location() -> ExpandArchivePathFn {
     unsafe {
-        std::mem::transmute::<*const c_void, ExpandArchivePathFn>(game_base().offset(RVA_ASSET_LOOKUP))
+        std::mem::transmute::<*const c_void, ExpandArchivePathFn>(
+            game_base().offset(RVA_ASSET_LOOKUP),
+        )
     }
 }
 
 fn wwise_hook_location() -> WwisePathFn {
     unsafe {
-        std::mem::transmute::<*const  c_void, WwisePathFn>(game_base().offset(RVA_WWISE_ASSET_LOOKUP))
+        std::mem::transmute::<*const c_void, WwisePathFn>(
+            game_base().offset(RVA_WWISE_ASSET_LOOKUP),
+        )
     }
 }
 
