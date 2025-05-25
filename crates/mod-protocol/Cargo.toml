@@ -6,10 +6,6 @@ repository.workspace = true
 license.workspace = true
 description = "Schema definition for me3 mod profiles"
 
-[package.metadata.release]
-consolidate-commits = true
-shared-version = true
-
 [dependencies]
 schemars.workspace = true
 serde.workspace = true

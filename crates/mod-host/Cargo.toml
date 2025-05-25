@@ -5,33 +5,27 @@ edition.workspace = true
 repository.workspace = true
 license.workspace = true
 description = "Host DLL providing game extension functionality"
-[package.metadata.release]
-consolidate-commits = true
-shared-version = true
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-dynasmrt = "2"
 crash-handler = "0.6"
 dll-syringe = { workspace = true, features = ["payload-utils"] }
 eyre = "0.6"
 iced-x86 = "1.21.0"
 ipc-channel.workspace = true
-futures-util = "0.3"
 me3-mod-protocol.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-host-assets.workspace = true
 retour = { git = "https://github.com/Hpmason/retour-rs", features = [
     "static-detour",
 ] }
-minidumper.workspace = true
 serde_json = "1"
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["json"] }
 thiserror.workspace = true
-windows = { version = "0.54", features = [
+windows = { version = "0.61", features = [
     "Win32_System_Memory",
     "Win32_System_Diagnostics_Debug",
     "Win32_System_Threading",
