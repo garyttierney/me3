@@ -21,7 +21,8 @@ theme:
     # - navigation.expand
     - navigation.footer
     - navigation.indexes
-    # - navigation.instant
+    - navigation.instant
+    - navigation.instant.preview
     # - navigation.instant.prefetch
     # - navigation.instant.progress
     # - navigation.prune
