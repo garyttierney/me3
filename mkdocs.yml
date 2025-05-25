@@ -49,6 +49,9 @@ plugins:
   - search
 
 markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
   - admonition
   - pymdownx.details
   - pymdownx.superfences
