@@ -4,7 +4,7 @@ This guide will help you get me3 installed and set up your first mod profile for
 
 ## Installation
 
-### Windows
+### :fontawesome-brands-windows: Windows
 
 The easiest way to install me3 on Windows is by using the installer provided with each release.
 
@@ -22,7 +22,7 @@ The easiest way to install me3 on Windows is by using the installer provided wit
     - Run the downloaded installer file.
     - Follow the on-screen instructions
 
-### Linux
+### :fontawesome-brands-linux: Linux
 
 !!! todo "Linux Installation Guide"
 
