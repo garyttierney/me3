@@ -13,12 +13,8 @@ if git rev-parse "$tag_name" >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! git diff --exit-code; then
-    echo "Local repository contains uncommitted changes"
-    exit 1
-fi
-
-git worktree add -B "release-$tag_name" mkrelease HEAD
+git fetch
+git worktree add -B "release-$tag_name" mkrelease origin/main
 (
     pushd mkrelease || exit 1
 
@@ -33,10 +29,6 @@ git worktree add -B "release-$tag_name" mkrelease HEAD
         echo "${changelog//"$search"/"$replacement"}" >CHANGELOG.md
     done
 
-    git add CHANGELOG.md && git commit -m "Release: $version"
-
-    git tag --sign -a "$tag_name" -m "$release_notes" --cleanup=verbatim
-    git push origin HEAD:main --force
-    git push origin "$tag_name" --force
-    gh release create --prerelease "$tag_name" --notes-from-tag --verify-tag
+    git add CHANGELOG.md && git commit -S -s -m "Release: $version" && git push origin "HEAD:release-$tag_name" --force
+    gh pr create -B main -b "$release_notes" --title "Release: $version"
 )
