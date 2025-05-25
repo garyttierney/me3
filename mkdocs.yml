@@ -3,7 +3,7 @@ site_name: me3
 
 # Set the site URL by using a Read the Docs environment variable:
 # https://docs.readthedocs.io/en/stable/reference/environment-variables.html
-# site_url: !ENV READTHEDOCS_CANONICAL_URL
+site_url: !ENV READTHEDOCS_CANONICAL_URL
 
 # Set the Material for MkDocs theme
 theme:
