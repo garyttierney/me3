@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  cargo-deny:
+  check-dependencies:
     name: Check dependencies
     runs-on: windows-latest
     permissions:
@@ -29,10 +29,8 @@ jobs:
           toolchain: nightly
           targets: x86_64-pc-windows-msvc
 
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-deny
-      - run: cargo deny check
+      - name: 'Dependency Review'
+        uses: actions/dependency-review-action@v4
 
   check_if_config_schema_up_to_date:
     name: Check if config schema is up to date
