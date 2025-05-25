@@ -3,14 +3,27 @@ site_name: me3
 
 # Set the site URL by using a Read the Docs environment variable:
 # https://docs.readthedocs.io/en/stable/reference/environment-variables.html
-site_url: !ENV READTHEDOCS_CANONICAL_URL
+# site_url: !ENV READTHEDOCS_CANONICAL_URL
 
 # Set the Material for MkDocs theme
 theme:
   name: material
+  features:
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    scheme: slate
   # https://squidfunk.github.io/mkdocs-material/customization/
   custom_dir: docs/overrides
-
+repo_url: https://github.com/garyttierney/me3
+edit_uri: edit/docs/docs/
 # Include extra JS to setup Read the Docs addons integrations
 extra_javascript:
   - javascripts/readthedocs.js
+
+plugins:
+  - blog
+  - offline
+  - meta
+  - git-authors
