@@ -13,29 +13,36 @@ use cxx_stl::{
 };
 use thiserror::Error;
 
+const UTF8: u8 = 0;
+const UTF16: u8 = 1;
+const ISO_8859: u8 = 2;
+const SJIS: u8 = 3;
+const EUC_JP: u8 = 4;
+const UTF32: u8 = 5;
+
 #[repr(u8)]
 #[allow(non_camel_case_types)]
 #[derive(Clone, Copy, Debug)]
 pub enum DLStringEncoding {
-    UTF8 = encoding::UTF8,
-    UTF16 = encoding::UTF16,
-    ISO_8859 = encoding::ISO_8859,
-    SJIS = encoding::SJIS,
-    EUC_JP = encoding::EUC_JP,
-    UTF32 = encoding::UTF32,
+    UTF8 = UTF8,
+    UTF16 = UTF16,
+    ISO_8859 = ISO_8859,
+    SJIS = SJIS,
+    EUC_JP = EUC_JP,
+    UTF32 = UTF32,
 }
 
-pub type DLStringUtf8<A> = DLString<CxxUtf8String<A>, { encoding::UTF8 }>;
+pub type DLStringUtf8<A> = DLString<CxxUtf8String<A>, { UTF8 }>;
 
-pub type DLStringUtf16<A> = DLString<CxxUtf16String<A>, { encoding::UTF16 }>;
+pub type DLStringUtf16<A> = DLString<CxxUtf16String<A>, { UTF16 }>;
 
-pub type DLStringIso8859<A> = DLString<CxxNarrowString<A>, { encoding::ISO_8859 }>;
+pub type DLStringIso8859<A> = DLString<CxxNarrowString<A>, { ISO_8859 }>;
 
-pub type DLStringSjis<A> = DLString<CxxNarrowString<A>, { encoding::SJIS }>;
+pub type DLStringSjis<A> = DLString<CxxNarrowString<A>, { SJIS }>;
 
-pub type DLStringEucJP<A> = DLString<CxxNarrowString<A>, { encoding::EUC_JP }>;
+pub type DLStringEucJP<A> = DLString<CxxNarrowString<A>, { EUC_JP }>;
 
-pub type DLStringUtf32<A> = DLString<CxxUtf32String<A>, { encoding::UTF32 }>;
+pub type DLStringUtf32<A> = DLString<CxxUtf32String<A>, { UTF32 }>;
 
 #[derive(Clone)]
 pub struct DLString<T, const E: u8> {
@@ -119,12 +126,12 @@ impl EncodingError {
 impl DLStringEncoding {
     const fn from_raw(value: u8) -> Result<Self, u8> {
         match value {
-            encoding::UTF8 => Ok(DLStringEncoding::UTF8),
-            encoding::UTF16 => Ok(DLStringEncoding::UTF16),
-            encoding::ISO_8859 => Ok(DLStringEncoding::ISO_8859),
-            encoding::SJIS => Ok(DLStringEncoding::SJIS),
-            encoding::EUC_JP => Ok(DLStringEncoding::EUC_JP),
-            encoding::UTF32 => Ok(DLStringEncoding::UTF32),
+            UTF8 => Ok(DLStringEncoding::UTF8),
+            UTF16 => Ok(DLStringEncoding::UTF16),
+            ISO_8859 => Ok(DLStringEncoding::ISO_8859),
+            SJIS => Ok(DLStringEncoding::SJIS),
+            EUC_JP => Ok(DLStringEncoding::EUC_JP),
+            UTF32 => Ok(DLStringEncoding::UTF32),
             value => Err(value),
         }
     }
@@ -136,13 +143,4 @@ impl TryFrom<u8> for DLStringEncoding {
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         Self::from_raw(value)
     }
-}
-
-pub mod encoding {
-    pub const UTF8: u8 = 0;
-    pub const UTF16: u8 = 1;
-    pub const ISO_8859: u8 = 2;
-    pub const SJIS: u8 = 3;
-    pub const EUC_JP: u8 = 4;
-    pub const UTF32: u8 = 5;
 }
