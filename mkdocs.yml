@@ -1,0 +1,111 @@
+# Define the site name
+site_name: me3 - FROMSOFTWARE mod loader
+
+# Set the site URL by using a Read the Docs environment variable:
+# https://docs.readthedocs.io/en/stable/reference/environment-variables.html
+site_url: !ENV READTHEDOCS_CANONICAL_URL
+
+# Set the Material for MkDocs theme
+theme:
+  name: material
+  features:
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    # - content.code.select
+    # - content.footnote.tooltips
+    # - content.tabs.link
+    - content.tooltips
+    # - header.autohide
+    # - navigation.expand
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.preview
+    # - navigation.instant.prefetch
+    # - navigation.instant.progress
+    # - navigation.prune
+    - navigation.sections
+    - navigation.tabs
+    # - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/link
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/toggle-switch-off
+        name: Switch to system preference
+  # https://squidfunk.github.io/mkdocs-material/customization/
+  custom_dir: docs/overrides
+repo_url: https://github.com/garyttierney/me3
+edit_uri: edit/docs/docs/
+# Include extra JS to setup Read the Docs addons integrations
+extra_javascript:
+  - javascripts/readthedocs.js
+
+nav:
+  - Home: index.md
+  - Getting started:
+    - Installation: getting-started.md
+  - Blog:
+    - blog/index.md
+  - Configuration reference: configuration-reference.md
+  - Download: https://github.com/garyttierney/me3/releases/latest
+
+plugins:
+  - blog
+  - offline
+  - meta
+  - search
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
