@@ -1,6 +1,7 @@
 ---
 comments: false
 ---
+
 # Welcome to me3
 
 **me<sup>3</sup>** is a framework designed for runtime modification of games, with a focus on ELDEN RING and other titles from FROMSOFTWARE.
@@ -11,8 +12,8 @@ comments: false
 
 Check the guides below to find the most appropriate documentation for your use-case.
 
-- **[Getting started](./getting-started.md)**: Get started with running mods by installing me3. For most users.
-- **[Building from Source](./building-from-source.md)**: For developers, this guide will walk you through compiling me3.
+- **[Getting started](./user-guide/installation.md)**: Get started with running mods by installing me3. For most users.
+- **[Building from source](./building-from-source.md)**: For developers, this guide will walk you through compiling me3.
 
 ## Key Features
 

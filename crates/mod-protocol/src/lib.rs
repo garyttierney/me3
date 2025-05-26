@@ -62,19 +62,19 @@ impl ModProfile {
 
     pub fn supports(&self) -> Vec<Supports> {
         match self {
-            ModProfile::V1(v1) => v1.supports.to_vec(),
+            Self::V1(v1) => v1.supports.clone(),
         }
     }
 
     pub fn natives(&self) -> Vec<Native> {
         match self {
-            ModProfile::V1(v1) => v1.natives.to_vec(),
+            Self::V1(v1) => v1.natives.clone(),
         }
     }
 
     pub fn packages(&self) -> Vec<Package> {
         match self {
-            ModProfile::V1(v1) => v1.packages.to_vec(),
+            Self::V1(v1) => v1.packages.clone(),
         }
     }
 }
@@ -104,7 +104,7 @@ mod tests {
     fn check(test_case_name: &str) {
         let test_data_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data");
         let test_case = test_data_dir.join(test_case_name);
-        let test_snapshot = test_data_dir.join(format!("{}.expected", test_case_name));
+        let test_snapshot = test_data_dir.join(format!("{test_case_name}.expected"));
 
         let actual_profile = ModProfile::from_file(&test_case).expect("parse failure");
         let expected_profile = expect_file![test_snapshot];

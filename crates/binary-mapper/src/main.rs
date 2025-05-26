@@ -52,24 +52,24 @@ fn main() {
                 .filter(|(_, e)| !e.is_empty());
 
             let mut matches = vec![0u32; entry.captures.len()];
-            if !program
+            if program
                 .scanner()
                 .matches_code(&scanner_pattern)
                 .next(&mut matches)
             {
                 captures
-                    .map(|(_, e)| MapperEntryResult {
-                        name: e.clone(),
-                        found: false,
-                        rva: 0x0,
-                    })
-                    .collect::<Vec<_>>()
-            } else {
-                captures
                     .map(|(i, e)| MapperEntryResult {
                         name: e.clone(),
                         found: true,
                         rva: matches[i],
+                    })
+                    .collect::<Vec<_>>()
+            } else {
+                captures
+                    .map(|(_, e)| MapperEntryResult {
+                        name: e.clone(),
+                        found: false,
+                        rva: 0x0,
                     })
                     .collect::<Vec<_>>()
             }
@@ -99,7 +99,7 @@ pub struct MapperProfile {
 pub struct MapperProfilePattern {
     /// Pattern used for matching. Under the hood this uses pelite's parser.
     /// As such, the same pattern syntax is used.
-    /// More: https://docs.rs/pelite/latest/pelite/pattern/fn.parse.html
+    /// More: <https://docs.rs/pelite/latest/pelite/pattern/fn.parse.html>
     pub pattern: String,
     /// Names for the captures. These names can be referenced from the generated
     /// definition file.

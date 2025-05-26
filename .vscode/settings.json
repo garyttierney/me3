@@ -10,5 +10,6 @@
   },
   "evenBetterToml.schema.associations": {
     "^.*\\.me3\\.toml$": "file://schemas/mod-profile.json"
-  }
+  },
+  "rust-analyzer.cargo.target": "x86_64-pc-windows-msvc"
 }

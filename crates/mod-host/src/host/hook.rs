@@ -2,7 +2,7 @@ use std::{marker::Tuple, mem::MaybeUninit, sync::Arc};
 
 use curried::Prepend;
 use retour::Function;
-use thunk::{thunk_data, thunk_info};
+use thunk::thunk_data;
 
 use crate::{
     detour::{install_detour, Detour, DetourError, UntypedDetour},

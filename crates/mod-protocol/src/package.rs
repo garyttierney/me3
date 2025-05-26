@@ -11,7 +11,7 @@ pub trait WithPackageSource {
     fn source_mut(&mut self) -> &mut ModFile;
 }
 
-/// A filesystem path to the contents of a package. May be relative to the [ModProfile] containing
+/// A filesystem path to the contents of a package. May be relative to the ``ModProfile`` containing
 /// it.
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ModFile(pub(crate) PathBuf);
@@ -30,6 +30,7 @@ impl ModFile {
 }
 
 /// A package is a source for files that override files within the existing games DVDBND archives.
+///
 /// It points to a local path containing assets matching the hierarchy they would be served under in
 /// the DVDBND.
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]

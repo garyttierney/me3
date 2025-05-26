@@ -91,7 +91,7 @@ impl ThunkPool {
         use iced_x86::code_asm::*;
 
         let mut sysinfo = SYSTEM_INFO::default();
-        unsafe { GetSystemInfo(&mut sysinfo) };
+        unsafe { GetSystemInfo(&raw mut sysinfo) };
         let page_size = sysinfo.dwPageSize as usize;
 
         let mut a = CodeAssembler::new(64)?;
@@ -138,13 +138,13 @@ impl ThunkPool {
             thunk_copy[..thunk.len()].copy_from_slice(&thunk);
         }
 
-        let mut _old_protect = PAGE_READWRITE;
+        let mut old_protect = PAGE_READWRITE;
         unsafe {
             VirtualProtect(
                 code_ptr.cast(),
                 page_size,
                 PAGE_EXECUTE_READ,
-                &mut _old_protect,
+                &raw mut old_protect,
             )?;
 
             FlushInstructionCache(GetCurrentProcess(), Some(code_ptr.cast()), page_size)?;
