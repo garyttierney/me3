@@ -25,7 +25,7 @@ use sentry::{
     protocol::{Attachment, AttachmentType, Event},
     Level,
 };
-use tracing::{error, info, warn};
+use tracing::{debug, error, event, info, trace, warn};
 
 use crate::game::Game;
 
@@ -124,9 +124,17 @@ fn run() -> LauncherResult<()> {
         loop {
             match receiver.recv() {
                 Ok(msg) => match msg {
-                    HostMessage::Trace(message) => {
-                        info!(message);
-                    }
+                    HostMessage::Trace {
+                        level,
+                        message,
+                        target,
+                    } => match level.0 {
+                        tracing_core::Level::DEBUG => debug!(target = target, message),
+                        tracing_core::Level::TRACE => trace!(target = target, message),
+                        tracing_core::Level::INFO => info!(target = target, message),
+                        tracing_core::Level::WARN => warn!(target = target, message),
+                        tracing_core::Level::ERROR => error!(target = target, message),
+                    },
                     HostMessage::CrashDumpRequest {
                         exception_pointers,
                         process_id,
@@ -232,6 +240,23 @@ fn install_tracing() {
 }
 
 fn main() {
+    #[cfg(feature = "sentry")]
+    let _sentry = {
+        let sentry_dsn = option_env!("SENTRY_DSN").and_then(|dsn| Dsn::from_str(dsn).ok());
+
+        if sentry_dsn.is_none() {
+            warn!("No Sentry DSN provided, but crash reporting was enabled");
+        }
+
+        sentry::init(sentry::ClientOptions {
+            debug: cfg!(debug_assertions),
+            traces_sample_rate: 1.0,
+            dsn: sentry_dsn,
+
+            ..Default::default()
+        })
+    };
+
     install_tracing();
 
     run().expect("Failed to successfully run launcher");

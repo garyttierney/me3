@@ -4,7 +4,10 @@ use ipc_channel::ipc::IpcSender;
 use me3_launcher_attach_protocol::HostMessage;
 use tracing::Subscriber;
 use tracing_subscriber::{
-    field::VisitOutput, fmt::format::JsonVisitor, registry::LookupSpan, Layer,
+    field::VisitOutput,
+    fmt::format::{PrettyVisitor, Writer},
+    registry::LookupSpan,
+    Layer,
 };
 
 pub struct HostTracingLayer {
@@ -20,8 +23,12 @@ where
         event: &tracing::Event<'_>,
         _ctx: tracing_subscriber::layer::Context<'_, S>,
     ) {
+        let metadata = event.metadata();
+        let level = metadata.level();
+        let target = metadata.target();
+
         let mut output = String::new();
-        let mut visitor = JsonVisitor::new(&mut output);
+        let mut visitor = PrettyVisitor::new(Writer::new(&mut output), true);
 
         event.record(&mut visitor);
 
@@ -29,7 +36,11 @@ where
             self.socket
                 .lock()
                 .expect("lock poisoned")
-                .send(HostMessage::Trace(output))
+                .send(HostMessage::Trace {
+                    level: (*level).into(),
+                    target: target.into(),
+                    message: output,
+                })
                 .unwrap()
         }
     }
