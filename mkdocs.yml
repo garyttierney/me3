@@ -8,6 +8,8 @@ site_url: !ENV READTHEDOCS_CANONICAL_URL
 # Set the Material for MkDocs theme
 theme:
   name: material
+  font:
+    text: Noto Sans
   features:
     - content.action.edit
     - content.action.view
@@ -38,18 +40,18 @@ theme:
   icon:
     repo: fontawesome/brands/github
   palette:
-    - media: "(prefers-color-scheme)"
+    - media: '(prefers-color-scheme)'
       toggle:
         icon: material/link
         name: Switch to light mode
-    - media: "(prefers-color-scheme: light)"
+    - media: '(prefers-color-scheme: light)'
       scheme: default
       primary: indigo
       accent: indigo
       toggle:
         icon: material/toggle-switch
         name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
+    - media: '(prefers-color-scheme: dark)'
       scheme: slate
       primary: black
       accent: indigo
@@ -66,13 +68,14 @@ extra_javascript:
 
 nav:
   - Home: index.md
-  - Getting started:
-    - Installation: getting-started.md
-  - Blog:
-    - blog/index.md
+  - User guide:
+      - Installation: user-guide/installation.md
+      - Creating mod profiles: user-guide/creating-mod-profiles.md
+      - Troubleshooting: user-guide/troubleshooting.md
   - Configuration reference: configuration-reference.md
   - Download: https://github.com/garyttierney/me3/releases/latest
-
+  - Blog:
+      - blog/index.md
 plugins:
   - blog
   - offline
@@ -87,6 +90,7 @@ markdown_extensions:
   - footnotes
   - md_in_html
   - toc:
+      toc_depth : "1-2"
       permalink: true
   # Python Markdown Extensions
   - pymdownx.arithmatex:
