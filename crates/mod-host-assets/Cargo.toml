@@ -7,13 +7,10 @@ license.workspace = true
 description = "Override game assets with local versions"
 
 [dependencies]
-cxx = { version = "1.0", features = ["c++17"] }
+cxx-stl = { version = "3", features = ["msvc2012"] }
 thiserror.workspace = true
 me3-mod-protocol.workspace = true
 tracing.workspace = true
-
-[build-dependencies]
-cxx-build = "1.0"
 
 [lints]
 workspace = true
