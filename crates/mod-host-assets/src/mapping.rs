@@ -10,7 +10,7 @@ use thiserror::Error;
 
 #[derive(Debug, Default)]
 pub struct ArchiveOverrideMapping {
-    map: HashMap<String, Vec<u16>>,
+    map: HashMap<String, (PathBuf, Vec<u16>)>,
 }
 
 #[derive(Debug, Error)]
@@ -66,11 +66,9 @@ impl ArchiveOverrideMapping {
                 } else {
                     let override_path = normalize_path(dir_entry);
                     let vfs_path = path_to_asset_lookup_key(&base_directory, &override_path)?;
+                    let as_wide = override_path.as_os_str().encode_wide().collect();
 
-                    self.map.insert(
-                        vfs_path,
-                        override_path.into_os_string().encode_wide().collect(),
-                    );
+                    self.map.insert(vfs_path, (override_path, as_wide));
                 }
             }
         }
@@ -78,10 +76,10 @@ impl ArchiveOverrideMapping {
         Ok(())
     }
 
-    pub fn get_override(&self, path: &str) -> Option<&[u16]> {
+    pub fn get_override(&self, path: &str) -> Option<(&Path, &[u16])> {
         let key = path.split_once(":/").map(|r| r.1).unwrap_or(path);
 
-        self.map.get(key).map(|v| &v[..])
+        self.map.get(key).map(|(path, wide)| (&**path, &**wide))
     }
 }
 
@@ -91,7 +89,10 @@ fn normalize_path<P: AsRef<Path>>(path: P) -> PathBuf {
 }
 
 /// Turns an asset path into an asset lookup key using the mods base path.
-fn path_to_asset_lookup_key<P: AsRef<Path>>(base: P, path: P) -> Result<String, StripPrefixError> {
+fn path_to_asset_lookup_key<P1: AsRef<Path>, P2: AsRef<Path>>(
+    base: P1,
+    path: P2,
+) -> Result<String, StripPrefixError> {
     path.as_ref()
         .strip_prefix(base)
         .map(|p| p.to_string_lossy().to_lowercase())

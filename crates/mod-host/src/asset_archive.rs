@@ -1,10 +1,7 @@
 use std::{ffi::c_void, sync::Arc};
 
 use me3_mod_host_assets::{
-    ffi::{get_dlwstring_contents, set_dlwstring_contents, DLWString},
-    mapping::ArchiveOverrideMapping,
-    rva::{RVA_ASSET_LOOKUP, RVA_WWISE_ASSET_LOOKUP},
-    wwise::{self, AkOpenMode},
+    alloc::DLStdAllocator, mapping::ArchiveOverrideMapping, rva::{RVA_ASSET_LOOKUP, RVA_WWISE_ASSET_LOOKUP}, string::DLStringUtf16, wwise::{self, AkOpenMode}
 };
 use tracing::debug;
 use windows::{
@@ -16,7 +13,7 @@ use crate::host::ModHost;
 
 /// This is a heavily obfuscated std::basic_string replace-esque. It's only
 /// used when the game wants to expand a path as part of the archive lookup.
-pub type ExpandArchivePathFn = extern "C" fn(*mut DLWString, usize, usize, usize, usize, usize);
+pub type ExpandArchivePathFn = extern "C" fn(*mut DLStringUtf16<DLStdAllocator>, usize, usize, usize, usize, usize);
 
 /// This function is part of FS's implementation of IAkLowLevelIOHook.
 pub type WwisePathFn = extern "C" fn(usize, PCWSTR, u64, usize, usize, usize) -> usize;
@@ -31,22 +28,21 @@ pub fn attach(
         .with_closure(move |ctx, path, p2, p3, p4, p5, p6| {
             // Have the game expand the path for us.
             (ctx.trampoline)(path, p2, p3, p4, p5, p6);
-
-            let resource_path_string = get_dlwstring_contents(unsafe { path.as_mut().unwrap() });
+            
+            let path = unsafe { path.as_mut().unwrap() };
+            let resource_path_string = path.decode().unwrap();
 
             debug!("Asset requested: {resource_path_string}");
 
             // Match the expanded path against the known overrides.
-            if let Some(mapped_override) = mapping.get_override(&resource_path_string) {
+            if let Some((mapped_path, mapped_override)) = mapping.get_override(&resource_path_string) {
                 // Replace the string with a canonical path to the asset if
                 // we did find an override. This will cause the game to
                 // pull the files bytes from the file system instead of the
                 // BDTs.
-                set_dlwstring_contents(unsafe { path.as_ref().unwrap() }, mapped_override);
+                path.get_mut().unwrap().replace(mapped_override);
 
-                debug!("Supplied override: {resource_path_string} -> {}", unsafe {
-                    get_dlwstring_contents(path.as_ref().unwrap())
-                });
+                debug!("Supplied override: {resource_path_string} -> {}", mapped_path.display());
             }
         })
         .install()?;
