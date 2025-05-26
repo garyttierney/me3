@@ -1364,6 +1364,7 @@ dependencies = [
 name = "me3-launcher"
 version = "0.2.0"
 dependencies = [
+ "clap",
  "crash-context",
  "dll-syringe",
  "eyre",
