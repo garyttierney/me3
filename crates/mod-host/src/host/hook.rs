@@ -70,7 +70,7 @@ where
     {
         let curried = curried::Curried::new(closure, || {
             let trampoline_ptr = unsafe { thunk_data::<F>().expect("no thunk data present") };
-            let trampoline = unsafe { F::from_ptr(trampoline_ptr.as_ptr() as *const _) };
+            let trampoline = unsafe { trampoline_ptr.read() };
 
             HookContext { trampoline }
         });
