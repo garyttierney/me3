@@ -51,9 +51,7 @@ pub struct DLString<T, const E: u8> {
 }
 
 impl<T, const E: u8> DLString<T, E> {
-    pub fn encoding(
-        &self,
-    ) -> Result<DLStringEncoding, <DLStringEncoding as TryFrom<u8>>::Error> {
+    pub fn encoding(&self) -> Result<DLStringEncoding, <DLStringEncoding as TryFrom<u8>>::Error> {
         self.encoding.try_into()
     }
 
