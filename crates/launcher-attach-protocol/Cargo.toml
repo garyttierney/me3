@@ -12,6 +12,7 @@ eyre = "0.6"
 me3-mod-protocol.workspace = true
 serde.workspace = true
 serde_derive.workspace = true
+tracing-core = "0.1.33"
 
 [lints]
 workspace = true

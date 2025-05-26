@@ -6,7 +6,7 @@ use me3_mod_host_assets::{
     rva::{RVA_ASSET_LOOKUP, RVA_WWISE_ASSET_LOOKUP},
     wwise::{self, AkOpenMode},
 };
-use tracing::debug;
+use tracing::{debug, info};
 use windows::{
     core::{PCSTR, PCWSTR},
     Win32::System::LibraryLoader::GetModuleHandleA,
@@ -44,7 +44,7 @@ pub fn attach(
                 // BDTs.
                 set_dlwstring_contents(unsafe { path.as_ref().unwrap() }, mapped_override);
 
-                debug!("Supplied override: {resource_path_string} -> {}", unsafe {
+                info!("Supplied override: {resource_path_string} -> {}", unsafe {
                     get_dlwstring_contents(path.as_ref().unwrap())
                 });
             }

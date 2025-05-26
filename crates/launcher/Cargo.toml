@@ -25,6 +25,7 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing.workspace = true
 sentry = { version = "0.38.1", optional = true }
 normpath = "1.3.0"
+tracing-core = "0.1.33"
 
 [lints]
 workspace = true
