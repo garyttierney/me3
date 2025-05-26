@@ -18,6 +18,7 @@ use ipc_channel::ipc::{IpcError, IpcOneShotServer};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
 use me3_mod_protocol::{dependency::sort_dependencies, package::WithPackageSource, ModProfile};
 use minidump_writer::minidump_writer::MinidumpWriter;
+use normpath::PathExt;
 use sentry::types::Dsn;
 #[cfg(feature = "sentry")]
 use sentry::{
@@ -54,6 +55,7 @@ impl LauncherArgs {
     }
 }
 
+#[tracing::instrument]
 fn run() -> LauncherResult<()> {
     info!("Launcher started");
 
@@ -65,34 +67,19 @@ fn run() -> LauncherResult<()> {
         }
     };
 
-    #[cfg(feature = "sentry")]
-    let _sentry = {
-        let sentry_dsn = option_env!("SENTRY_DSN").and_then(|dsn| Dsn::from_str(dsn).ok());
-
-        if sentry_dsn.is_none() {
-            warn!("No Sentry DSN provider, but crash reporting was enabled");
-        }
-
-        sentry::init(sentry::ClientOptions {
-            release: sentry::release_name!(),
-            dsn: sentry_dsn,
-            ..Default::default()
-        })
-    };
-
     if args.profiles.is_empty() {
         info!("No profiles provided");
     } else {
         info!("Loading profiles from {:?}", args.profiles);
     }
 
-    let all_natives = vec![];
-    let all_packages = vec![];
+    let mut all_natives = vec![];
+    let mut all_packages = vec![];
 
     for profile_path in args.profiles {
         let base = profile_path
             .parent()
-            .and_then(|parent| parent.canonicalize().ok())
+            .and_then(|parent| parent.normalize().ok())
             .ok_or_eyre("failed to acquire base directory for mod profile")?;
 
         let profile = ModProfile::from_file(&profile_path)?;
@@ -103,10 +90,13 @@ fn run() -> LauncherResult<()> {
 
         packages
             .iter_mut()
-            .for_each(|pkg| pkg.source_mut().make_absolute(&base));
+            .for_each(|pkg| pkg.source_mut().make_absolute(base.as_path()));
         natives
             .iter_mut()
-            .for_each(|pkg| pkg.source_mut().make_absolute(&base));
+            .for_each(|pkg| pkg.source_mut().make_absolute(base.as_path()));
+
+        all_packages.extend(packages);
+        all_natives.extend(natives);
     }
 
     let ordered_natives = sort_dependencies(all_natives)?;
