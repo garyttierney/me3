@@ -113,3 +113,29 @@ where
         Ok(detour)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::error::Error;
+
+    use super::{thunk::ThunkPool, HookInstaller};
+
+    type TestFn = extern "C" fn() -> usize;
+    extern "C" fn test_fn() -> usize {
+        5
+    }
+
+    #[test]
+    fn context_with_closure() -> Result<(), Box<dyn Error>> {
+        let thunks = ThunkPool::new()?;
+        let hook = HookInstaller::<TestFn>::new(None, &thunks, test_fn)
+            .with_closure(|ctx| 5 + (ctx.trampoline)())
+            .install()?;
+
+        unsafe { hook.enable()? };
+
+        assert_eq!(10, test_fn());
+
+        Ok(())
+    }
+}
