@@ -29,7 +29,7 @@ pub struct AttachError(pub String);
 impl<E: Into<eyre::Report>> From<E> for AttachError {
     fn from(value: E) -> Self {
         let err = value.into();
-        AttachError(format!("{err:#?}"))
+        Self(format!("{err:#?}"))
     }
 }
 
@@ -129,7 +129,7 @@ impl TryFrom<u32> for MonitorMessageKind {
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         match value {
-            1 => Ok(MonitorMessageKind::TraceEvent),
+            1 => Ok(Self::TraceEvent),
             _ => Err(()),
         }
     }

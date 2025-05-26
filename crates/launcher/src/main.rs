@@ -2,7 +2,6 @@ use std::{
     fs::File,
     io,
     path::PathBuf,
-    process::exit,
     str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering::SeqCst},
@@ -11,7 +10,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use clap::{command, Parser};
+use clap::{ArgAction, Parser};
 use crash_context::CrashContext;
 use eyre::OptionExt;
 use ipc_channel::ipc::{IpcError, IpcOneShotServer};
@@ -25,7 +24,7 @@ use sentry::{
     protocol::{Attachment, AttachmentType, Event},
     Level,
 };
-use tracing::{debug, error, event, info, trace, warn};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::game::Game;
 
@@ -35,19 +34,44 @@ pub type LauncherResult<T> = stable_eyre::Result<T>;
 
 /// Launch a Steam game with the me3 mod loader attached.
 #[derive(Parser, Debug)]
-#[command(version)]
+#[command(version, disable_help_flag(true))]
 struct LauncherArgs {
+    /// Opt-in to the unstable command-line interface. The options and structure
+    /// of the launcher CLI is currently unstable and may change in a later version.
+    #[arg(long, action(ArgAction::SetTrue), required(false))]
+    enable_unstable_cli: bool,
+
     /// Path to the game EXE that should be launched.
-    #[arg(long, env("ME3_GAME_EXE"))]
-    exe: PathBuf,
+    #[arg(
+        long,
+        env("ME3_GAME_EXE"),
+        required_if_eq("enable_unstable_cli", "true"),
+        requires("enable_unstable_cli")
+    )]
+    exe: Option<PathBuf>,
 
     /// Path to the me3 that should be attached to the game.
-    #[arg(long, env("ME3_DLL"))]
-    dll: PathBuf,
+    #[arg(
+        short('h'),
+        long("host-dll"),
+        env("ME3_DLL"),
+        required_if_eq("enable_unstable_cli", "true"),
+        requires("enable_unstable_cli")
+    )]
+    host_dll: Option<PathBuf>,
 
-    /// A list of paths to ModProfile configuration files.
-    #[arg(short, long, action = clap::ArgAction::Append)]
+    /// A list of paths to ``ModProfile`` configuration files.
+    #[arg(
+        short('p'),
+        long("profile"),
+        env("ME3_PROFILE"),
+        action = clap::ArgAction::Append,
+        requires("enable_unstable_cli")
+    )]
     profiles: Vec<PathBuf>,
+
+    #[arg(short('?'), long("help"), action(ArgAction::Help))]
+    _help: (),
 }
 
 #[tracing::instrument]
@@ -56,13 +80,16 @@ fn run() -> LauncherResult<()> {
 
     let args = match LauncherArgs::try_parse() {
         Ok(args) => args,
-        Err(e) => e.exit(),
+        Err(error) => {
+            error!(%error);
+            error.exit();
+        }
     };
 
     if args.profiles.is_empty() {
         info!("No profiles provided");
     } else {
-        info!("Loading profiles from {:?}", args.profiles);
+        info!(profiles=?args.profiles, "Loading profiles");
     }
 
     let mut all_natives = vec![];
@@ -72,7 +99,7 @@ fn run() -> LauncherResult<()> {
         let base = profile_path
             .parent()
             .and_then(|parent| parent.normalize().ok())
-            .ok_or_eyre("failed to acquire base directory for mod profile")?;
+            .ok_or_eyre("failed to normalize base directory for mod profile")?;
 
         let profile = ModProfile::from_file(&profile_path)?;
         // TODO: check profile.supports
@@ -101,12 +128,13 @@ fn run() -> LauncherResult<()> {
         packages: ordered_packages,
     };
 
-    info!("Starting game at {:?} with DLL {:?}", args.exe, args.dll);
+    info!(exe = ?args.exe, dll = ?args.host_dll, "Starting game");
 
     let shutdown_requested = Arc::new(AtomicBool::new(false));
 
-    let game_path = args.exe.parent();
-    let mut game = Game::launch(&args.exe, game_path)?;
+    let game_exe = args.exe.unwrap();
+    let game_path = game_exe.parent();
+    let mut game = Game::launch(&game_exe, game_path)?;
 
     let monitor_thread = std::thread::spawn(move || {
         info!("Starting monitor thread");
@@ -133,10 +161,7 @@ fn run() -> LauncherResult<()> {
                         thread_id,
                         exception_code,
                     } => {
-                        info!(
-                            "Host requested a crashdump for exception {:x}",
-                            exception_code
-                        );
+                        info!(exception_code, "Host requested a crashdump");
 
                         let start = SystemTime::now();
                         let timestamp = start
@@ -195,7 +220,7 @@ fn run() -> LauncherResult<()> {
         }
     });
 
-    if let Err(e) = game.attach(&args.dll, request) {
+    if let Err(e) = game.attach(&args.host_dll.expect("no host DLL option set"), request) {
         println!("Failed to attach to game: {e:?}");
     }
 

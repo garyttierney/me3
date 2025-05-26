@@ -24,7 +24,7 @@ impl<F: Function> Detour<F> {
     }
 
     pub fn trampoline(&self) -> F {
-        unsafe { F::from_ptr(self.detour.trampoline() as *const _) }
+        unsafe { F::from_ptr(std::ptr::from_ref(self.detour.trampoline())) }
     }
 }
 

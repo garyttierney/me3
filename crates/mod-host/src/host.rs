@@ -16,7 +16,6 @@ pub mod hook;
 static ATTACHED_INSTANCE: OnceLock<RwLock<ModHost>> = OnceLock::new();
 
 pub struct ModHost {
-    crash_handler: CrashHandler,
     hooks: Vec<Arc<UntypedDetour>>,
     profiles: Vec<ModProfile>,
     thunk_pool: ThunkPool,
@@ -28,15 +27,14 @@ impl Debug for ModHost {
             .field("hooks", &self.hooks)
             .field("profiles", &self.profiles)
             .field("thunk_pool", &self.thunk_pool)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
 #[allow(unused)]
 impl ModHost {
-    pub fn new(crash_handler: CrashHandler, thunk_pool: ThunkPool) -> Self {
+    pub fn new(thunk_pool: ThunkPool) -> Self {
         Self {
-            crash_handler: CrashHandler,
             hooks: vec![],
             profiles: vec![],
             thunk_pool,
@@ -68,7 +66,7 @@ impl ModHost {
     }
 
     pub fn panic(&self) {
-        let _ = self.crash_handler.simulate_exception(None);
+        CrashHandler::simulate_exception(&CrashHandler, None);
     }
 
     pub fn hook<F>(&mut self, target: F) -> HookInstaller<F>

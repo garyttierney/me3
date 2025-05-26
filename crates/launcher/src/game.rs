@@ -29,7 +29,7 @@ impl Game {
                 game_directory
                     .map(Path::to_path_buf)
                     .or_else(|| std::env::current_dir().ok())
-                    .unwrap_or(PathBuf::from(".")),
+                    .unwrap_or_else(|| PathBuf::from(".")),
             )
             // FIXME
             .env("SteamAppId", "1245620")

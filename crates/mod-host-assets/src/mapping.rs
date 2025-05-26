@@ -79,7 +79,7 @@ impl ArchiveOverrideMapping {
     }
 
     pub fn get_override(&self, path: &str) -> Option<&[u16]> {
-        let key = path.split_once(":/").map(|r| r.1).unwrap_or(path);
+        let key = path.split_once(":/").map_or(path, |r| r.1);
 
         self.map.get(key).map(|v| &v[..])
     }

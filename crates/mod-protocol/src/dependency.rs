@@ -87,7 +87,7 @@ pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Result<Vec<T>, Depende
                 DependencyOrder::After => (dep.id, item.id()),
             };
 
-            sorter.add_dependency(prec, succ)
+            sorter.add_dependency(prec, succ);
         }
     }
 
@@ -154,7 +154,7 @@ mod tests {
             vec![],
         );
 
-        assert!(sort_dependencies(vec![pkg1, pkg2]).is_err())
+        assert!(sort_dependencies(vec![pkg1, pkg2]).is_err());
     }
 
     #[test]

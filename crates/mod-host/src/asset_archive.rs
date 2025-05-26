@@ -51,7 +51,7 @@ pub fn attach(
         })
         .install()?;
 
-    let mapping = mapping_.clone();
+    let mapping = mapping_;
 
     host.hook(wwise_hook_location())
         .with_closure(move |ctx, p1, path, open_mode, p4, p5, p6| {
@@ -59,20 +59,21 @@ pub fn attach(
 
             debug!("Wwise asset requested: {path_string}");
 
-            if let Some(mapped_override) = wwise::find_override(&mapping, &path_string) {
-                debug!("Supplied override for {path_string}");
-                // Force lookup to wwise'ordinary read (from disk) mode instead of the EBL read.
-                (ctx.trampoline)(
-                    p1,
-                    PCWSTR(mapped_override.as_ptr()),
-                    AkOpenMode::Read as _,
-                    p4,
-                    p5,
-                    p6,
-                )
-            } else {
-                (ctx.trampoline)(p1, path, open_mode, p4, p5, p6)
-            }
+            wwise::find_override(&mapping, &path_string).map_or_else(
+                || (ctx.trampoline)(p1, path, open_mode, p4, p5, p6),
+                |mapped_override| {
+                    debug!("Supplied override for {path_string}");
+                    // Force lookup to wwise'ordinary read (from disk) mode instead of the EBL read.
+                    (ctx.trampoline)(
+                        p1,
+                        PCWSTR(mapped_override.as_ptr()),
+                        AkOpenMode::Read as _,
+                        p4,
+                        p5,
+                        p6,
+                    )
+                },
+            )
         })
         .install()?;
 
@@ -80,7 +81,7 @@ pub fn attach(
 }
 
 fn game_base() -> *const c_void {
-    unsafe { GetModuleHandleA(PCSTR(std::ptr::null() as _)) }
+    unsafe { GetModuleHandleA(PCSTR(std::ptr::null())) }
         .expect("Could not retrieve game base for asset loader")
         .0
         .cast()

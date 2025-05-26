@@ -8,7 +8,7 @@ use std::{
     time::Duration,
 };
 
-use crash_handler::CrashEventResult;
+use crash_handler::{CrashEventResult, CrashHandler};
 use ipc_channel::ipc::IpcSender;
 use me3_launcher_attach_protocol::{AttachRequest, AttachResult, Attachment, HostMessage};
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
@@ -26,7 +26,7 @@ mod diagnostics;
 mod host;
 
 static INSTANCE: OnceLock<usize> = OnceLock::new();
-/// https://learn.microsoft.com/en-us/windows/win32/dlls/dllmain#parameters
+/// <https://learn.microsoft.com/en-us/windows/win32/dlls/dllmain#parameters>
 const DLL_PROCESS_ATTACH: u32 = 1;
 
 dll_syringe::payload_procedure! {
@@ -42,7 +42,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     let socket = Arc::new(Mutex::new(socket));
     let crash_handler_socket = socket.clone();
 
-    let crash_handler = crash_handler::CrashHandler::attach(unsafe {
+    CrashHandler::attach(unsafe {
         crash_handler::make_crash_event(move |crash_context: &crash_handler::CrashContext| {
             info!("Handling crash event");
             let _ = crash_handler_socket
@@ -71,7 +71,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
     info!("Host monitoring configured");
 
-    let mut host = ModHost::new(crash_handler, ThunkPool::new()?);
+    let mut host = ModHost::new(ThunkPool::new()?);
 
     let mut override_mapping = ArchiveOverrideMapping::default();
     override_mapping.scan_directories(request.packages.iter())?;
