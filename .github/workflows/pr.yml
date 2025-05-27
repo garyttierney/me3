@@ -1,0 +1,39 @@
+on:
+  pull_request_target:
+    branches:
+      - main
+
+name: Pull Request
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-dependencies:
+    name: Check dependencies
+    runs-on: windows-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly
+          targets: x86_64-pc-windows-msvc
+
+      - name: "Dependency Review"
+        uses: actions/dependency-review-action@v4
+        with:
+          comment-summary-in-pr: always
+          retry-on-snapshot-warnings: true
+          retry-on-snapshot-warnings-timeout: 60
+  labeler:
+    name: Assign labels
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@v5

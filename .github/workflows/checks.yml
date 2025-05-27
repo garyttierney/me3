@@ -17,35 +17,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check-dependencies:
-    name: Check dependencies
-    runs-on: windows-latest
-    permissions:
-      id-token: write
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          toolchain: nightly
-          targets: x86_64-pc-windows-msvc
-
-      - name: 'Dependency Review'
-        uses: actions/dependency-review-action@v4
-        with:
-          comment-summary-in-pr: always
-          retry-on-snapshot-warnings: true
-          retry-on-snapshot-warnings-timeout: 60
-        if: github.event_name == 'pull_request'
-
   check_if_config_schema_up_to_date:
     name: Check if config schema is up to date
     runs-on: windows-latest
     permissions:
       checks: write
       contents: read
-      pull-requests: write
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v4
@@ -64,6 +41,24 @@ jobs:
         with:
           tool_name: me3-mod-protocol schema
           filter_mode: nofilter
+
+  changelog:
+    runs-on: ubuntu-latest
+    name: Check if CHANGELOG.md is updated
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check for CHANGELOG update
+        shell: bash
+        run: |
+          if ! git diff --name-only -r ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha}} | grep 'CHANGELOG.md'; then
+              echo "Changelog needs updated"
+              exit 1
+          fi
+        if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
 
   clippy:
     name: Clippy
