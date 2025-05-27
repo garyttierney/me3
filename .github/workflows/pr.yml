@@ -3,7 +3,7 @@ on:
     branches:
       - main
 
-name: Pull Request Checks
+name: Pull Request
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
