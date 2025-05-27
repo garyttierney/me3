@@ -12,12 +12,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     name: Check if CHANGELOG.md is updated
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Check for CHANGELOG update
         shell: bash
         run: |
-          if ! git diff --name-only -r ${{ github.event.pull_request.base.sha }} HEAD | grep 'CHANGELOG.md'; then
+          if ! git diff --name-only -r ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha}} | grep 'CHANGELOG.md'; then
               echo "Changelog needs updated"
               exit 1
           fi
