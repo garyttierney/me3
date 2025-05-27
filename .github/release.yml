@@ -1,0 +1,20 @@
+changelog:
+  exclude:
+    authors:
+      - dependabot
+  categories:
+    - title: 'Breaking Changes'
+      labels:
+        - 'breaking'
+    - title: 'Added'
+      labels:
+        - 'feature'
+    - title: 'Documentation updates'
+      labels:
+        - 'documentation'
+    - title: 'Fixes'
+      labels:
+        - 'bug'
+    - title: Changes
+      labels:
+        - '*'

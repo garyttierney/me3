@@ -17,35 +17,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check-dependencies:
-    name: Check dependencies
-    runs-on: windows-latest
-    permissions:
-      id-token: write
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          toolchain: nightly
-          targets: x86_64-pc-windows-msvc
-
-      - name: 'Dependency Review'
-        uses: actions/dependency-review-action@v4
-        with:
-          comment-summary-in-pr: always
-          retry-on-snapshot-warnings: true
-          retry-on-snapshot-warnings-timeout: 60
-        if: github.event_name == 'pull_request'
-
   check_if_config_schema_up_to_date:
     name: Check if config schema is up to date
     runs-on: windows-latest
     permissions:
       checks: write
       contents: read
-      pull-requests: write
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v4
