@@ -1,7 +1,9 @@
-use std::fmt::Debug;
+use std::fmt::{self, Debug};
 
 use me3_mod_protocol::{native::Native, package::Package};
+use serde::{Deserializer, Serializer};
 use serde_derive::{Deserialize, Serialize};
+use tracing_core::Level;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AttachRequest {
@@ -31,10 +33,72 @@ impl<E: Into<eyre::Report>> From<E> for AttachError {
     }
 }
 
+#[derive(Debug)]
+pub struct TraceLevel(pub tracing_core::Level);
+
+impl From<tracing_core::Level> for TraceLevel {
+    fn from(value: tracing_core::Level) -> Self {
+        Self(value)
+    }
+}
+
+impl serde::Serialize for TraceLevel {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.0.to_string())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for TraceLevel {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(TraceLevelVisitor)
+    }
+}
+
+pub struct TraceLevelVisitor;
+
+impl<'de> serde::de::Visitor<'de> for TraceLevelVisitor {
+    type Value = TraceLevel;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a string representing a tracing level")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        let level = match value.to_ascii_lowercase().as_str() {
+            "error" => Level::ERROR,
+            "warn" => Level::WARN,
+            "info" => Level::INFO,
+            "debug" => Level::DEBUG,
+            "trace" => Level::TRACE,
+            _ => {
+                return Err(serde::de::Error::unknown_variant(
+                    value,
+                    &["error", "warn", "info", "trace", "debug"],
+                ))
+            }
+        };
+
+        Ok(TraceLevel(level))
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum HostMessage {
     Attached,
-    Trace(String),
+    Trace {
+        level: TraceLevel,
+        message: String,
+        target: String,
+    },
     CrashDumpRequest {
         /// The address of an `EXCEPTION_POINTERS` in the client's memory
         exception_pointers: u64,

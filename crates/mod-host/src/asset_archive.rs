@@ -6,7 +6,7 @@ use me3_mod_host_assets::{
     string::DlUtf16String,
     wwise::{self, AkOpenMode},
 };
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 use windows::{
     core::{PCSTR, PCWSTR},
     Win32::System::LibraryLoader::GetModuleHandleA,
@@ -41,7 +41,7 @@ pub fn attach(host: &mut ModHost, mapping: Arc<ArchiveOverrideMapping>) -> Resul
                         // BDTs.
                         path.replace(mapped_override);
 
-                        debug!(
+                        info!(
                             "Supplied override: {path_string} -> {}",
                             mapped_path.display()
                         );

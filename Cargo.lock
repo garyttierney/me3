@@ -1315,6 +1315,7 @@ dependencies = [
  "stable-eyre",
  "tracing",
  "tracing-appender",
+ "tracing-core",
  "tracing-error",
  "tracing-subscriber",
 ]
@@ -1327,6 +1328,7 @@ dependencies = [
  "me3-mod-protocol",
  "serde",
  "serde_derive",
+ "tracing-core",
 ]
 
 [[package]]
