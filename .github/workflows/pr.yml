@@ -1,0 +1,24 @@
+on:
+  pull_request:
+    branches:
+      - main
+
+name: Pull Request Checks
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Check if CHANGELOG.md is updated
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for CHANGELOG update
+        shell: bash
+        run: |
+          if ! git diff --name-only -r ${{ github.base_ref }} HEAD | grep 'CHANGELOG.md'; then
+              echo "Changelog needs updated"
+              exit 1
+          fi
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
