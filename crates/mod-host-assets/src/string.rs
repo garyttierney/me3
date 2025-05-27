@@ -158,26 +158,24 @@ impl<T, const E: u8> DerefMut for TrustedDlString<T, E> {
     }
 }
 
-impl<A: CxxProxy> ToString for TrustedDlString<CxxUtf8String<A>, { UTF8 }> {
-    fn to_string(&self) -> String {
+impl<A: CxxProxy> fmt::Display for TrustedDlString<CxxUtf8String<A>, { UTF8 }> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // SAFETY: `self` is encoded at least as a UTF-8 superset
         // as verified by checking the encoding.
-        unsafe {
-            OsStr::from_encoded_bytes_unchecked(self.as_bytes())
-                .to_string_lossy()
-                .into_owned()
-        }
+        let os_str = unsafe { OsStr::from_encoded_bytes_unchecked(self.as_bytes()) };
+
+        f.write_str(&os_str.to_string_lossy())
     }
 }
 
 #[cfg(windows)]
-impl<A: CxxProxy> ToString for TrustedDlString<CxxUtf16String<A>, { UTF16 }> {
-    fn to_string(&self) -> String {
+impl<A: CxxProxy> fmt::Display for TrustedDlString<CxxUtf16String<A>, { UTF16 }> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use std::{ffi::OsString, os::windows::ffi::OsStringExt};
 
-        OsString::from_wide(self.as_bytes())
-            .to_string_lossy()
-            .into_owned()
+        let os_str = OsString::from_wide(self.as_bytes());
+
+        f.write_str(&os_str.to_string_lossy())
     }
 }
 
