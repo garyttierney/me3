@@ -57,7 +57,7 @@ pub fn find_override<'a>(mapping: &'a ArchiveOverrideMapping, input: &str) -> Op
 fn get_override<'a>(mapping: &'a ArchiveOverrideMapping, input: &str) -> Option<&'a [u16]> {
     for prefix in PREFIXES {
         let prefixed = format!("{prefix}/{input}");
-        if let Some(replacement) = mapping.get_override(&prefixed) {
+        if let Some((_, replacement)) = mapping.get_override(&prefixed) {
             return Some(replacement);
         }
     }
