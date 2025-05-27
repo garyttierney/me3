@@ -2,7 +2,10 @@ on:
   pull_request:
     branches:
       - main
-
+    types:
+      - opened
+      - synchronize
+      - labeled
 name: Pull Request
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
