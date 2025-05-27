@@ -1,13 +1,12 @@
 use std::{ffi::c_void, sync::Arc};
 
 use me3_mod_host_assets::{
-    alloc::DLStdAllocator,
     mapping::ArchiveOverrideMapping,
     rva::{RVA_ASSET_LOOKUP, RVA_WWISE_ASSET_LOOKUP},
-    string::DLStringUtf16,
+    string::DlUtf16String,
     wwise::{self, AkOpenMode},
 };
-use tracing::debug;
+use tracing::{debug, error};
 use windows::{
     core::{PCSTR, PCWSTR},
     Win32::System::LibraryLoader::GetModuleHandleA,
@@ -17,47 +16,54 @@ use crate::host::ModHost;
 
 /// This is a heavily obfuscated std::basic_string replace-esque. It's only
 /// used when the game wants to expand a path as part of the archive lookup.
-pub type ExpandArchivePathFn =
-    extern "C" fn(*mut DLStringUtf16<DLStdAllocator>, usize, usize, usize, usize, usize);
+pub type ExpandArchivePathFn = extern "C" fn(*mut DlUtf16String, usize, usize, usize, usize, usize);
 
 /// This function is part of FS's implementation of IAkLowLevelIOHook.
 pub type WwisePathFn = extern "C" fn(usize, PCWSTR, u64, usize, usize, usize) -> usize;
 
-pub fn attach(
-    host: &mut ModHost,
-    mapping_: Arc<ArchiveOverrideMapping>,
-) -> Result<(), eyre::Error> {
-    let mapping = mapping_.clone();
+pub fn attach(host: &mut ModHost, mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Error> {
+    let asset_override = {
+        let mapping = mapping.clone();
+
+        move |path: *mut DlUtf16String| {
+            match unsafe { path.as_mut().map(DlUtf16String::get_mut) } {
+                Some(Ok(path)) => {
+                    let path_string = path.to_string();
+
+                    debug!("Asset requested: {path_string}");
+
+                    // Match the expanded path against the known overrides.
+                    if let Some((mapped_path, mapped_override)) = mapping.get_override(&path_string)
+                    {
+                        // Replace the string with a canonical path to the asset if
+                        // we did find an override. This will cause the game to
+                        // pull the files bytes from the file system instead of the
+                        // BDTs.
+                        path.replace(mapped_override);
+
+                        debug!(
+                            "Supplied override: {path_string} -> {}",
+                            mapped_path.display()
+                        );
+                    }
+                }
+                Some(Err(encoding)) => {
+                    error!("Incorrect asset path encoding: {encoding:?}");
+                }
+                None => {
+                    error!("Asset path was null!");
+                }
+            }
+        }
+    };
 
     host.hook(asset_hook_location())
         .with_closure(move |ctx, path, p2, p3, p4, p5, p6| {
             // Have the game expand the path for us.
             (ctx.trampoline)(path, p2, p3, p4, p5, p6);
-
-            let path = unsafe { path.as_mut().unwrap() };
-            let resource_path_string = path.decode().unwrap();
-
-            debug!("Asset requested: {resource_path_string}");
-
-            // Match the expanded path against the known overrides.
-            if let Some((mapped_path, mapped_override)) =
-                mapping.get_override(&resource_path_string)
-            {
-                // Replace the string with a canonical path to the asset if
-                // we did find an override. This will cause the game to
-                // pull the files bytes from the file system instead of the
-                // BDTs.
-                path.get_mut().unwrap().replace(mapped_override);
-
-                debug!(
-                    "Supplied override: {resource_path_string} -> {}",
-                    mapped_path.display()
-                );
-            }
+            asset_override(path);
         })
         .install()?;
-
-    let mapping = mapping_.clone();
 
     host.hook(wwise_hook_location())
         .with_closure(move |ctx, p1, path, open_mode, p4, p5, p6| {
