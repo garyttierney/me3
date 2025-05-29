@@ -9,6 +9,11 @@ use tracing_core::Level;
 pub struct AttachRequest {
     pub monitor_name: String,
 
+    pub config: AttachConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AttachConfig {
     /// An ordered list of natives to be loaded on attach.
     pub natives: Vec<Native>,
 

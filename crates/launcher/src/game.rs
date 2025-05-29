@@ -1,7 +1,8 @@
 use std::{
-    os::windows::process::CommandExt,
+    io::Stderr,
+    os::{raw::c_void, windows::process::CommandExt},
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
     time::Duration,
 };
 
@@ -32,8 +33,9 @@ impl Game {
                     .unwrap_or(PathBuf::from(".")),
             )
             // FIXME
-            .env("SteamAppId", "1245620")
-            .creation_flags(0)
+            .stdout(Stdio::inherit())
+            .stdin(Stdio::inherit())
+            .stderr(Stdio::inherit())
             .spawn()?;
 
         Ok(Self { child })

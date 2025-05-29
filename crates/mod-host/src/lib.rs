@@ -4,6 +4,7 @@
 #![feature(unboxed_closures)]
 
 use std::{
+    fs::OpenOptions,
     sync::{Arc, Mutex, OnceLock},
     time::Duration,
 };
@@ -15,14 +16,10 @@ use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::{
-    diagnostics::HostTracingLayer,
-    host::{hook::thunk::ThunkPool, ModHost},
-};
+use crate::host::{hook::thunk::ThunkPool, ModHost};
 
 mod asset_archive;
 mod detour;
-mod diagnostics;
 mod host;
 
 static INSTANCE: OnceLock<usize> = OnceLock::new();
@@ -36,13 +33,16 @@ dll_syringe::payload_procedure! {
 }
 
 fn on_attach(request: AttachRequest) -> AttachResult {
-    let AttachRequest { monitor_name, .. } = request;
+    let AttachRequest {
+        monitor_name,
+        config,
+    } = request;
 
     let socket = IpcSender::connect(monitor_name).unwrap();
     let socket = Arc::new(Mutex::new(socket));
     let crash_handler_socket = socket.clone();
 
-    let crash_handler = crash_handler::CrashHandler::attach(unsafe {
+    crash_handler::CrashHandler::attach(unsafe {
         crash_handler::make_crash_event(move |crash_context: &crash_handler::CrashContext| {
             info!("Handling crash event");
             let _ = crash_handler_socket
@@ -60,21 +60,24 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
             CrashEventResult::Handled(false)
         })
-    })
-    .expect("failed to attach crash handler");
+    })?;
 
     socket.lock().unwrap().send(HostMessage::Attached).unwrap();
 
-    tracing_subscriber::registry()
-        .with(HostTracingLayer { socket })
-        .init();
+    let log_file_path = std::env::var("ME3_LOG_FILE").expect("log file location not set");
+    let log_file = OpenOptions::new()
+        .append(true)
+        .open(log_file_path)
+        .expect("couldn't open log file");
+
+    let telemetry = me3_telemetry::install(move || log_file.try_clone().unwrap());
 
     info!("Host monitoring configured");
 
-    let mut host = ModHost::new(crash_handler, ThunkPool::new()?);
+    let mut host = ModHost::new(telemetry, ThunkPool::new()?);
 
     let mut override_mapping = ArchiveOverrideMapping::default();
-    override_mapping.scan_directories(request.packages.iter())?;
+    override_mapping.scan_directories(config.packages.iter())?;
     asset_archive::attach(&mut host, Arc::new(override_mapping))?;
 
     host.attach();

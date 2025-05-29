@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -25,15 +27,15 @@ pub enum NativeInitializerCondition {
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Native {
     /// Path to the DLL. Can be relative to the mod profile.
-    path: ModFile,
+    pub path: ModFile,
 
     /// If this native fails to load and this vakye is false, treat it as a critical error.
     #[serde(default = "off")]
-    optional: bool,
+    pub optional: bool,
 
     /// Should this native be loaded?
     #[serde(default = "on")]
-    enabled: bool,
+    pub enabled: bool,
 
     #[serde(default)]
     load_before: Vec<Dependent<String>>,
@@ -46,6 +48,20 @@ pub struct Native {
 
     /// An optional symbol to be called when this native successfully is queued for unload.
     finalizer: Option<String>,
+}
+
+impl Native {
+    pub fn new<P: Into<PathBuf>>(path: P) -> Self {
+        Self {
+            path: ModFile(path.into()),
+            optional: false,
+            enabled: true,
+            load_after: vec![],
+            load_before: vec![],
+            initializer: None,
+            finalizer: None,
+        }
+    }
 }
 
 impl WithPackageSource for Native {

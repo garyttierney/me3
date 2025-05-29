@@ -26,6 +26,9 @@ tracing.workspace = true
 sentry = { version = "0.38.1", optional = true }
 normpath = "1.3.0"
 tracing-core = "0.1.33"
+toml.workspace = true
+libc = "0.2.172"
+me3_telemetry = { version = "0.2.0", path = "../telemetry" }
 
 [lints]
 workspace = true

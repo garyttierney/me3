@@ -1,11 +1,12 @@
 [workspace]
 members = [
-    "crates/launcher",
-    "crates/launcher-attach-protocol",
-    "crates/mod-host",
-    "crates/mod-protocol",
-    "crates/mod-host-assets",
-    "crates/binary-mapper",
+  "crates/cli",
+  "crates/launcher",
+  "crates/launcher-attach-protocol",
+  "crates/mod-host",
+  "crates/mod-protocol",
+  "crates/mod-host-assets",
+  "crates/binary-mapper", "crates/telemetry",
 ]
 resolver = "2"
 
@@ -45,11 +46,11 @@ tracing = "0.1"
 
 [workspace.metadata.release]
 pre_release_replacements = [
-  {file="CHANGELOG.md", search="Unreleased", replace="$TAG_NAME"},
-  {file="CHANGELOG.md", search="...HEAD", replace="...$TAG_NAME", exactly=1},
-  {file="CHANGELOG.md", search="ReleaseDate", replace="$DATE"},
-  {file="CHANGELOG.md", search="<!-- next-header -->", replace="<!-- next-header -->\n\n## [Unreleased] - ReleaseDate", exactly=1},
-  {file="CHANGELOG.md", search="<!-- next-url -->", replace="<!-- next-url -->\n[Unreleased]: https://github.com/assert-rs/predicates-rs/compare/$TAG_NAME...HEAD", exactly=1},
+  { file = "CHANGELOG.md", search = "Unreleased", replace = "$TAG_NAME" },
+  { file = "CHANGELOG.md", search = "...HEAD", replace = "...$TAG_NAME", exactly = 1 },
+  { file = "CHANGELOG.md", search = "ReleaseDate", replace = "$DATE" },
+  { file = "CHANGELOG.md", search = "<!-- next-header -->", replace = "<!-- next-header -->\n\n## [Unreleased] - ReleaseDate", exactly = 1 },
+  { file = "CHANGELOG.md", search = "<!-- next-url -->", replace = "<!-- next-url -->\n[Unreleased]: https://github.com/assert-rs/predicates-rs/compare/$TAG_NAME...HEAD", exactly = 1 },
 ]
 
 [patch.crates-io]
