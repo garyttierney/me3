@@ -13,7 +13,7 @@
   <p align="center">
     A framework for modifying and instrumenting games.
     <br />
-    <a href="https://garyttierney.github.io/me3/me3_framework/"><strong>Explore the docs »</strong></a>
+    <a href="https://me3.readthedocs.io/"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/garyttierney/me3/discussions/categories/bug-reports">Report Bug</a>
