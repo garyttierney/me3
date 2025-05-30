@@ -23,7 +23,7 @@
 </div>
 
 - [About The Project](#about-the-project)
-- [Quickstart](#quickstart)
+- [Installation](#installation)
 - [Developer Quickstart](#developer-quickstart)
   - [Prerequisites](#prerequisites)
   - [Usage](#usage)
@@ -83,17 +83,23 @@ Currently it supports the following titles:
 ### Usage
 
 1. Clone the repo
+
    ```sh
    git clone https://github.com/garyttierney/me3.git
    ```
+
 2. Build the binaries
+
    ```sh
    cargo build [--release]
    ```
+
 3. Attach the sample host DLL to your game
+
    ```sh
    cargo run -p me3-cli -- launch -g elden-ring
    ```
+
    <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- CONTRIBUTING -->
@@ -133,6 +139,7 @@ Discussions Board: [https://github.com/garyttierney/me3/discussions](https://git
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
+[rustup-installer]: https://static.rust-lang.org/dist/rust-1.87.0-x86_64-pc-windows-msvc.msi
 [buildtools-installer]: https://aka.ms/vs/17/release/vs_BuildTools.exe
 [discussions-shield]: https://img.shields.io/github/discussions/garyttierney/me3
 [discussions-url]: https://github.com/garyttierney/me3/discussions
