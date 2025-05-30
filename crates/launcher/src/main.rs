@@ -61,7 +61,7 @@ impl LauncherArgs {
 
 fn run() -> LauncherResult<()> {
     let span = info_span!("run");
-    let span_guard = span.entered();
+    let span_guard = span.enter();
     info!("Launcher started");
 
     let args = LauncherArgs::from_env()?;
@@ -92,17 +92,6 @@ fn run() -> LauncherResult<()> {
         loop {
             match receiver.recv() {
                 Ok(msg) => match msg {
-                    HostMessage::Trace {
-                        level,
-                        message,
-                        target,
-                    } => match level.0 {
-                        tracing_core::Level::DEBUG => debug!(target = target, message),
-                        tracing_core::Level::TRACE => trace!(target = target, message),
-                        tracing_core::Level::INFO => info!(target = target, message),
-                        tracing_core::Level::WARN => warn!(target = target, message),
-                        tracing_core::Level::ERROR => error!(target = target, message),
-                    },
                     HostMessage::CrashDumpRequest {
                         exception_pointers,
                         process_id,
@@ -175,7 +164,7 @@ fn run() -> LauncherResult<()> {
         error!("Failed to attach to game: {e:?}");
     }
 
-    let _ = span_guard.exit();
+    drop(span_guard);
 
     game.join();
     shutdown_requested.store(true, SeqCst);

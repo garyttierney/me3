@@ -1571,10 +1571,8 @@ dependencies = [
  "me3-launcher-attach-protocol",
  "me3-mod-protocol",
  "me3_telemetry",
- "nix 0.30.1",
  "normpath",
  "serde",
- "serde_toml",
  "steamlocate",
  "tempfile",
  "toml",
@@ -1597,15 +1595,10 @@ dependencies = [
  "me3-mod-protocol",
  "me3_telemetry",
  "minidump-writer",
- "normpath",
  "sentry",
  "stable-eyre",
  "toml",
  "tracing",
- "tracing-appender",
- "tracing-core",
- "tracing-error",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1616,7 +1609,6 @@ dependencies = [
  "me3-mod-protocol",
  "serde",
  "serde_derive",
- "tracing-core",
 ]
 
 [[package]]
@@ -2808,12 +2800,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_toml"
-version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e68184169792863bfb6d8b5de8e15456ebf4302f28236f0ff1136591eb66541"
-
-[[package]]
 name = "serde_urlencoded"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3293,18 +3279,6 @@ dependencies = [
  "pin-project-lite",
  "tracing-attributes",
  "tracing-core",
-]
-
-[[package]]
-name = "tracing-appender"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3566e8ce28cc0a3fe42519fc80e6b4c943cc4c8cef275620eb8dac2d3d4e06cf"
-dependencies = [
- "crossbeam-channel",
- "thiserror 1.0.69",
- "time",
- "tracing-subscriber",
 ]
 
 [[package]]

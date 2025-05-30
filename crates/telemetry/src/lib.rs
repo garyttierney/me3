@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use sentry::{ClientInitGuard, Hub};
+use tracing_error::ErrorLayer;
 use tracing_subscriber::{
     fmt::{self, MakeWriter},
     prelude::*,
@@ -21,6 +22,7 @@ where
         .unwrap();
 
     tracing_subscriber::registry()
+        .with(ErrorLayer::default())
         .with(filter_layer)
         .with(
             fmt::layer()

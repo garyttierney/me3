@@ -53,12 +53,17 @@ pub enum Game {
     #[serde(alias = "er")]
     #[value(alias("er"))]
     EldenRing,
+
+    #[serde(alias = "nr", alias = "elden-ring-nightrein")]
+    #[value(alias("nr"), alias("elden-ring-nightrein"))]
+    Nightrein,
 }
 
 impl Game {
     pub fn app_id(self) -> u32 {
         match self {
             Self::EldenRing => 1245620,
+            Self::Nightrein => 2622380,
         }
     }
 }
