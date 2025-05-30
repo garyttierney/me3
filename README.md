@@ -3,10 +3,10 @@
 <br />
 <div align="center">
 
-  [![Discussions][discussions-shield]][discussions-url]
-  [![Contributors][contributors-shield]][contributors-url]
-  [![Forks][forks-shield]][forks-url]
-  [![MIT + Apache-2.0 License][license-shield]][license-url]
+[![Discussions][discussions-shield]][discussions-url]
+[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![MIT + Apache-2.0 License][license-shield]][license-url]
 
   <h2 align="center">me<sup>3</sup></h2>
 
@@ -23,8 +23,8 @@
 </div>
 
 - [About The Project](#about-the-project)
-  - [Built With](#built-with)
-- [Getting Started](#getting-started)
+- [Quickstart](#quickstart)
+- [Developer Quickstart](#developer-quickstart)
   - [Prerequisites](#prerequisites)
   - [Usage](#usage)
 - [Contributing](#contributing)
@@ -33,34 +33,36 @@
 - [Acknowledgments](#acknowledgments)
 
 <!-- ABOUT THE PROJECT -->
+
 ## About The Project
 
-TODO: write me
+me3 is a tool that extends the functionality of FROMSOTWARE games running on Windows and Linux via Proton.
+
+Currently it supports the following titles:
+
+- ELDEN RING
+- ELDEN RING: NIGHTREIN
+
+> [!TIP]
+> Want to use me3 to make one of the listed games load your mods? Check the [user guide](https://me3.readthedocs.io/quickstart) on the documentation website.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-### Built With
-
-* [Rust](https://rust-lang.org/)
-* Many others...
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 <!-- GETTING STARTED -->
-## Getting Started
 
-me3 is a launcher and mod loader for the Dark Souls series of games from FROMSOFTWARE and similar titles.
+## Developer Quickstart
+
+me3 is a launcher and mod loader for games from FROMSOFTWARE.
 
 ### Prerequisites
 
-* Cargo
+- Cargo
   - Windows: download and run [rustup‑init.exe][rustup-installer] then follow the onscreen instructions.
   - Linux:
     ```bash
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     ```
-* Visual Studio C++ Build Tools
+- Visual Studio C++ Build Tools
   - Windows: download and run [vs_BuildTools.exe][buildtools-installer] then follow the onscreen instructions.
   - Linux: while me3 can be built against mingw64, this generally isn't recommended. Instead acquire the Windows SDK using `xwin`
     ```bash
@@ -72,11 +74,12 @@ me3 is a launcher and mod loader for the Dark Souls series of games from FROMSOF
     linker = "lld"
     runner = "wine"
     rustflags = [
-    "-Lnative=/home/gtierney/.xwin/crt/lib/x86_64",
-    "-Lnative=/home/gtierney/.xwin/sdk/lib/um/x86_64",
-    "-Lnative=/home/gtierney/.xwin/sdk/lib/ucrt/x86_64"
+      "-Lnative=/home/gtierney/.xwin/crt/lib/x86_64",
+      "-Lnative=/home/gtierney/.xwin/sdk/lib/um/x86_64",
+      "-Lnative=/home/gtierney/.xwin/sdk/lib/ucrt/x86_64"
     ]
     ```
+
 ### Usage
 
 1. Clone the repo
@@ -89,24 +92,26 @@ me3 is a launcher and mod loader for the Dark Souls series of games from FROMSOF
    ```
 3. Attach the sample host DLL to your game
    ```sh
-   TODO: fix these instructions.
+   cargo run -p me3-cli -- launch -g elden-ring
    ```
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
+   <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- CONTRIBUTING -->
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 <!-- LICENSE -->
+
 ## License
 
-Distributed under either the Apache Software License 2.0 or MIT License. See LICENSE-APACHE and LICENSE-MIT for more information.
+Distributed under the terms of both the Apache Software License 2.0 and MIT License. See LICENSE-APACHE and LICENSE-MIT for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- CONTACT -->
+
 ## Contact
 
 Project Link: [https://github.com/garyttierney/me3](https://github.com/garyttierney/me3)
@@ -116,16 +121,18 @@ Discussions Board: [https://github.com/garyttierney/me3/discussions](https://git
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- ACKNOWLEDGMENTS -->
+
 ## Acknowledgments
 
-* [Mod Engine](https://github.com/katalash/ModEngine/tree/master/DS3ModEngine) - prior art for runtime modification of FROMSOFTWARE games.
-* [Mod Organizer 2](https://github.com/ModOrganizer2/modorganizer/) - inspiration for the VFS framework.
-* [Elden Ring Reforged](https://www.nexusmods.com/eldenring/mods/541) - provided invaluable feedback on the end-user perspective
-* 
+- [Mod Engine](https://github.com/katalash/ModEngine/tree/master/DS3ModEngine) - prior art for runtime modification of FROMSOFTWARE games.
+- [Mod Organizer 2](https://github.com/ModOrganizer2/modorganizer/) - inspiration for the VFS framework.
+- [Elden Ring Reforged](https://www.nexusmods.com/eldenring/mods/541) - provided invaluable feedback on the end-user perspective
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+
 [buildtools-installer]: https://aka.ms/vs/17/release/vs_BuildTools.exe
 [discussions-shield]: https://img.shields.io/github/discussions/garyttierney/me3
 [discussions-url]: https://github.com/garyttierney/me3/discussions
