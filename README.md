@@ -43,8 +43,10 @@ Currently it supports the following titles:
 - ELDEN RING
 - ELDEN RING: NIGHTREIN
 
-> [!TIP]
-> Want to use me3 to make one of the listed games load your mods? Check the [user guide](https://me3.readthedocs.io/quickstart) on the documentation website.
+## Installation
+
+> [!IMPORTANT]
+> Follow the [user guide](https://me3.readthedocs.io/quickstart)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -62,14 +64,14 @@ Currently it supports the following titles:
     ```
 - Visual Studio C++ Build Tools
   - Windows: download and run [vs_BuildTools.exe][buildtools-installer] then follow the onscreen instructions.
-  - Linux: while me3 can be built against mingw64, this generally isn't recommended. Instead acquire the Windows SDK using `xwin`
+  - Linux: Acquire the Windows SDK using `xwin`
     ```bash
     cargo install xwin && xwin --accept-license splat --output ~/.xwin
     ```
-    And configure Cargo to link with LLD and use the binaries from xwin in `~/.cargo/config.toml`
+    And configure Cargo to link with lld-link and use the binaries from xwin in `~/.cargo/config.toml`
     ```toml
     [target.x86_64-pc-windows-msvc]
-    linker = "lld"
+    linker = "lld-link"
     runner = "wine"
     rustflags = [
       "-Lnative=/home/gtierney/.xwin/crt/lib/x86_64",
