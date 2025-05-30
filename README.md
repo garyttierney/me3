@@ -52,8 +52,6 @@ Currently it supports the following titles:
 
 ## Developer Quickstart
 
-me3 is a launcher and mod loader for games from FROMSOFTWARE.
-
 ### Prerequisites
 
 - Cargo
