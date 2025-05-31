@@ -41,11 +41,7 @@ jobs:
 
       - name: Install NSIS
         run: |
-          iwr -useb get.scoop.sh -outfile 'install.ps1'
-          .\install.ps1 -RunAsAdmin
-          scoop update
-          scoop bucket add extras
-          scoop install nsis
+          sudo apt-get install nsis
 
       - run: |
           echo "version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)" >> $GITHUB_OUTPUT
