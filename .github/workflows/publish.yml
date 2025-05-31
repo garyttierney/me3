@@ -1,7 +1,8 @@
 on:
   release:
     types:
-      - published
+      - released
+      - prereleased
   push:
   workflow_dispatch:
 
