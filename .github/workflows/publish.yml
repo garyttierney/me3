@@ -123,11 +123,11 @@ jobs:
       - name: Upload installer to release
         run: >-
           gh release upload --clobber -R garyttierney/me3 "${{ steps.collect-release-info.outputs.release_tag }}"
-           me3_installer_${{ steps.get_version.outputs.version }}.exe
-           target/x86_64-pc-windows-msvc/release/me3_mod_host.dll
-           target/x86_64-pc-windows-msvc/release/me3-launcher.exe
-           target/x86_64-pc-windows-msvc/release/me3.exe
-           target/x86_64-unknown-linux-gnu/release/me3
+          me3_installer_${{ steps.get_version.outputs.version }}.exe
+          target/x86_64-pc-windows-msvc/release/me3_mod_host.dll
+          target/x86_64-pc-windows-msvc/release/me3-launcher.exe
+          target/x86_64-pc-windows-msvc/release/me3.exe
+          target/x86_64-unknown-linux-gnu/release/me3
         env:
           GH_TOKEN: ${{ github.token }}
         if: github.event_name == 'release' || (github.event_name == 'push' && github.ref_name == 'main')
