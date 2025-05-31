@@ -44,9 +44,12 @@ FunctionEnd
 Page custom nsDialogsPage nsDialogsPageLeave
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
+!define MUI_FINISHPAGE_SHOWREADME "https://me3.readthedocs.io/"
+!insertmacro MUI_PAGE_FINISH
 
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_LANGUAGE English
 
 Function nsDialogsPage
   !insertmacro MUI_HEADER_TEXT "me3 Configuration" "Configure me3 system-wide settings"
@@ -90,8 +93,6 @@ Section "Main Application" SEC01
     File "LICENSE-APACHE"
     File "LICENSE-MIT"
     File "CHANGELOG.md"
-
-
 
     WriteRegStr HKCU "$UNINSTALL_REG_KEY" "DisplayName" "me3"
     WriteRegStr HKCU "$UNINSTALL_REG_KEY" "UninstallString" '"$INSTDIR\uninstall.exe"'
