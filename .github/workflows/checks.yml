@@ -19,7 +19,7 @@ concurrency:
 jobs:
   check-dependencies:
     name: Check dependencies
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: write
@@ -29,8 +29,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           toolchain: nightly
-          targets: x86_64-pc-windows-msvc
-      - uses: advanced-security/component-detection-dependency-submission-action@d7bc99869613749499d21661bc708bdf6ed614a0 # v0.0.3
+          targets: x86_64-pc-windows-msvc,x86_64-unknown-linux-musl
+      - uses: ./.github/actions/setup-windows-toolchain
       - name: "Dependency Review"
         uses: actions/dependency-review-action@da24556b548a50705dd671f47852072ea4c105d9 # v4.7.1
         with:

@@ -18,7 +18,6 @@
 Unicode true
 
 Name "me3"
-OutFile "me3_installer_${VERSION}.exe"
 
 RequestExecutionLevel user
 
