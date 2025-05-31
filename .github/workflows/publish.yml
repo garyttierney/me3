@@ -60,10 +60,21 @@ jobs:
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd # v2.3.0
         with:
-          subject-path: me3_installer_${{ steps.get_version.outputs.version }}.exe
+          subject-path: |
+            me3_installer_${{ steps.get_version.outputs.version }}.exe
+            target/x86_x64-pc-windows-msvc/release/me3_mod_host.dll
+            target/x86_x64-pc-windows-msvc/release/me3-launcher.exe
+            target/x86_x64-pc-windows-msvc/release/me3.exe
+            target/x86_64-unknown-linux-gnu/release/me3
 
       - name: Upload installer to release
-        run: gh release upload --clobber -R garyttierney/me3 ${{ github.event.release.tag_name }} me3_installer_${{ steps.get_version.outputs.version }}.exe
+        run: >-
+          gh release upload --clobber -R garyttierney/me3 ${{ github.event.release.tag_name }}
+          me3_installer_${{ steps.get_version.outputs.version }}.exe
+          target/x86_x64-pc-windows-msvc/release/me3_mod_host.dll
+          target/x86_x64-pc-windows-msvc/release/me3-launcher.exe
+          target/x86_x64-pc-windows-msvc/release/me3.exe
+          target/x86_64-unknown-linux-gnu/release/me3
         env:
           GH_TOKEN: ${{ github.token }}
         if: github.event_name == 'release'
