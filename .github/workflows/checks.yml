@@ -31,27 +31,6 @@ jobs:
           toolchain: nightly
           targets: x86_64-pc-windows-msvc,x86_64-unknown-linux-musl
       - uses: ./.github/actions/setup-windows-toolchain
-      - uses: taiki-e/install-action@2ee2c006bbe55b0c2924d63f440aa76ecdd09aea # v2.52.3
-        with:
-          tool: cargo-cyclonedx
-
-      - name: Generate SBOMs
-        run: |
-          cargo cyclonedx --target=x86_64-pc-windows-msvc --target-in-filename --format=json
-          cargo cyclonedx --target=x86_64-unknown-linux-musl --target-in-filename --format=json
-          sboms=$(find . -name '*.cdx.json' -print | tr '\n' ' ')
-          curl -L -ocyclonedx https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.27.2/cyclonedx-linux-x64
-          chmod +x ./cyclonedx
-          echo $sboms
-          ./cyclonedx merge  --input-format=json --input-files $sboms --output-format=json > all.json
-          ./cyclonedx convert --input-file all.json --output-format spdxjson > all.spdx.json
-          cat all.spdx.json
-
-      - name: SBOM upload
-        uses: advanced-security/spdx-dependency-submission-action@v0.1.1
-        with:
-          filePath: "."
-
       - name: "Dependency Review"
         uses: actions/dependency-review-action@da24556b548a50705dd671f47852072ea4c105d9 # v4.7.1
         with:
