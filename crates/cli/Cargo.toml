@@ -9,6 +9,10 @@ license.workspace = true
 name = "me3"
 path = "src/main.rs"
 
+[features]
+default = []
+sentry = ["me3_telemetry/sentry"]
+
 [dependencies]
 clap = { version = "4.5.38", features = ["derive"] }
 color-eyre = { version = "0.6.4" }

@@ -7,8 +7,8 @@ license.workspace = true
 description = "Launcher for me3"
 
 [features]
-sentry = ["dep:sentry"]
-default = ["sentry"]
+sentry = ["me3_telemetry/sentry", "dep:sentry"]
+default = []
 
 [dependencies]
 stable-eyre = { version = "0.2" }

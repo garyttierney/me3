@@ -6,6 +6,10 @@ repository.workspace = true
 license.workspace = true
 description = "Host DLL providing game extension functionality"
 
+[features]
+default = []
+sentry = ["me3_telemetry/sentry"]
+
 [lib]
 crate-type = ["cdylib"]
 
