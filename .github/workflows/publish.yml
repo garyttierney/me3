@@ -57,9 +57,12 @@ jobs:
           name: me3-installer-${{ steps.get_version.outputs.version }}
           path: me3_installer_*.exe
 
+      - uses: taiki-e/install-action@2ee2c006bbe55b0c2924d63f440aa76ecdd09aea # v2.52.3
+        with:
+          tool: cargo-cyclonedx
+
       - name: Generate SBOMs
         run: |
-          cargo install cargo-cyclonedx --locked
           cargo cyclonedx --target=x86_64-pc-windows-msvc --target-in-filename --format=json
           cargo cyclonedx --target=x86_64-unknown-linux-gnu --target-in-filename --format=json
 
@@ -71,7 +74,7 @@ jobs:
       - uses: actions/attest-sbom@v2
         with:
           subject-path: "target/x86_64-pc-windows-msvc/release/me3_mod_host.dll"
-          sbom-path: "crates/host/me3-mod-host_x86_64-pc-windows-msvc.cdx.json"
+          sbom-path: "crates/mod-host/me3-mod-host_x86_64-pc-windows-msvc.cdx.json"
 
       - uses: actions/attest-sbom@v2
         with:
