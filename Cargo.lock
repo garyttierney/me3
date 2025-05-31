@@ -1650,7 +1650,6 @@ dependencies = [
  "expect-test",
  "schemars",
  "serde",
- "serde_derive",
  "serde_json",
  "serde_yaml",
  "thiserror 2.0.12",
