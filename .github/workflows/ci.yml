@@ -36,6 +36,7 @@ jobs:
           cargo install xwin
 
           xwin --accept-license splat --output "${{ github.workspace }}/xwin"
+          echo "AR_x86_64_pc_windows_msvc=llvm-lib" >> "$GITHUB_ENV"
           echo "CFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS" >> "$GITHUB_ENV"
           echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS /EHsc" >> "$GITHUB_ENV"
           echo "CC_x86_64_pc_windows_msvc=clang-cl-18" >> "$GITHUB_ENV"
