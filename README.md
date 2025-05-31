@@ -59,16 +59,21 @@ Currently it supports the following titles:
 - Cargo
   - Windows: download and run [rustup‑init.exe][rustup-installer] then follow the onscreen instructions.
   - Linux:
+
     ```bash
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     ```
+
 - Visual Studio C++ Build Tools
   - Windows: download and run [vs_BuildTools.exe][buildtools-installer] then follow the onscreen instructions.
   - Linux: Acquire the Windows SDK using `xwin`
+
     ```bash
     cargo install xwin && xwin --accept-license splat --output ~/.xwin
     ```
+
     And configure Cargo to link with lld-link and use the binaries from xwin in `~/.cargo/config.toml`
+
     ```toml
     [target.x86_64-pc-windows-msvc]
     linker = "lld-link"
