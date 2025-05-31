@@ -1,0 +1,64 @@
+name: 'Hello World'
+description: 'Greet someone'
+inputs:
+  who-to-greet: # id of input
+    description: 'Who to greet'
+    required: true
+    default: 'World'
+outputs:
+  random-number:
+    description: 'Random number'
+    value: ${{ steps.random-number-generator.outputs.random-number }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Install WINE + LLVM
+      shell: bash
+      run: |
+        sudo dpkg --add-architecture i386
+        wget -qO - https://dl.winehq.org/wine-builds/winehq.key | sudo apt-key add -
+        sudo apt-add-repository "deb https://dl.winehq.org/wine-builds/ubuntu $(lsb_release -cs) main"
+        sudo apt install --install-recommends winehq-stable lld clang-tools llvm
+
+    - name: Cache MSVC SDK
+      id: cache-xwin
+      uses: actions/cache@v4
+      shell: bash
+      with:
+        path: ${{ github.workspace }}/xwin
+        key: xwin
+
+    - name: Fetch MSVC SDK
+      if: steps.cache-xwin.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        cargo install xwin --locked
+        xwin --accept-license splat --output "${{github.workspace}}/xwin"
+
+    - name: Generate x86_64-pc-windows-msvc configuration
+      shell: bash
+      run: |
+        {
+            CL_FLAGS="-Wno-unused-command-line-argument -fuse-ld=lld-link  /imsvc${{ github.workspace }}/xwin/crt/include  /imsvc${{ github.workspace }}/xwin/sdk/include/ucrt  /imsvc${{ github.workspace }}/xwin/sdk/include/um /imsvc${{ github.workspace }}/xwin/sdk/include/shared"
+
+            echo "AR_x86_64_pc_windows_msvc=llvm-lib"
+            echo "CFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS"
+            echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS /EHsc"
+            echo "CC_x86_64_pc_windows_msvc=clang-cl-18"
+            echo "CXX_x86_64_pc_windows_msvc=clang-cl-18"
+        } >>"$GITHUB_ENV"
+
+        cat >~/.cargo/config.toml <<EOF
+        [target.x86_64-pc-windows-msvc]
+        linker = "lld"
+        runner = ["env", "WINEDEBUG=-all", "wine"]
+        rustflags = [
+            "-Lnative=${{ github.workspace }}/xwin/crt/lib/x86_64",
+            "-Lnative=${{ github.workspace }}/xwin/sdk/lib/um/x86_64",
+            "-Lnative=${{ github.workspace }}/xwin/sdk/lib/ucrt/x86_64",
+            "-C",
+            "target-feature=+crt-static",
+            "--cfg", "windows_raw_dylib",
+            "--cfg", "windows_debugger_visualizer"
+        ]
+        EOF

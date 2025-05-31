@@ -24,7 +24,7 @@ jobs:
         with:
           toolchain: nightly
           targets: x86_64-pc-windows-msvc
-      - run: .github/setup-windows-toolchain
+      - uses: ./.github/actions/setup-windows-toolchain
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true

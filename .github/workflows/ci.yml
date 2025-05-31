@@ -26,7 +26,7 @@ jobs:
         with:
           toolchain: nightly
           targets: x86_64-pc-windows-msvc
-      - run: .github/setup-windows-toolchain
+      - uses: ./.github/actions/setup-windows-toolchain
         if: matrix.os == 'ubuntu-latest'
       - uses: Swatinem/rust-cache@v2
         env:
