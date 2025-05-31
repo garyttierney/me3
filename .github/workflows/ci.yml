@@ -31,7 +31,7 @@ jobs:
           sudo dpkg --add-architecture i386
           wget -qO - https://dl.winehq.org/wine-builds/winehq.key | sudo apt-key add -
           sudo apt-add-repository "deb https://dl.winehq.org/wine-builds/ubuntu $(lsb_release -cs) main"
-          sudo apt install --install-recommends winehq-stable lld clang-tools
+          sudo apt install --install-recommends winehq-stable lld clang-tools llvm
           set -eux
           cargo install xwin
 
