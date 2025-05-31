@@ -19,7 +19,7 @@ concurrency:
 jobs:
   check-dependencies:
     name: Check dependencies
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: write
@@ -29,7 +29,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           toolchain: nightly
-          targets: x86_64-pc-windows-msvc
+          targets: x86_64-pc-windows-msvc,x86_64-unknown-linux-musl
+      - uses: ./.github/actions/setup-windows-toolchain
       - uses: taiki-e/install-action@2ee2c006bbe55b0c2924d63f440aa76ecdd09aea # v2.52.3
         with:
           tool: cargo-cyclonedx
@@ -41,6 +42,7 @@ jobs:
           sboms=$(find . -name '*.cdx.json' -print | tr '\n' ' ')
           curl -L -ocyclonedx https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.27.2/cyclonedx-linux-x64
           chmod +x ./cyclonedx
+          echo $sboms
           ./cyclonedx merge  --input-format=json --input-files $sboms --output-format=json > all.json
           ./cyclonedx convert --input-file all.json --output-format spdxjson > all.spdx.json
 
