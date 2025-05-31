@@ -3,8 +3,7 @@ use std::{fs::File, io::Read, path::Path};
 use native::Native;
 use package::Package;
 use schemars::JsonSchema;
-use serde::Deserialize;
-use serde_derive::Serialize;
+use serde::{Deserialize, Serialize};
 
 pub mod dependency;
 pub mod native;
@@ -104,7 +103,7 @@ mod tests {
     fn check(test_case_name: &str) {
         let test_data_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data");
         let test_case = test_data_dir.join(test_case_name);
-        let test_snapshot = test_data_dir.join(format!("{}.expected", test_case_name));
+        let test_snapshot = test_data_dir.join(format!("{test_case_name}.expected"));
 
         let actual_profile = ModProfile::from_file(&test_case).expect("parse failure");
         let expected_profile = expect_file![test_snapshot];

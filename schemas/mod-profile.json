@@ -1,53 +1,24 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ModProfile",
   "oneOf": [
     {
       "type": "object",
-      "required": [
-        "profileVersion"
-      ],
       "properties": {
-        "natives": {
-          "description": "Native modules (DLLs) that will be loaded.",
-          "default": [],
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Native"
-          }
-        },
-        "packages": {
-          "description": "A collection of packages containing assets that should be considered for loading before the DVDBND.",
-          "default": [],
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Package"
-          }
-        },
         "profileVersion": {
           "type": "string",
-          "enum": [
-            "v1"
-          ]
-        },
-        "supports": {
-          "description": "The games that this profile supports.",
-          "default": [],
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Supports"
-          }
+          "const": "v1"
         }
-      }
+      },
+      "$ref": "#/$defs/ModProfileV1",
+      "required": [
+        "profileVersion"
+      ]
     }
   ],
-  "definitions": {
-    "Dependent_for_String": {
+  "$defs": {
+    "Dependent_for_string": {
       "type": "object",
-      "required": [
-        "id",
-        "optional"
-      ],
       "properties": {
         "id": {
           "type": "string"
@@ -55,7 +26,11 @@
         "optional": {
           "type": "boolean"
         }
-      }
+      },
+      "required": [
+        "id",
+        "optional"
+      ]
     },
     "Game": {
       "type": "string",
@@ -66,19 +41,45 @@
       ]
     },
     "ModFile": {
-      "description": "A filesystem path to the contents of a package. May be relative to the [ModProfile] containing it.",
+      "description": "A filesystem path to the contents of a package. May be relative to the [ModProfile] containing\n it.",
       "type": "string"
+    },
+    "ModProfileV1": {
+      "type": "object",
+      "properties": {
+        "natives": {
+          "description": "Native modules (DLLs) that will be loaded.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Native"
+          }
+        },
+        "packages": {
+          "description": "A collection of packages containing assets that should be considered for loading\n before the DVDBND.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Package"
+          }
+        },
+        "supports": {
+          "description": "The games that this profile supports.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Supports"
+          }
+        }
+      }
     },
     "Native": {
       "type": "object",
-      "required": [
-        "path"
-      ],
       "properties": {
         "enabled": {
           "description": "Should this native be loaded?",
-          "default": true,
-          "type": "boolean"
+          "type": "boolean",
+          "default": true
         },
         "finalizer": {
           "description": "An optional symbol to be called when this native successfully is queued for unload.",
@@ -91,7 +92,7 @@
           "description": "An optional symbol to be called after this native succesfully loads.",
           "anyOf": [
             {
-              "$ref": "#/definitions/NativeInitializerCondition"
+              "$ref": "#/$defs/NativeInitializerCondition"
             },
             {
               "type": "null"
@@ -99,79 +100,74 @@
           ]
         },
         "load_after": {
-          "default": [],
           "type": "array",
+          "default": [],
           "items": {
-            "$ref": "#/definitions/Dependent_for_String"
+            "$ref": "#/$defs/Dependent_for_string"
           }
         },
         "load_before": {
-          "default": [],
           "type": "array",
+          "default": [],
           "items": {
-            "$ref": "#/definitions/Dependent_for_String"
+            "$ref": "#/$defs/Dependent_for_string"
           }
         },
         "optional": {
           "description": "If this native fails to load and this vakye is false, treat it as a critical error.",
-          "default": false,
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "path": {
           "description": "Path to the DLL. Can be relative to the mod profile.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/ModFile"
-            }
-          ]
+          "$ref": "#/$defs/ModFile"
         }
-      }
+      },
+      "required": [
+        "path"
+      ]
     },
     "NativeInitializerCondition": {
       "oneOf": [
         {
           "type": "object",
-          "required": [
-            "delay"
-          ],
           "properties": {
             "delay": {
               "type": "object",
-              "required": [
-                "ms"
-              ],
               "properties": {
                 "ms": {
                   "type": "integer",
                   "format": "uint",
-                  "minimum": 0.0
+                  "minimum": 0
                 }
-              }
+              },
+              "required": [
+                "ms"
+              ]
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "required": [
+            "delay"
+          ]
         },
         {
           "type": "object",
-          "required": [
-            "function"
-          ],
           "properties": {
             "function": {
               "type": "string"
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "required": [
+            "function"
+          ]
         }
       ]
     },
     "Package": {
-      "description": "A package is a source for files that override files within the existing games DVDBND archives. It points to a local path containing assets matching the hierarchy they would be served under in the DVDBND.",
+      "description": "A package is a source for files that override files within the existing games DVDBND archives.\n It points to a local path containing assets matching the hierarchy they would be served under in\n the DVDBND.",
       "type": "object",
-      "required": [
-        "id",
-        "source"
-      ],
       "properties": {
         "id": {
           "description": "The unique identifier for this package..",
@@ -179,44 +175,44 @@
         },
         "load_after": {
           "description": "A list of package IDs that this package should load after.",
-          "default": [],
           "type": "array",
+          "default": [],
           "items": {
-            "$ref": "#/definitions/Dependent_for_String"
+            "$ref": "#/$defs/Dependent_for_string"
           }
         },
         "load_before": {
           "description": "A list of packages that this package should load before.",
-          "default": [],
           "type": "array",
+          "default": [],
           "items": {
-            "$ref": "#/definitions/Dependent_for_String"
+            "$ref": "#/$defs/Dependent_for_string"
           }
         },
         "source": {
           "description": "A path to the source of this package.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/ModFile"
-            }
-          ]
+          "$ref": "#/$defs/ModFile"
         }
-      }
+      },
+      "required": [
+        "id",
+        "source"
+      ]
     },
     "Supports": {
       "type": "object",
-      "required": [
-        "game",
-        "since"
-      ],
       "properties": {
         "game": {
-          "$ref": "#/definitions/Game"
+          "$ref": "#/$defs/Game"
         },
         "since": {
           "type": "string"
         }
-      }
+      },
+      "required": [
+        "game",
+        "since"
+      ]
     }
   }
 }
