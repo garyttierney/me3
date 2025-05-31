@@ -1,7 +1,7 @@
 on:
   release:
     types:
-      - created
+      - published
   push:
   workflow_dispatch:
 
@@ -75,7 +75,7 @@ jobs:
       - name: Setup Sentry CLI
         uses: matbour/setup-sentry-cli@4cb3adf3ade6f5776a298102a9fb9e29e41bf89d # v1.3.0
         with:
-          version: latest # optional if 'latest'
+          version: latest
           token: ${{ secrets.SENTRY_AUTH_TOKEN }} # from GitHub secrets
           organization: modengine
           project: me3
@@ -88,8 +88,10 @@ jobs:
           SENTRY_PROJECT: me3
         with:
           release: "${{ github.event.release.tag_name }}"
+          finalize: "${{ !github.event.release.prerelease }}"
         if: github.event_name == 'release'
 
       - name: Upload debug symbols to sentry
         run: |
           sentry-cli debug-files upload --include-sources -o modengine -p me3 target/x86_64-pc-windows-msvc/release/
+        if: github.event_name == 'release'
