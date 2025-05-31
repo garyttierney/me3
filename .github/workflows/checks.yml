@@ -45,11 +45,12 @@ jobs:
           echo $sboms
           ./cyclonedx merge  --input-format=json --input-files $sboms --output-format=json > all.json
           ./cyclonedx convert --input-file all.json --output-format spdxjson > all.spdx.json
+          cat all.spdx.json
 
       - name: SBOM upload
         uses: advanced-security/spdx-dependency-submission-action@v0.1.1
         with:
-          filePath: "all.spdx.json"
+          filePath: "."
 
       - name: "Dependency Review"
         uses: actions/dependency-review-action@da24556b548a50705dd671f47852072ea4c105d9 # v4.7.1
