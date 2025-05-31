@@ -31,10 +31,10 @@ pub enum Game {
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Supports {
     #[serde(rename = "game")]
-    game: Game,
+    pub game: Game,
 
     #[serde(rename = "since")]
-    since_version: String,
+    pub since_version: String,
 }
 
 impl Default for ModProfile {
