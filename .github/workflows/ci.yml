@@ -38,8 +38,8 @@ jobs:
           xwin --accept-license splat --output "${{ github.workspace }}/xwin"
           echo "CFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS" >> "$GITHUB_ENV"
           echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS" >> "$GITHUB_ENV"
-          echo "CC_x86_64_pc_windows_msvc=clang-cl" >> "$GITHUB_ENV"
-          echo "CXX_x86_64_pc_windows_msvc=clang-cl" >> "$GITHUB_ENV"
+          echo "CC_x86_64_pc_windows_msvc=clang-cl-18" >> "$GITHUB_ENV"
+          echo "CXX_x86_64_pc_windows_msvc=clang-cl-18" >> "$GITHUB_ENV"
           cat > ~/.cargo/config.toml <<EOF
             [target.x86_64-pc-windows-msvc]
             linker = "lld-link"

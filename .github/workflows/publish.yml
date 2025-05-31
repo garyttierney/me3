@@ -3,6 +3,7 @@ on:
     types:
       - created
   push:
+  workflow_dispatch:
 
 name: Publishing
 concurrency:
