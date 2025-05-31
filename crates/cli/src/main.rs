@@ -6,9 +6,7 @@ use commands::{profile::ProfileCommands, Commands};
 use config::{ConfigError, Environment, File, Map, Source, Value};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
-use tracing::{level_filters::LevelFilter, warn};
-use tracing_error::ErrorLayer;
-use tracing_subscriber::EnvFilter;
+use tracing::warn;
 
 mod commands;
 pub mod output;
@@ -147,7 +145,6 @@ impl AppInstallInfo {
         }
 
         let ws_dir = std::env::var("CARGO_MANIFEST_DIR")?;
-        let current_exe_path = std::env::current_exe()?;
 
         Ok(Self {
             prefix: ws_dir.clone().into(),

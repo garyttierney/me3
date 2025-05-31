@@ -16,8 +16,8 @@ jobs:
     name: Tests
     strategy:
       matrix:
-        os: 
-          # - ubuntu-latest - todo: fix clang-cl under ubuntu builds
+        os:
+          - ubuntu-latest
           - windows-latest
     runs-on: ${{ matrix.os }}
     steps:

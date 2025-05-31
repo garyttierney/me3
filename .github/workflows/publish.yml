@@ -12,7 +12,7 @@ concurrency:
 jobs:
   publish-installer:
     name: Installer
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       id-token: write
       attestations: write
