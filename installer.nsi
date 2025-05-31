@@ -1,9 +1,79 @@
 !include MUI2.nsh
 !include LogicLib.nsh
 !include nsDialogs.nsh
+!include Integration.nsh
 
 !define PRODUCT "garyttierney\me3"
 !define PRODUCT_URL "https://github.com/garyttierney/me3"
+
+!macro APP_ASSOCIATE EXT FILECLASS DESCRIPTION ICON COMMANDTEXT COMMAND
+  ; Backup the previously associated file class
+  ReadRegStr $R0 SHELL_CONTEXT "Software\Classes\.${EXT}" ""
+  WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}" "${FILECLASS}_backup" "$R0"
+
+  WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}" "" "${FILECLASS}"
+
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}" "" `${DESCRIPTION}`
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\DefaultIcon" "" `${ICON}`
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\shell" "" "open"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\shell\open" "" `${COMMANDTEXT}`
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\shell\open\command" "" `${COMMAND}`
+!macroend
+
+!macro APP_ASSOCIATE_EX EXT FILECLASS DESCRIPTION ICON VERB DEFAULTVERB SHELLNEW COMMANDTEXT COMMAND
+  ; Backup the previously associated file class
+  ReadRegStr $R0 SHELL_CONTEXT "Software\Classes\.${EXT}" ""
+  WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}" "${FILECLASS}_backup" "$R0"
+
+  WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}" "" "${FILECLASS}"
+  StrCmp "${SHELLNEW}" "0" +2
+  WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}\ShellNew" "NullFile" ""
+
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}" "" `${DESCRIPTION}`
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\DefaultIcon" "" `${ICON}`
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\shell" "" `${DEFAULTVERB}`
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\shell\${VERB}" "" `${COMMANDTEXT}`
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\shell\${VERB}\command" "" `${COMMAND}`
+!macroend
+
+!macro APP_ASSOCIATE_ADDVERB FILECLASS VERB COMMANDTEXT COMMAND
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\shell\${VERB}" "" `${COMMANDTEXT}`
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${FILECLASS}\shell\${VERB}\command" "" `${COMMAND}`
+!macroend
+
+!macro APP_ASSOCIATE_REMOVEVERB FILECLASS VERB
+  DeleteRegKey SHELL_CONTEXT `Software\Classes\${FILECLASS}\shell\${VERB}`
+!macroend
+
+
+!macro APP_UNASSOCIATE EXT FILECLASS
+  ; Backup the previously associated file class
+  ReadRegStr $R0 SHELL_CONTEXT "Software\Classes\.${EXT}" `${FILECLASS}_backup`
+  WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}" "" "$R0"
+
+  DeleteRegKey SHELL_CONTEXT `Software\Classes\${FILECLASS}`
+!macroend
+
+!macro APP_ASSOCIATE_GETFILECLASS OUTPUT EXT
+  ReadRegStr ${OUTPUT} SHELL_CONTEXT "Software\Classes\.${EXT}" ""
+!macroend
+
+
+; !defines for use with SHChangeNotify
+!ifdef SHCNE_ASSOCCHANGED
+!undef SHCNE_ASSOCCHANGED
+!endif
+!define SHCNE_ASSOCCHANGED 0x08000000
+!ifdef SHCNF_FLUSH
+!undef SHCNF_FLUSH
+!endif
+!define SHCNF_FLUSH        0x1000
+
+!macro UPDATEFILEASSOC
+; Using the system.dll plugin to call the SHChangeNotify Win32 API function so we
+; can update the shell.
+  System::Call "shell32::SHChangeNotify(i,i,i,i) (${SHCNE_ASSOCCHANGED}, ${SHCNF_FLUSH}, 0, 0)"
+!macroend
 
 !ifndef TARGET_DIR
   !define TARGET_DIR "target/x86_64-pc-windows-msvc/release/"
@@ -85,7 +155,6 @@ Function nsDialogsPage
 	nsDialogs::Show
 FunctionEnd
 
-
 Function nsDialogsPageLeave
 	${NSD_GetState} $Checkbox $TelemetryEnabled
 FunctionEnd
@@ -116,6 +185,8 @@ Section "Main Application" SEC01
 
     ; Generate an uninstaller executable
     WriteUninstaller "$INSTDIR\uninstall.exe"
+    !insertmacro APP_ASSOCIATE "me3-toml" "me3.mod-profile" "me3 mod profile" \
+      "$INSTDIR\bin\me3.exe,0" "Open with me3" "$INSTDIR\bin\me3.exe $\"%1$\""
 
     IfFileExists "$INSTDIR\config\me3.toml" file_found file_not_found
 file_found:
