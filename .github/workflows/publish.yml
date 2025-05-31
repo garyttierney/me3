@@ -2,6 +2,8 @@ on:
   release:
     types:
       - published
+      - edited
+      - created
   push:
   workflow_dispatch:
 
