@@ -11,6 +11,13 @@ cargo install xwin
 xwin --accept-license splat --output "$HOME/xwin"
 
 {
+    CL_FLAGS="-Wno-unused-command-line-argument
+            -fuse-ld=lld-link
+            /imsvc$HOME/xwin/crt/include
+            /imsvc$HOME/xwin/sdk/include/ucrt
+            /imsvc$HOME/xwin/sdk/include/um
+            /imsvc$HOME/xwin/sdk/include/shared"
+
     echo "AR_x86_64_pc_windows_msvc=llvm-lib"
     echo "CFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS"
     echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS /EHsc"
