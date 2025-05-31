@@ -24,6 +24,8 @@ jobs:
           toolchain: nightly
           targets: x86_64-pc-windows-msvc,x86_64-unknown-linux-musl
       - uses: ./.github/actions/setup-windows-toolchain
+      - name: Install musl-tools
+        run: sudo apt-get install --yes musl-tools
       - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
         with:
           cache-on-failure: true
@@ -32,7 +34,6 @@ jobs:
           cargo build --target x86_64-unknown-linux-musl -p me3-cli --release --features=sentry
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-
       - run: |
           ls target/
           ls target/release
