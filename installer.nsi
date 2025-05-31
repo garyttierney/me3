@@ -2,7 +2,7 @@
 !include LogicLib.nsh
 !include nsDialogs.nsh
 
-!define PRODUCT "me3"
+!define PRODUCT "garyttierney\me3"
 !define PRODUCT_URL "https://github.com/garyttierney/me3"
 
 !ifndef TARGET_DIR
@@ -21,7 +21,7 @@ Name "me3"
 
 RequestExecutionLevel user
 
-InstallDir "$LOCALAPPDATA\Programs\me3"
+InstallDir "$LOCALAPPDATA\Programs\${PRODUCT}"
 InstallDirRegKey HKCU "Software\${PRODUCT}" "Install_Dir"
 
 ShowInstDetails "show"
@@ -41,12 +41,23 @@ Function .onInit
     StrCpy $TelemetryEnabled "${BST_CHECKED}"
 FunctionEnd
 
+function .onInstSuccess
+  nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create default' 
+FunctionEnd
+
+Function onFinish
+  ExecShell "open" "$LOCALAPPDATA\garyttierney\me3\config\profiles"
+FunctionEnd
+
 Page custom nsDialogsPage nsDialogsPageLeave
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_SHOWREADME "https://me3.readthedocs.io/"
-!insertmacro MUI_PAGE_FINISH
+!define MUI_FINISHPAGE_RUN
+!define MUI_FINISHPAGE_RUN_FUNCTION onFinish
+!define MUI_FINISHPAGE_RUN_TEXT "Open the mod profile folder?"
 
+!insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE English
