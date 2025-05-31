@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use color_eyre::owo_colors::OwoColorize;
-use steamlocate::SteamDir;
 
 use crate::{output::OutputBuilder, AppInstallInfo, AppPaths, Config};
 

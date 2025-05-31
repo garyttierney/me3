@@ -3,7 +3,6 @@
 use std::{
     env,
     fs::{File, OpenOptions},
-    os::raw::c_void,
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering::SeqCst},
@@ -22,7 +21,7 @@ use sentry::{
     protocol::{Attachment, AttachmentType, Event},
     Level,
 };
-use tracing::{debug, error, info, info_span, trace, warn};
+use tracing::{error, info, info_span};
 
 use crate::game::Game;
 

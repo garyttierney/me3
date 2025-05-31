@@ -3,7 +3,7 @@ use std::{error::Error, io::stderr, path::PathBuf, str::FromStr};
 use clap::{ArgAction, Parser, ValueEnum};
 use color_eyre::eyre::eyre;
 use commands::{profile::ProfileCommands, Commands};
-use config::{ConfigError, Environment, File, Map, Source, Value};
+use config::{ConfigError, Environment, File, Map, Source};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use tracing::warn;

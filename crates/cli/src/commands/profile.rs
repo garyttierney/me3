@@ -1,18 +1,11 @@
-use std::{
-    error::Error,
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{error::Error, fs, path::PathBuf};
 
 use clap::{ArgAction, Args, Subcommand};
-use color_eyre::eyre::{self, eyre};
+use color_eyre::eyre::eyre;
 use me3_mod_protocol::{dependency::Dependency, package::WithPackageSource, ModProfile};
-use tracing::{debug, error, warn};
+use tracing::{debug, warn};
 
-use crate::{
-    output::{self, OutputBuilder},
-    Config,
-};
+use crate::{output::OutputBuilder, Config};
 
 #[derive(Subcommand)]
 #[command(flatten_help = true)]

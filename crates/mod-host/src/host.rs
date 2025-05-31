@@ -4,7 +4,6 @@ use std::{
     sync::{Arc, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
-use crash_handler::CrashHandler;
 use me3_mod_protocol::ModProfile;
 use me3_telemetry::TelemetryGuard;
 use retour::Function;

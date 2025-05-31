@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use sentry::{ClientInitGuard, Hub};
+use sentry::ClientInitGuard;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{
     fmt::{self, MakeWriter},

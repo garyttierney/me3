@@ -1,6 +1,4 @@
 use std::{
-    io::Stderr,
-    os::{raw::c_void, windows::process::CommandExt},
     path::{Path, PathBuf},
     process::{Command, Stdio},
     time::Duration,

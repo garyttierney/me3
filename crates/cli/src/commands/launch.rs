@@ -11,7 +11,6 @@ use std::{
 
 use clap::Args;
 use color_eyre::eyre::{eyre, OptionExt};
-use is_terminal::IsTerminal;
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{
     dependency::sort_dependencies,
@@ -24,8 +23,7 @@ use steamlocate::{CompatTool, SteamDir};
 use tempfile::NamedTempFile;
 use tracing::info;
 
-use super::profile::no_profile_dir;
-use crate::{commands::info, AppInstallInfo, AppPaths, Config, Game};
+use crate::{AppPaths, Config, Game};
 
 #[derive(Debug, clap::Args)]
 #[group(required = true, multiple = false)]
