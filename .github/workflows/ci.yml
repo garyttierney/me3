@@ -26,36 +26,9 @@ jobs:
         with:
           toolchain: nightly
           targets: x86_64-pc-windows-msvc
-      - uses: Swatinem/rust-cache@v2
-      - run: |
-          sudo dpkg --add-architecture i386
-          wget -qO - https://dl.winehq.org/wine-builds/winehq.key | sudo apt-key add -
-          sudo apt-add-repository "deb https://dl.winehq.org/wine-builds/ubuntu $(lsb_release -cs) main"
-          sudo apt install --install-recommends winehq-stable lld clang-tools llvm
-          set -eux
-          cargo install xwin
-
-          xwin --accept-license splat --output "${{ github.workspace }}/xwin"
-          echo "AR_x86_64_pc_windows_msvc=llvm-lib" >> "$GITHUB_ENV"
-          echo "CFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS" >> "$GITHUB_ENV"
-          echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS /EHsc" >> "$GITHUB_ENV"
-          echo "CC_x86_64_pc_windows_msvc=clang-cl-18" >> "$GITHUB_ENV"
-          echo "CXX_x86_64_pc_windows_msvc=clang-cl-18" >> "$GITHUB_ENV"
-          cat > ~/.cargo/config.toml <<EOF
-            [target.x86_64-pc-windows-msvc]
-            linker = "lld"
-            runner = ["env", "WINEDEBUG=-all", "wine"]
-            rustflags = [
-                "-Lnative=${{ github.workspace }}/xwin/crt/lib/x86_64",
-                "-Lnative=${{ github.workspace }}/xwin/sdk/lib/um/x86_64",
-                "-Lnative=${{ github.workspace }}/xwin/sdk/lib/ucrt/x86_64",
-                "-C",
-                "target-feature=+crt-static",
-                "--cfg", "windows_raw_dylib",
-                "--cfg", "windows_debugger_visualizer"
-            ]
-          EOF
+      - run: .github/setup-windows-toolchain
         if: matrix.os == 'ubuntu-latest'
+      - uses: Swatinem/rust-cache@v2
         env:
           CL_FLAGS: >-
             -Wno-unused-command-line-argument -fuse-ld=lld-link 

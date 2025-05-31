@@ -24,10 +24,13 @@ jobs:
         with:
           toolchain: nightly
           targets: x86_64-pc-windows-msvc
+      - run: .github/setup-windows-toolchain
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-      - run: cargo build --target x86_64-pc-windows-msvc --all --release --features=sentry
+      - run: |
+          cargo build --target x86_64-pc-windows-msvc --all --release --features=sentry
+          cargo build --target x86_64-unknown-linux-gnu -p me3-cli --release --features=sentry
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 

@@ -1,0 +1,34 @@
+#!/bin/bash
+
+set -eux
+
+sudo dpkg --add-architecture i386
+wget -qO - https://dl.winehq.org/wine-builds/winehq.key | sudo apt-key add -
+sudo apt-add-repository "deb https://dl.winehq.org/wine-builds/ubuntu $(lsb_release -cs) main"
+sudo apt install --install-recommends winehq-stable lld clang-tools llvm
+cargo install xwin
+
+xwin --accept-license splat --output "$HOME/xwin"
+
+{
+    echo "AR_x86_64_pc_windows_msvc=llvm-lib"
+    echo "CFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS"
+    echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS /EHsc"
+    echo "CC_x86_64_pc_windows_msvc=clang-cl-18"
+    echo "CXX_x86_64_pc_windows_msvc=clang-cl-18"
+} >>"$GITHUB_ENV"
+
+cat >~/.cargo/config.toml <<EOF
+[target.x86_64-pc-windows-msvc]
+linker = "lld"
+runner = ["env", "WINEDEBUG=-all", "wine"]
+rustflags = [
+    "-Lnative=$HOME/xwin/crt/lib/x86_64",
+    "-Lnative=$HOME/xwin/sdk/lib/um/x86_64",
+    "-Lnative=$HOME/xwin/sdk/lib/ucrt/x86_64",
+    "-C",
+    "target-feature=+crt-static",
+    "--cfg", "windows_raw_dylib",
+    "--cfg", "windows_debugger_visualizer"
+]
+EOF
