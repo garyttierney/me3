@@ -24,14 +24,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
-          targets: x86_64-pc-windows-msvc
+          targets: x86_64-pc-windows-msvc,x86_64-unknown-linux-musl
       - uses: ./.github/actions/setup-windows-toolchain
       - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
         with:
           cache-on-failure: true
       - run: |
           cargo build --target x86_64-pc-windows-msvc --all --release --features=sentry
-          cargo build --target x86_64-unknown-linux-gnu -p me3-cli --release --features=sentry
+          cargo build --target x86_64-unknown-linux-musl -p me3-cli --release --features=sentry
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
@@ -65,7 +65,7 @@ jobs:
       - name: Generate SBOMs
         run: |
           cargo cyclonedx --target=x86_64-pc-windows-msvc --target-in-filename --format=json
-          cargo cyclonedx --target=x86_64-unknown-linux-gnu --target-in-filename --format=json
+          cargo cyclonedx --target=x86_64-unknown-linux-musl --target-in-filename --format=json
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd # v2.3.0
@@ -89,8 +89,8 @@ jobs:
 
       - uses: actions/attest-sbom@v2
         with:
-          subject-path: "target/x86_64-unknown-linux-gnu/release/me3"
-          sbom-path: "crates/cli/me3-cli_x86_64-unknown-linux-gnu.cdx.json"
+          subject-path: "target/x86_64-unknown-linux-musl/release/me3"
+          sbom-path: "crates/cli/me3-cli_x86_64-unknown-linux-musl.cdx.json"
 
       - run: |
           set +e
@@ -127,7 +127,7 @@ jobs:
           target/x86_64-pc-windows-msvc/release/me3_mod_host.dll
           target/x86_64-pc-windows-msvc/release/me3-launcher.exe
           target/x86_64-pc-windows-msvc/release/me3.exe
-          target/x86_64-unknown-linux-gnu/release/me3
+          target/x86_64-unknown-linux-musl/release/me3
         env:
           GH_TOKEN: ${{ github.token }}
         if: github.event_name == 'release' || (github.event_name == 'push' && github.ref_name == 'main')
