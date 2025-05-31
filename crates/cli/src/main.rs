@@ -128,7 +128,7 @@ impl AppInstallInfo {
         use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
         let hklm = RegKey::predef(HKEY_CURRENT_USER);
-        let me3_reg = hklm.open_subkey(r"Software\me3")?;
+        let me3_reg = hklm.open_subkey(r"Software\garyttierney\me3")?;
         let install_dir_value = me3_reg.get_value::<String, _>("Install_Dir")?;
         let install_dir = PathBuf::from_str(&install_dir_value)?;
 
