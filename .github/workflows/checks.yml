@@ -30,9 +30,6 @@ jobs:
       - name: Setup | Rust
         uses: dtolnay/rust-toolchain@nightly
 
-      - name: Setup | Cache
-        uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
-
       - name: Run | Generate Schema
         run: cargo run --locked --package me3-mod-protocol --bin schema > schemas/mod-profile.json
 
