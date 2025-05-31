@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add tests for with_context(...) hooks by @garyttierney in https://github.com/garyttierney/me3/pull/40
 - Normalize profile paths instead of canonicalizing by @garyttierney in https://github.com/garyttierney/me3/pull/41
 - Structured host->launcher logging by @garyttierney in https://github.com/garyttierney/me3/pull/43
+- Remove support for YAML ModProfile files by @garyttierney in https://github.com/garyttierney/me3/pull/50
 
 ## [v0.1.0] - 2025-05-25
 
