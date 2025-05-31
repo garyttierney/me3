@@ -42,7 +42,7 @@ jobs:
           echo "CXX_x86_64_pc_windows_msvc=clang-cl-18" >> "$GITHUB_ENV"
           cat > ~/.cargo/config.toml <<EOF
             [target.x86_64-pc-windows-msvc]
-            linker = "lld-link"
+            linker = "lld"
             runner = ["env", "WINEDEBUG=-all", "wine"]
             rustflags = [
                 "-Lnative=${{ github.workspace }}/xwin/crt/lib/x86_64",
