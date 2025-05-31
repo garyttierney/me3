@@ -24,7 +24,7 @@ jobs:
               gh release delete prerelease -R garyttierney/me3
           fi
 
-          release_notes=$(awk '/^## /{f=1;next} f{if(/^## /){f=0;exit} print}' CHANGELOG.md)
+          release_notes=$(awk 'NR == 1, /^## / { next }; /^## / { exit }; { print }' CHANGELOG.md )
 
           gh release create prerelease -p -n "$release_notes"
         env:
