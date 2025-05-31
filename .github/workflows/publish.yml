@@ -57,15 +57,36 @@ jobs:
           name: me3-installer-${{ steps.get_version.outputs.version }}
           path: me3_installer_*.exe
 
+      - name: Generate SBOMs
+        run: |
+          cargo install cargo-cyclonedx --locked
+          cargo cyclonedx --target=x86_64-pc-windows-msvc --target-in-filename --format=json
+          cargo cyclonedx --target=x86_64-unknown-linux-gnu --target-in-filename --format=json
+
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd # v2.3.0
         with:
           subject-path: |
             me3_installer_${{ steps.get_version.outputs.version }}.exe
-            target/x86_64-pc-windows-msvc/release/me3_mod_host.dll
-            target/x86_64-pc-windows-msvc/release/me3-launcher.exe
-            target/x86_64-pc-windows-msvc/release/me3.exe
-            target/x86_64-unknown-linux-gnu/release/me3
+      - uses: actions/attest-sbom@v2
+        with:
+          subject-path: "target/x86_64-pc-windows-msvc/release/me3_mod_host.dll"
+          sbom-path: "crates/host/me3-mod-host_x86_64-pc-windows-msvc.cdx.json"
+
+      - uses: actions/attest-sbom@v2
+        with:
+          subject-path: "target/x86_64-pc-windows-msvc/release/me3-launcher.exe"
+          sbom-path: "crates/launcher/me3-launcher_x86_64-pc-windows-msvc.cdx.json"
+
+      - uses: actions/attest-sbom@v2
+        with:
+          subject-path: "target/x86_64-pc-windows-msvc/release/me3.exe"
+          sbom-path: "crates/cli/me3-cli_x86_64-pc-windows-msvc.cdx.json"
+
+      - uses: actions/attest-sbom@v2
+        with:
+          subject-path: "target/x86_64-unknown-linux-gnu/release/me3"
+          sbom-path: "crates/cli/me3-cli_x86_64-unknown-linux-gnu.cdx.json"
 
       - name: Upload installer to release
         run: >-
