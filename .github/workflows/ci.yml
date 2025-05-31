@@ -37,7 +37,7 @@ jobs:
 
           xwin --accept-license splat --output "${{ github.workspace }}/xwin"
           echo "CFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS" >> "$GITHUB_ENV"
-          echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS" >> "$GITHUB_ENV"
+          echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS /EHsc" >> "$GITHUB_ENV"
           echo "CC_x86_64_pc_windows_msvc=clang-cl-18" >> "$GITHUB_ENV"
           echo "CXX_x86_64_pc_windows_msvc=clang-cl-18" >> "$GITHUB_ENV"
           cat > ~/.cargo/config.toml <<EOF
@@ -61,8 +61,7 @@ jobs:
             /imsvc${{ github.workspace }}/xwin/crt/include 
             /imsvc${{ github.workspace }}/xwin/sdk/include/ucrt 
             /imsvc${{ github.workspace }}/xwin/sdk/include/um 
-            /imsvc${{ github.workspace }}/xwin/sdk/include/shared 
-            /EHsc"
+            /imsvc${{ github.workspace }}/xwin/sdk/include/shared"
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Install cargo-nextest
@@ -78,9 +77,11 @@ jobs:
           files: ./target/nextest/default/junit.xml
           name: me3-windows-test-results
           token: ${{ secrets.CODECOV_TOKEN }}
+          flags: ${{ matrix.os }}
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
           files: codecov.json
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+          flags: ${{ matrix.os }}
