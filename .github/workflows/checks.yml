@@ -37,6 +37,7 @@ jobs:
           comment-summary-in-pr: always
           retry-on-snapshot-warnings: true
           retry-on-snapshot-warnings-timeout: 60
+        if: github.event == 'pull_request'
 
   check_if_config_schema_up_to_date:
     name: Check if config schema is up to date
@@ -80,13 +81,14 @@ jobs:
 
   clippy:
     name: Clippy
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       actions: read
       security-events: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: ./.github/actions/setup-windows-toolchain
       - uses: dtolnay/rust-toolchain@nightly
         with:
           toolchain: nightly
@@ -108,7 +110,7 @@ jobs:
     permissions:
       contents: read
     name: Formatting
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: dtolnay/rust-toolchain@nightly
