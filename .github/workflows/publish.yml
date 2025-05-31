@@ -98,7 +98,7 @@ jobs:
           echo "RELEASE_IS_PRERELEASE=true" >> "$GITHUB_ENV"
 
           if gh release view prerelease -R garyttierney/me3 ; then
-              gh release delete prerelease -R garyttierney/me3
+              gh release delete prerelease -R garyttierney/me3 -y --cleanup-tag
               sleep 5s
           fi
 
