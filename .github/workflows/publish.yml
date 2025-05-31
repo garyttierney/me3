@@ -95,7 +95,6 @@ jobs:
       - run: |
           set +e
 
-          echo "release_tag"
           echo "RELEASE_TAG=prerelease" >> "$GITHUB_ENV"
           echo "RELEASE_IS_PRERELEASE=true" >> "$GITHUB_ENV"
 
@@ -106,7 +105,7 @@ jobs:
 
           release_notes=$(awk 'NR == 1, /^## / { next }; /^## / { exit }; { print }' CHANGELOG.md )
 
-          gh release create "$RELEASE_TAG" -p -n "$release_notes"
+          gh release create "prerelease" -p -n "$release_notes"
         env:
           GH_TOKEN: ${{ github.token }}
         if: github.event_name != 'release' && github.ref_name == 'main'
