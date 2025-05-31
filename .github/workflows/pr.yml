@@ -9,26 +9,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check-dependencies:
-    name: Check dependencies
-    runs-on: windows-latest
-    permissions:
-      id-token: write
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          toolchain: nightly
-          targets: x86_64-pc-windows-msvc
-
-      - name: "Dependency Review"
-        uses: actions/dependency-review-action@v4
-        with:
-          comment-summary-in-pr: always
-          retry-on-snapshot-warnings: true
-          retry-on-snapshot-warnings-timeout: 60
   labeler:
     name: Assign labels
     permissions:
@@ -36,4 +16,4 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/labeler@v5
+      - uses: actions/labeler@8558fd74291d67161a8a78ce36a881fa63b766a9 # v5.0.0

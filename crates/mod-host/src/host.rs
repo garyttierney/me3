@@ -4,8 +4,8 @@ use std::{
     sync::{Arc, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 
-use crash_handler::CrashHandler;
 use me3_mod_protocol::ModProfile;
+use me3_telemetry::TelemetryGuard;
 use retour::Function;
 
 use self::hook::{thunk::ThunkPool, HookInstaller};
@@ -16,9 +16,9 @@ pub mod hook;
 static ATTACHED_INSTANCE: OnceLock<RwLock<ModHost>> = OnceLock::new();
 
 pub struct ModHost {
-    crash_handler: CrashHandler,
     hooks: Vec<Arc<UntypedDetour>>,
     profiles: Vec<ModProfile>,
+    telemetry: TelemetryGuard,
     thunk_pool: ThunkPool,
 }
 
@@ -34,9 +34,9 @@ impl Debug for ModHost {
 
 #[allow(unused)]
 impl ModHost {
-    pub fn new(crash_handler: CrashHandler, thunk_pool: ThunkPool) -> Self {
+    pub fn new(telemetry: TelemetryGuard, thunk_pool: ThunkPool) -> Self {
         Self {
-            crash_handler: CrashHandler,
+            telemetry,
             hooks: vec![],
             profiles: vec![],
             thunk_pool,
@@ -65,10 +65,6 @@ impl ModHost {
         ATTACHED_INSTANCE
             .set(RwLock::new(self))
             .expect("already attached");
-    }
-
-    pub fn panic(&self) {
-        let _ = self.crash_handler.simulate_exception(None);
     }
 
     pub fn hook<F>(&mut self, target: F) -> HookInstaller<F>

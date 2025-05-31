@@ -6,6 +6,10 @@ repository.workspace = true
 license.workspace = true
 description = "Host DLL providing game extension functionality"
 
+[features]
+default = []
+sentry = ["me3_telemetry/sentry"]
+
 [lib]
 crate-type = ["cdylib"]
 
@@ -33,6 +37,7 @@ windows = { version = "0.61", features = [
     "Win32_System_LibraryLoader",
 ] }
 seq-macro = "0.3.6"
+me3_telemetry = { version = "0.2.0", path = "../telemetry" }
 
 [lints]
 workspace = true

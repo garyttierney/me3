@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    ops::Deref,
+    path::{Path, PathBuf},
+};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -15,6 +18,14 @@ pub trait WithPackageSource {
 /// it.
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ModFile(pub(crate) PathBuf);
+
+impl Deref for ModFile {
+    type Target = PathBuf;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl ModFile {
     /// Returns whether or not the package's source description is relative to the mod profile.
@@ -50,6 +61,19 @@ pub struct Package {
 }
 
 impl Package {
+    pub fn new(path: PathBuf) -> Self {
+        Self {
+            id: path
+                .file_name()
+                .expect("no name for this package")
+                .to_string_lossy()
+                .into(),
+            source: ModFile(path),
+            load_after: vec![],
+            load_before: vec![],
+        }
+    }
+
     /// Makes the package's source absolute using a given base directory (this is usually the mod
     /// profile's parent path).
     pub fn make_absolute(&mut self, base: &Path) {

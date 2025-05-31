@@ -16,53 +16,29 @@ jobs:
     name: Tests
     strategy:
       matrix:
-        os: 
-          # - ubuntu-latest - todo: fix clang-cl under ubuntu builds
+        os:
+          - ubuntu-latest
           - windows-latest
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
           targets: x86_64-pc-windows-msvc
-      - uses: Swatinem/rust-cache@v2
-      - run: |
-          sudo dpkg --add-architecture i386
-          wget -qO - https://dl.winehq.org/wine-builds/winehq.key | sudo apt-key add -
-          sudo apt-add-repository "deb https://dl.winehq.org/wine-builds/ubuntu $(lsb_release -cs) main"
-          sudo apt install --install-recommends winehq-stable lld clang-tools
-          set -eux
-          cargo install xwin
-
-          xwin --accept-license splat --output "${{ github.workspace }}/xwin"
-          echo "CFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS" >> "$GITHUB_ENV"
-          echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS" >> "$GITHUB_ENV"
-          echo "CC_x86_64_pc_windows_msvc=clang-cl" >> "$GITHUB_ENV"
-          echo "CXX_x86_64_pc_windows_msvc=clang-cl" >> "$GITHUB_ENV"
-          cat > ~/.cargo/config.toml <<EOF
-            [target.x86_64-pc-windows-msvc]
-            linker = "lld-link"
-            runner = ["env", "WINEDEBUG=-all", "wine"]
-            rustflags = [
-                "-Lnative=${{ github.workspace }}/xwin/crt/lib/x86_64",
-                "-Lnative=${{ github.workspace }}/xwin/sdk/lib/um/x86_64",
-                "-Lnative=${{ github.workspace }}/xwin/sdk/lib/ucrt/x86_64",
-                "-C",
-                "target-feature=+crt-static",
-                "--cfg", "windows_raw_dylib",
-                "--cfg", "windows_debugger_visualizer"
-            ]
-          EOF
+      - uses: ./.github/actions/setup-windows-toolchain
         if: matrix.os == 'ubuntu-latest'
+      - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
         env:
           CL_FLAGS: >-
             -Wno-unused-command-line-argument -fuse-ld=lld-link 
             /imsvc${{ github.workspace }}/xwin/crt/include 
             /imsvc${{ github.workspace }}/xwin/sdk/include/ucrt 
             /imsvc${{ github.workspace }}/xwin/sdk/include/um 
-            /imsvc${{ github.workspace }}/xwin/sdk/include/shared 
-            /EHsc"
+            /imsvc${{ github.workspace }}/xwin/sdk/include/shared"
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Install cargo-nextest
@@ -73,14 +49,16 @@ jobs:
           cargo llvm-cov --locked report --codecov --output-path codecov.json
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
+        uses: codecov/test-results-action@47f89e9acb64b76debcd5ea40642d25a4adced9f # v1.1.1
         with:
           files: ./target/nextest/default/junit.xml
           name: me3-windows-test-results
           token: ${{ secrets.CODECOV_TOKEN }}
+          flags: ${{ matrix.os }}
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@ab904c41d6ece82784817410c45d8b8c02684457 # v3.1.6
         with:
           files: codecov.json
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+          flags: ${{ matrix.os }}

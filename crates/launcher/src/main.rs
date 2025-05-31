@@ -1,10 +1,9 @@
+#![windows_subsystem = "windows"]
+
 use std::{
     env,
-    fs::File,
-    io,
+    fs::{File, OpenOptions},
     path::PathBuf,
-    process::exit,
-    str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering::SeqCst},
         Arc,
@@ -13,19 +12,16 @@ use std::{
 };
 
 use crash_context::CrashContext;
-use eyre::{Context, OptionExt};
+use eyre::Context;
 use ipc_channel::ipc::{IpcError, IpcOneShotServer};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
-use me3_mod_protocol::{dependency::sort_dependencies, package::WithPackageSource, ModProfile};
 use minidump_writer::minidump_writer::MinidumpWriter;
-use normpath::PathExt;
-use sentry::types::Dsn;
 #[cfg(feature = "sentry")]
 use sentry::{
     protocol::{Attachment, AttachmentType, Event},
     Level,
 };
-use tracing::{debug, error, event, info, trace, warn};
+use tracing::{error, info, info_span};
 
 use crate::game::Game;
 
@@ -34,6 +30,7 @@ mod game;
 pub type LauncherResult<T> = stable_eyre::Result<T>;
 
 /// Launch a Steam game with the me3 mod loader attached.
+#[derive(Debug)]
 struct LauncherArgs {
     /// Path to the game EXE that should be launched.
     exe: PathBuf,
@@ -41,72 +38,42 @@ struct LauncherArgs {
     /// Path to the me3 that should be attached to the game.
     dll: PathBuf,
 
-    /// A list of paths to ModProfile configuration files.
-    profiles: Vec<PathBuf>,
+    /// Path to the compiled attach configuration.
+    config_path: PathBuf,
 }
 
 impl LauncherArgs {
     pub fn from_env() -> Result<Self, eyre::Error> {
         let exe = PathBuf::from(env::var("ME3_GAME_EXE").wrap_err("game exe wasn't set")?);
-        let dll = PathBuf::from(env::var("ME3_DLL").wrap_err("me3 host dll wasn't set")?);
-        let profiles = env::args().skip(1).map(PathBuf::from).collect();
+        let dll = PathBuf::from(env::var("ME3_HOST_DLL").wrap_err("me3 host dll wasn't set")?);
+        let config_path = PathBuf::from(
+            env::var("ME3_HOST_CONFIG_PATH").wrap_err("me3 host config path wasn't set")?,
+        );
 
-        Ok(LauncherArgs { exe, dll, profiles })
+        Ok(LauncherArgs {
+            exe,
+            dll,
+            config_path,
+        })
     }
 }
 
-#[tracing::instrument]
 fn run() -> LauncherResult<()> {
+    let span = info_span!("run");
+    let span_guard = span.enter();
     info!("Launcher started");
 
-    let args = match LauncherArgs::from_env() {
-        Ok(args) => args,
-        Err(e) => {
-            error!(%e);
-            exit(1)
-        }
-    };
+    let args = LauncherArgs::from_env()?;
 
-    if args.profiles.is_empty() {
-        info!("No profiles provided");
-    } else {
-        info!("Loading profiles from {:?}", args.profiles);
-    }
+    info!(?args, "Parsed launcher args");
 
-    let mut all_natives = vec![];
-    let mut all_packages = vec![];
-
-    for profile_path in args.profiles {
-        let base = profile_path
-            .parent()
-            .and_then(|parent| parent.normalize().ok())
-            .ok_or_eyre("failed to acquire base directory for mod profile")?;
-
-        let profile = ModProfile::from_file(&profile_path)?;
-        // TODO: check profile.supports
-
-        let mut packages = profile.packages();
-        let mut natives = profile.natives();
-
-        packages
-            .iter_mut()
-            .for_each(|pkg| pkg.source_mut().make_absolute(base.as_path()));
-        natives
-            .iter_mut()
-            .for_each(|pkg| pkg.source_mut().make_absolute(base.as_path()));
-
-        all_packages.extend(packages);
-        all_natives.extend(natives);
-    }
-
-    let ordered_natives = sort_dependencies(all_natives)?;
-    let ordered_packages = sort_dependencies(all_packages)?;
+    let attach_config_text = std::fs::read_to_string(args.config_path)?;
+    let attach_config = toml::from_str(&attach_config_text)?;
 
     let (monitor_server, monitor_name) = IpcOneShotServer::new()?;
     let request = AttachRequest {
         monitor_name,
-        natives: ordered_natives,
-        packages: ordered_packages,
+        config: attach_config,
     };
 
     info!("Starting game at {:?} with DLL {:?}", args.exe, args.dll);
@@ -124,17 +91,6 @@ fn run() -> LauncherResult<()> {
         loop {
             match receiver.recv() {
                 Ok(msg) => match msg {
-                    HostMessage::Trace {
-                        level,
-                        message,
-                        target,
-                    } => match level.0 {
-                        tracing_core::Level::DEBUG => debug!(target = target, message),
-                        tracing_core::Level::TRACE => trace!(target = target, message),
-                        tracing_core::Level::INFO => info!(target = target, message),
-                        tracing_core::Level::WARN => warn!(target = target, message),
-                        tracing_core::Level::ERROR => error!(target = target, message),
-                    },
                     HostMessage::CrashDumpRequest {
                         exception_pointers,
                         process_id,
@@ -204,8 +160,10 @@ fn run() -> LauncherResult<()> {
     });
 
     if let Err(e) = game.attach(&args.dll, request) {
-        println!("Failed to attach to game: {e:?}");
+        error!("Failed to attach to game: {e:?}");
     }
+
+    drop(span_guard);
 
     game.join();
     shutdown_requested.store(true, SeqCst);
@@ -214,50 +172,16 @@ fn run() -> LauncherResult<()> {
     Ok(())
 }
 
-fn install_tracing() {
-    use tracing_error::ErrorLayer;
-    use tracing_subscriber::{fmt, prelude::*, EnvFilter};
-
-    let file_layer = fmt::layer()
-        .with_ansi(false)
-        .with_writer(tracing_appender::rolling::never(".", "me3.log"))
-        .pretty();
-    let stdout_layer = fmt::layer()
-        .with_ansi(false)
-        .with_writer(io::stderr)
-        .with_target(false)
-        .compact();
-    let filter_layer = EnvFilter::try_from_default_env()
-        .or_else(|_| EnvFilter::try_new("info"))
-        .unwrap();
-
-    tracing_subscriber::registry()
-        .with(filter_layer)
-        .with(stdout_layer)
-        .with(file_layer)
-        .with(ErrorLayer::default())
-        .init();
-}
-
 fn main() {
-    #[cfg(feature = "sentry")]
-    let _sentry = {
-        let sentry_dsn = option_env!("SENTRY_DSN").and_then(|dsn| Dsn::from_str(dsn).ok());
+    let log_file_path = std::env::var("ME3_LOG_FILE").expect("log file location not set");
+    let log_file = OpenOptions::new()
+        .append(true)
+        .open(log_file_path)
+        .expect("couldn't open log file");
 
-        if sentry_dsn.is_none() {
-            warn!("No Sentry DSN provided, but crash reporting was enabled");
-        }
+    let _guard = me3_telemetry::install(move || log_file.try_clone().unwrap());
 
-        sentry::init(sentry::ClientOptions {
-            debug: cfg!(debug_assertions),
-            traces_sample_rate: 1.0,
-            dsn: sentry_dsn,
-
-            ..Default::default()
-        })
-    };
-
-    install_tracing();
-
-    run().expect("Failed to successfully run launcher");
+    if let Err(e) = run() {
+        error!(?e, "Failed to run launcher: {e}");
+    }
 }
