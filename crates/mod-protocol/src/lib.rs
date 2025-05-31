@@ -54,7 +54,7 @@ impl ModProfile {
 
                 toml::from_str(file_contents.as_str()).map_err(std::io::Error::other)
             }
-            Some("yml" | "yaml") => serde_yaml::from_reader(file).map_err(std::io::Error::other),
+            Some("json") => serde_json::from_reader(file).map_err(std::io::Error::other),
             Some(format) => Err(std::io::Error::other(format!("{format} is unsupported"))),
         }
     }
@@ -114,10 +114,5 @@ mod tests {
     #[test]
     fn basic_config_toml() {
         check("basic_config.me3.toml");
-    }
-
-    #[test]
-    fn basic_config_yaml() {
-        check("basic_config.me3.yaml");
     }
 }

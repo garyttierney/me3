@@ -10,7 +10,6 @@ description = "Schema definition for me3 mod profiles"
 schemars.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-serde_yaml.workspace = true
 toml.workspace = true
 thiserror.workspace = true
 topological-sort = "0.2.2"
