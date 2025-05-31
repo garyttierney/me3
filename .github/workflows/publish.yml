@@ -1,12 +1,9 @@
 on:
   release:
     types:
-      - published
-      - edited
-      - created
+      - released
   push:
   workflow_dispatch:
-
 name: Publishing
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.release.name || github.ref }}
@@ -93,9 +90,38 @@ jobs:
           subject-path: "target/x86_64-unknown-linux-gnu/release/me3"
           sbom-path: "crates/cli/me3-cli_x86_64-unknown-linux-gnu.cdx.json"
 
+      - run: |
+          set +e
+
+          echo "release_tag"
+          echo "RELEASE_TAG=prerelease" >> "$GITHUB_ENV"
+          echo "RELEASE_IS_PRERELEASE=true" >> "$GITHUB_ENV"
+
+          if gh release view prerelease -R garyttierney/me3 ; then
+              gh release delete prerelease -R garyttierney/me3
+              sleep 5s
+          fi
+
+          release_notes=$(awk 'NR == 1, /^## / { next }; /^## / { exit }; { print }' CHANGELOG.md )
+
+          gh release create "$RELEASE_TAG" -p -n "$release_notes"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        if: github.event_name != 'release'
+
+      - run: |
+          echo "RELEASE_TAG=${{ github.event.release.tag_name }}" >> "$GITHUB_ENV"
+          echo "RELEASE_IS_PRERELEASE=false" >> "$GITHUB_ENV"
+        if: github.event_name == 'release'
+
+      - run: |
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$RELEASE_IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+        id: collect-release-info
+
       - name: Upload installer to release
         run: >-
-          gh release upload --clobber -R garyttierney/me3 ${{ github.event.release.tag_name }}
+          gh release upload --clobber -R garyttierney/me3 "${{ steps.collect-release-info.outputs.release_tag }}"
            me3_installer_${{ steps.get_version.outputs.version }}.exe
            target/x86_64-pc-windows-msvc/release/me3_mod_host.dll
            target/x86_64-pc-windows-msvc/release/me3-launcher.exe
@@ -103,7 +129,6 @@ jobs:
            target/x86_64-unknown-linux-gnu/release/me3
         env:
           GH_TOKEN: ${{ github.token }}
-        if: github.event_name == 'release'
 
       - name: Setup Sentry CLI
         uses: matbour/setup-sentry-cli@4cb3adf3ade6f5776a298102a9fb9e29e41bf89d # v1.3.0
@@ -120,11 +145,9 @@ jobs:
           SENTRY_ORG: modengine
           SENTRY_PROJECT: me3
         with:
-          release: "${{ github.event.release.tag_name }}"
-          finalize: "${{ !github.event.release.prerelease }}"
-        if: github.event_name == 'release'
+          release: "$${{ steps.collect-release-info.outputs.release_tag }}"
+          finalize: "${{ steps.collect-release-info.outputs.is_prerelease == 'false' }}"
 
       - name: Upload debug symbols to sentry
         run: |
           sentry-cli debug-files upload --include-sources -o modengine -p me3 target/x86_64-pc-windows-msvc/release/
-        if: github.event_name == 'release'
