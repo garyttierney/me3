@@ -37,7 +37,7 @@ jobs:
           comment-summary-in-pr: always
           retry-on-snapshot-warnings: true
           retry-on-snapshot-warnings-timeout: 60
-        if: github.event == 'pull_request'
+        if: github.event_name == 'pull_request'
 
   check_if_config_schema_up_to_date:
     name: Check if config schema is up to date
