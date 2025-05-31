@@ -3,8 +3,6 @@ on:
     types:
       - released
   push:
-    branches:
-      - main
   workflow_dispatch:
 name: Publishing
 concurrency:
