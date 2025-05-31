@@ -87,6 +87,8 @@ jobs:
           sarif_file: results.sarif
 
   fmt:
+    permissions:
+      contents: read
     name: Formatting
     runs-on: windows-latest
     steps:
