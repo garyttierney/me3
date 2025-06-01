@@ -152,9 +152,5 @@ Discussions Board: [https://github.com/garyttierney/me3/discussions](https://git
 [contributors-url]: https://github.com/garyttierney/me3/graphs/contributors
 [forks-shield]: https://img.shields.io/github/forks/garyttierney/me3.svg?style=flat
 [forks-url]: https://github.com/garyttierney/me3/network/members
-[stars-shield]: https://img.shields.io/github/stars/garyttierney/me3.svg?style=flat
-[stars-url]: https://github.com/garyttierney/me3/stargazers
-[issues-shield]: https://img.shields.io/github/issues/garyttierney/me3.svg?style=flat
-[issues-url]: https://github.com/garyttierney/me3/issues
 [license-shield]: https://img.shields.io/badge/license-MIT%2FApache--2.0-green?style=flat
-[license-url]: https://github.com/garyttierney/me3/blob/master/LICENSE.txt
+[license-url]: https://github.com/garyttierney/me3/blob/main/LICENSE-APACHE
