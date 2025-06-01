@@ -167,7 +167,7 @@ jobs:
           name: me3-installer
       - run: ./me3_installer.exe /S
       - run: |
-          ls $APPDATA/Programs/garyttierney/me3
+          ls $LOCALAPPDATA/Programs/garyttierney/me3
           echo $PATH
         shell: bash
       - run: me3.exe info
