@@ -193,10 +193,8 @@ Section "Main Application" SEC01
 file_found:
     goto end
 file_not_found:
-    File /oname=config\me3.toml "support/config-dist.toml"
-
     ${If} $TelemetryEnabled == ${BST_CHECKED}
-      WriteINIStr "config\me3.toml" "me3" "crash_telemetry" "true"
+      File /oname=config\me3.toml "support/config-dist.toml"
     ${EndIf}
 end:
 SectionEnd

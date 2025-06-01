@@ -183,7 +183,9 @@ fn main() {
         .open(log_file_path)
         .expect("couldn't open log file");
 
-    let _guard = me3_telemetry::install(move || log_file.try_clone().unwrap());
+    let _guard = me3_telemetry::install(std::env::var("ME3_TELEMETRY").is_ok(), move || {
+        log_file.try_clone().unwrap()
+    });
 
     if let Err(e) = run() {
         error!(?e, "Failed to run launcher: {e}");

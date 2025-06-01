@@ -69,7 +69,9 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         .open(log_file_path)
         .expect("couldn't open log file");
 
-    let telemetry = me3_telemetry::install(move || log_file.try_clone().unwrap());
+    let telemetry = me3_telemetry::install(std::env::var("ME3_TELEMETRY").is_ok(), move || {
+        log_file.try_clone().unwrap()
+    });
 
     info!("Host monitoring configured");
 

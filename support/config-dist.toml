@@ -1,2 +1,1 @@
-[me3]
-crash_telemetry = false
+crash_reporting = true

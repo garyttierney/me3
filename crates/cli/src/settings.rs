@@ -8,6 +8,10 @@ use crate::commands::profile::no_profile_dir;
 #[derive(Debug, clap::Args, Serialize, Deserialize, Default)]
 #[group(multiple = true)]
 pub struct Config {
+    /// Enable crash reporting?
+    #[clap(long, help_heading = "Configuration")]
+    pub(crate) crash_reporting: bool,
+
     /// Override the path to the me3 profile directory.
     #[clap(long, help_heading = "Configuration", value_hint = clap::ValueHint::DirPath)]
     pub(crate) profile_dir: Option<PathBuf>,
@@ -25,6 +29,7 @@ pub struct Config {
 impl Config {
     pub fn merge(self, other: Self) -> Self {
         Self {
+            crash_reporting: self.crash_reporting || other.crash_reporting,
             profile_dir: self.profile_dir.or(other.profile_dir),
             steam_dir: self.steam_dir.or(other.steam_dir),
             #[cfg(target_os = "linux")]
