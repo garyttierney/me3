@@ -75,7 +75,7 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         config.resolve_profile(&args.name)?
     };
 
-    if let Ok(true) = std::fs::exists(&profile_path) {
+    if std::fs::exists(&profile_path).is_ok_and(|exists| exists) && args.overwrite {
         return Err(eyre!(
             "Profile already exists, use --overwrite to ignore this error"
         ));
