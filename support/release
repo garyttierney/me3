@@ -10,7 +10,7 @@ git worktree add -B "release-prep" mkrelease main
     pushd mkrelease || exit 1
 
     git fetch origin --tags
-    release_notes=$(awk '/^## /{f=1;next} f{if(/^## /){f=0;exit} print}' CHANGELOG.md)
+    release_notes=$(awk 'NR == 1, /^## / { next }; /^## / { exit }; { print }' CHANGELOG.md)
     version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
     tag_name="v$version"
 
@@ -57,8 +57,13 @@ EOF
 
     git add Cargo.* && git commit -S -s -m "Release: Start $new_version development"
 
-    if [ -n "$RELEASE_PUSH" ]; then 
+    if [ -n "$RELEASE_PUSH" ]; then
         git push origin "HEAD:release-$tag_name" --force
-        gh pr create -B main -b "$release_notes\n$tag_command" --title "Release: $version"
+
+        if ! gh pr view; then
+            gh pr create -B main -b "$release_notes\n$tag_command" --title "Release: $version"
+        else
+            gh pr edit -B main -b "$release_notes\n$tag_command" --title "Release: $version"
+        fi
     fi
 )
