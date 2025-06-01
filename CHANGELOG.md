@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add a user friendly command-line interface by @garyttierney in <https://github.com/garyttierney/me3/pull/48>
 - Set up documentation site by @garyttierney in <https://github.com/garyttierney/me3/pull/37>
+- Support for loading native DLLs by @garyttierney
 
 ### Fixes
 

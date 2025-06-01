@@ -44,10 +44,10 @@ pub struct Native {
     load_after: Vec<Dependent<String>>,
 
     /// An optional symbol to be called after this native succesfully loads.
-    initializer: Option<NativeInitializerCondition>,
+    pub initializer: Option<NativeInitializerCondition>,
 
     /// An optional symbol to be called when this native successfully is queued for unload.
-    finalizer: Option<String>,
+    pub finalizer: Option<String>,
 }
 
 impl Native {

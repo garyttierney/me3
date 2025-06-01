@@ -75,6 +75,10 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
     let mut host = ModHost::new(telemetry, ThunkPool::new()?);
 
+    for native in config.natives {
+        host.load_native(&native.path, native.initializer)?;
+    }
+
     let mut override_mapping = ArchiveOverrideMapping::default();
     override_mapping.scan_directories(config.packages.iter())?;
     asset_archive::attach(&mut host, Arc::new(override_mapping))?;
