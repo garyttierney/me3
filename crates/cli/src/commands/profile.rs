@@ -110,7 +110,7 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
 pub fn show(config: Config, name: String) -> color_eyre::Result<()> {
     let profile_path = config.resolve_profile(&name)?;
 
-    if std::fs::exists(&profile_path)? {
+    if !std::fs::exists(&profile_path)? {
         return Err(eyre!("No profile found with this name"));
     }
 
