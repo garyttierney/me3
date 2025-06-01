@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeSet,
     fs,
     io::{BufRead, BufReader},
     path::PathBuf,
@@ -9,7 +10,7 @@ use std::{
     },
 };
 
-use clap::Args;
+use clap::{ArgAction, Args};
 use color_eyre::eyre::{eyre, OptionExt};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{
@@ -28,6 +29,10 @@ use crate::{AppPaths, Config, Game};
 #[derive(Debug, clap::Args)]
 #[group(required = true, multiple = false)]
 pub struct Selector {
+    /// Automatically detect the game to launch from mod profiles.
+    #[clap(long, help_heading = "Game selection", action = ArgAction::SetTrue)]
+    auto_detect: bool,
+
     /// A path to the game executable to launch with mod support.
     #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
     exe: Option<PathBuf>,
@@ -89,6 +94,7 @@ pub struct LaunchArgs {
 pub fn launcher_for(name: &str) -> Option<PathBuf> {
     let path = match name {
         "ELDEN RING" => "Game/eldenring.exe",
+        "ELDEN RING NIGHTREIGN" => "Game/nightreign.exe",
         _ => return None,
     };
 
@@ -157,6 +163,7 @@ impl Launcher for CompatToolLauncher {
     }
 }
 
+#[tracing::instrument(skip(config, paths, bins_dir))]
 pub fn launch(
     config: Config,
     paths: AppPaths,
@@ -165,32 +172,6 @@ pub fn launch(
 ) -> color_eyre::Result<()> {
     let mut all_natives = vec![];
     let mut all_packages = vec![];
-
-    let app_id = args
-        .target_selector
-        .steam_id
-        .or_else(|| args.target_selector.game.map(Game::app_id))
-        .ok_or_eyre("unable to determine app ID for game")?;
-    info!(app_id, "resolved app id");
-
-    let steam_dir = config.resolve_steam_dir()?;
-    info!(?steam_dir, "found steam dir");
-
-    let (steam_app, steam_library) = steam_dir
-        .find_app(app_id)?
-        .ok_or_eyre("installation for requested game wasn't found")?;
-    info!(name = ?steam_app.name, "found steam app in library");
-
-    let app_install_path = steam_library.resolve_app_dir(&steam_app);
-    info!(?app_install_path, "found steam app path");
-
-    let launcher_path = steam_app
-        .launcher_path
-        .or_else(|| launcher_for(&steam_app.name.expect("app must have a name")))
-        .ok_or_eyre("unable to determine path to launcher for game")?;
-    info!(?launcher_path, "found steam app launcher");
-
-    let launcher = app_install_path.join(launcher_path);
 
     all_packages.extend(
         args.packages
@@ -205,6 +186,8 @@ pub fn launch(
             .filter_map(|path| path.normalize().ok())
             .map(|normalized| Native::new(normalized.into_path_buf())),
     );
+
+    let mut profile_supported_games = BTreeSet::new();
 
     for profile_name in args.profiles {
         let profile_path = config.resolve_profile(&profile_name)?;
@@ -228,7 +211,55 @@ pub fn launch(
 
         all_packages.extend(packages);
         all_natives.extend(natives);
+
+        for supports in profile.supports() {
+            match supports.game {
+                me3_mod_protocol::Game::EldenRing => {
+                    profile_supported_games.insert(Game::EldenRing);
+                }
+                me3_mod_protocol::Game::Nightreign => {
+                    profile_supported_games.insert(Game::Nightreign);
+                }
+            }
+        }
     }
+
+    let app_id = if args.target_selector.auto_detect {
+        if profile_supported_games.len() > 1 {
+            Err(eyre!(
+                "profile supports more than one game, unable to auto-detect"
+            ))
+        } else {
+            profile_supported_games
+                .pop_first()
+                .map(Game::app_id)
+                .ok_or_eyre("unable to auto-detect appid of game")
+        }
+    } else {
+        args.target_selector
+            .steam_id
+            .or_else(|| args.target_selector.game.map(Game::app_id))
+            .ok_or_eyre("unable to determine app ID for game")
+    }?;
+
+    info!(app_id, "resolved app id");
+
+    let steam_dir = config.resolve_steam_dir()?;
+    info!(?steam_dir, "found steam dir");
+
+    let (steam_app, steam_library) = steam_dir
+        .find_app(app_id)?
+        .ok_or_eyre("installation for requested game wasn't found")?;
+    info!(name = ?steam_app.name, "found steam app in library");
+
+    let app_install_path = steam_library.resolve_app_dir(&steam_app);
+    info!(?app_install_path, "found steam app path");
+
+    let launcher_path = launcher_for(&steam_app.name.expect("app must have a name"))
+        .ok_or_eyre("unable to determine path to launcher for game")?;
+    info!(?launcher_path, "found steam app launcher");
+
+    let launcher = app_install_path.join(launcher_path);
 
     let ordered_natives = sort_dependencies(all_natives)?;
     let ordered_packages = sort_dependencies(all_packages)?;

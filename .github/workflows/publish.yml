@@ -54,7 +54,7 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: me3-installer-${{ steps.get_version.outputs.version }}
+          name: me3-installer
           path: me3_installer.exe
 
       - uses: taiki-e/install-action@2ee2c006bbe55b0c2924d63f440aa76ecdd09aea # v2.52.3
@@ -155,3 +155,23 @@ jobs:
         run: |
           sentry-cli debug-files upload --include-sources -o modengine -p me3 target/x86_64-pc-windows-msvc/release/
         if: github.event_name == 'release' || (github.event_name == 'push' && github.ref_name == 'main')
+  test-windows:
+    name: End-to-end tests (Windows)
+    needs:
+      - publish-installer
+    runs-on: windows-latest
+    steps:
+      - name: Download installer
+        uses: actions/download-artifact@v4
+        with:
+          name: me3-installer
+      - run: ./me3_installer.exe /S
+
+      - run: |
+          Import-Module "$env:ChocolateyInstall/helpers/chocolateyInstaller.psm1"
+          refreshenv
+          me3.exe info
+          me3.exe profile create -g er my-new-profile
+          me3.exe profile list
+          me3.exe profile show my-new-profile
+        shell: pwsh

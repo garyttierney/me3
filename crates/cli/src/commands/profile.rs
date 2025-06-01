@@ -1,11 +1,11 @@
 use std::{error::Error, fs, path::PathBuf};
 
 use clap::{ArgAction, Args, Subcommand};
-use color_eyre::eyre::eyre;
-use me3_mod_protocol::{dependency::Dependency, package::WithPackageSource, ModProfile};
+use color_eyre::eyre::{eyre, OptionExt};
+use me3_mod_protocol::{dependency::Dependency, package::WithPackageSource, ModProfile, Supports};
 use tracing::{debug, warn};
 
-use crate::{output::OutputBuilder, Config};
+use crate::{output::OutputBuilder, Config, Game};
 
 #[derive(Subcommand)]
 #[command(flatten_help = true)]
@@ -25,6 +25,16 @@ pub enum ProfileCommands {
 pub struct ProfileCreateArgs {
     /// Name of the profile.
     name: String,
+
+    /// An optional game to associate with this profile for one-click launches.
+    #[clap(
+        short('g'),
+        long,
+        hide_possible_values = false,
+        help_heading = "Game selection"
+    )]
+    #[arg(value_enum)]
+    game: Option<Game>,
 
     /// Optional flag to treat the input as a filename instead of a profile ID to store in
     /// ME3_PROFILE_DIR.
@@ -65,13 +75,31 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         config.resolve_profile(&args.name)?
     };
 
-    if std::fs::exists(&profile_path)? && !args.overwrite {
+    if std::fs::exists(&profile_path).is_ok_and(|exists| exists) && args.overwrite {
         return Err(eyre!(
             "Profile already exists, use --overwrite to ignore this error"
         ));
     }
 
-    let profile = ModProfile::default();
+    let profile_dir = profile_path
+        .parent()
+        .ok_or_eyre("profile parent path was removed")?;
+    fs::create_dir_all(profile_dir)?;
+
+    let mut profile = ModProfile::default();
+
+    if let Some(game) = args.game {
+        let supports = profile.supports_mut();
+
+        supports.push(Supports {
+            game: match game {
+                Game::EldenRing => me3_mod_protocol::Game::EldenRing,
+                Game::Nightreign => me3_mod_protocol::Game::Nightreign,
+            },
+            since_version: None,
+        });
+    }
+
     let contents = toml::to_string_pretty(&profile)?;
 
     std::fs::write(profile_path, contents)?;
@@ -91,6 +119,17 @@ pub fn show(config: Config, name: String) -> color_eyre::Result<()> {
 
     output.property("Name", name.clone());
     output.property("Path", profile_path.to_string_lossy());
+
+    output.section("Supports", |builder| {
+        for supports in profile.supports() {
+            let name = match supports.game {
+                me3_mod_protocol::Game::EldenRing => "ELDEN RING",
+                me3_mod_protocol::Game::Nightreign => "ELDEN RING: NIGHTREIGN",
+            };
+
+            builder.property(name, "Supported");
+        }
+    });
 
     output.section("Natives", |builder| {
         for native in profile.natives() {

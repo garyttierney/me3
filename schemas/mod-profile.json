@@ -36,8 +36,7 @@
       "type": "string",
       "enum": [
         "elden-ring",
-        "sekiro",
-        "dark-souls-3"
+        "nightrein"
       ]
     },
     "ModFile": {
@@ -206,12 +205,14 @@
           "$ref": "#/$defs/Game"
         },
         "since": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
-        "game",
-        "since"
+        "game"
       ]
     }
   }

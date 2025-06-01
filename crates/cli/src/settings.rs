@@ -41,14 +41,14 @@ impl Config {
     }
 
     pub fn resolve_profile(&self, profile_name: &str) -> color_eyre::Result<PathBuf> {
-        if std::fs::exists(profile_name)? {
+        if let Ok(true) = std::fs::exists(profile_name) {
             Ok(PathBuf::from(profile_name))
         } else {
             Ok(self
                 .profile_dir
                 .as_ref()
                 .ok_or_else(no_profile_dir)?
-                .join(format!("{profile_name}.toml")))
+                .join(format!("{profile_name}.me3")))
         }
     }
 }

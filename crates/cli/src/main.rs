@@ -1,6 +1,6 @@
 use std::{error::Error, io::stderr, path::PathBuf, str::FromStr};
 
-use clap::{ArgAction, Parser, ValueEnum};
+use clap::{ArgAction, Command, Parser, ValueEnum};
 use color_eyre::eyre::eyre;
 use commands::{profile::ProfileCommands, Commands};
 use config::{ConfigError, Environment, File, Map, Source};
@@ -52,16 +52,16 @@ pub enum Game {
     #[value(alias("er"))]
     EldenRing,
 
-    #[serde(alias = "nr", alias = "elden-ring-nightrein")]
-    #[value(alias("nr"), alias("elden-ring-nightrein"))]
-    Nightrein,
+    #[serde(alias = "nr", alias = "elden-ring-nightreign")]
+    #[value(alias("nr"), alias("elden-ring-nightreign"))]
+    Nightreign,
 }
 
 impl Game {
     pub fn app_id(self) -> u32 {
         match self {
             Self::EldenRing => 1245620,
-            Self::Nightrein => 2622380,
+            Self::Nightreign => 2622380,
         }
     }
 }
@@ -128,7 +128,7 @@ impl AppInstallInfo {
         use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
         let hklm = RegKey::predef(HKEY_CURRENT_USER);
-        let me3_reg = hklm.open_subkey(r"Software\me3")?;
+        let me3_reg = hklm.open_subkey(r"Software\garyttierney\me3")?;
         let install_dir_value = me3_reg.get_value::<String, _>("Install_Dir")?;
         let install_dir = PathBuf::from_str(&install_dir_value)?;
 
@@ -273,6 +273,8 @@ fn main() {
         Commands::Profile(ProfileCommands::Create(args)) => commands::profile::create(config, args),
         Commands::Profile(ProfileCommands::List) => commands::profile::list(config),
         Commands::Profile(ProfileCommands::Show { name }) => commands::profile::show(config, name),
+        #[cfg(target_os = "windows")]
+        Commands::AddToPath => commands::windows::add_to_path(),
     };
 
     if let Err(error) = result {

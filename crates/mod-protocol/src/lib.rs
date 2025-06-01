@@ -21,20 +21,17 @@ pub enum Game {
     #[serde(rename = "elden-ring")]
     EldenRing,
 
-    #[serde(rename = "sekiro")]
-    Sekiro,
-
-    #[serde(rename = "dark-souls-3")]
-    DarkSouls3,
+    #[serde(rename = "nightrein")]
+    Nightreign,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Supports {
     #[serde(rename = "game")]
-    game: Game,
+    pub game: Game,
 
     #[serde(rename = "since")]
-    since_version: String,
+    pub since_version: Option<String>,
 }
 
 impl Default for ModProfile {
@@ -48,7 +45,7 @@ impl ModProfile {
         let mut file = File::open(path)?;
 
         match path.extension().and_then(|path| path.to_str()) {
-            Some("toml") | None => {
+            Some("toml") | Some("me3") | None => {
                 let mut file_contents = String::new();
                 let _ = file.read_to_string(&mut file_contents)?;
 
@@ -56,6 +53,12 @@ impl ModProfile {
             }
             Some("json") => serde_json::from_reader(file).map_err(std::io::Error::other),
             Some(format) => Err(std::io::Error::other(format!("{format} is unsupported"))),
+        }
+    }
+
+    pub fn supports_mut(&mut self) -> &mut Vec<Supports> {
+        match self {
+            ModProfile::V1(v1) => &mut v1.supports,
         }
     }
 
