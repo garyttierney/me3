@@ -167,6 +167,11 @@ jobs:
           name: me3-installer
       - run: ./me3_installer.exe /S
       - run: |
+          Import-Module "$env:ChocolateyInstall/helpers/chocolateyInstaller.psm1"
+          refreshenv
+        shell: pwsh
+
+      - run: |
           ls $LOCALAPPDATA/Programs/garyttierney/me3
           echo $PATH
         shell: bash
