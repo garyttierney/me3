@@ -170,6 +170,5 @@ jobs:
       - run: |
           Import-Module "$env:ChocolateyInstall/helpers/chocolateyInstaller.psm1"
           refreshenv
-          & "$env:LOCALAPPDATA/Programs/garyttierney/me3/bin/me3.exe" add-to-path
-          & "$env:LOCALAPPDATA/Programs/garyttierney/me3/bin/me3.exe" info
+          me3.exe info
         shell: pwsh
