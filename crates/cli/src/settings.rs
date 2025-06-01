@@ -41,7 +41,7 @@ impl Config {
     }
 
     pub fn resolve_profile(&self, profile_name: &str) -> color_eyre::Result<PathBuf> {
-        if std::fs::exists(profile_name)? {
+        if let Ok(true) = std::fs::exists(profile_name) {
             Ok(PathBuf::from(profile_name))
         } else {
             Ok(self
