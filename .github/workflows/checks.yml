@@ -17,6 +17,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check-dead-links:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: tcort/github-action-markdown-link-check@v1
   check-dependencies:
     name: Check dependencies
     runs-on: ubuntu-latest
