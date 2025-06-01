@@ -253,9 +253,7 @@ pub fn launch(
     let app_install_path = steam_library.resolve_app_dir(&steam_app);
     info!(?app_install_path, "found steam app path");
 
-    let launcher_path = steam_app
-        .launcher_path
-        .or_else(|| launcher_for(&steam_app.name.expect("app must have a name")))
+    let launcher_path = launcher_for(&steam_app.name.expect("app must have a name"))
         .ok_or_eyre("unable to determine path to launcher for game")?;
     info!(?launcher_path, "found steam app launcher");
 
