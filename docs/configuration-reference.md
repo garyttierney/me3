@@ -56,11 +56,11 @@ path = "mods/MyAwesomeMod.dll"
 	 - <b id="definitionsnativepropertiesload-after">load_after</b>
 		 - Type: `array`
 			 - ***Items***
-			 - &#36;ref: [#/definitions/Dependent](#Dependent)
+			 - &#36;ref: [#/definitions/Dependent](./configuration-reference.md#dependent)
 	 - <b id="definitionsnativepropertiesload-before">load_before</b>
 		 - Type: `array`
 			 - ***Items***
-			 - &#36;ref: [#/definitions/Dependent](#Dependent)
+			 - &#36;ref: [#/definitions/Dependent](./configuration-reference.md#dependent)
 	 - <b id="definitionsnativepropertiesoptional">optional</b>
 		 - *If this native fails to load and this vakye is false, treat it as a critical error.*
 		 - Type: `boolean`
@@ -80,12 +80,12 @@ path = "mods/MyAwesomeMod.dll"
 		 - *A list of package IDs that this package should load after.*
 		 - Type: `array`
 			 - ***Items***
-			 - &#36;ref: [#/definitions/Dependent](#/definitions/Dependent)
+			 - &#36;ref: [#/definitions/Dependent](./configuration-reference.md#dependent)
 	 - <b id="definitionspackagepropertiesload-before">load_before</b>
 		 - *A list of packages that this package should load before.*
 		 - Type: `array`
 			 - ***Items***
-			 - &#36;ref: [#/definitions/Dependent](#/definitions/Dependent)
+			 - &#36;ref: [#/definitions/Dependent](./configuration-reference.md#dependent)
 	 - <b id="definitionspackagepropertiessource">source</b> `required`
 		 - *A path to the source of this package.*
 
@@ -94,6 +94,6 @@ path = "mods/MyAwesomeMod.dll"
  - Type: `object`
  - ***Properties***
 	 - <b id="definitionssupportspropertiesgame">game</b> `required`
-		 - &#36;ref: [#/definitions/Game](#/definitions/Game)
+		 - &#36;ref: [#/definitions/Game](./configuration-reference.md#game)
 	 - <b id="definitionssupportspropertiessince">since</b> `required`
 		 - Type: `string`

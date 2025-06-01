@@ -40,9 +40,9 @@ A **Mod Profile** tells me3 which mods to load and how to load them. These profi
 
 You can define two main types of mod entries:
 
-- **[Packages](./configuration-reference.md#package) (`[[packages]]`)**: Use this to override game assets. Each package entry points to a directory (`source`) containing files that will replace the game's original files. The `id` gives your package a unique name that other packages can use to create a load order.
+- **[Packages](../configuration-reference.md#package) (`[[packages]]`)**: Use this to override game assets. Each package entry points to a directory (`source`) containing files that will replace the game's original files. The `id` gives your package a unique name that other packages can use to create a load order.
 
-- **[Natives](./configuration-reference.md#native) (`[[natives]]`)**: Use this to load custom DLL files (`.dll`) that inject new code or functionality into the game. Each native entry specifies the `path` to the DLL.
+- **[Natives](../configuration-reference.md#native) (`[[natives]]`)**: Use this to load custom DLL files (`.dll`) that inject new code or functionality into the game. Each native entry specifies the `path` to the DLL.
 
 ???+ info "Advanced profile configuration"
 
