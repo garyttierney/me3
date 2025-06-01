@@ -12,8 +12,8 @@ comments: false
 
 1. Get the latest installer from [GitHub releases](https://github.com/garyttierney/me3/releases/latest).
 2. Launch the installer and optionally configure the crash reporting setting to send me3 developers error reports.
-3. Run your mod profile by running `me3 launch -p <profile>` on the command-line or by double-clicking the `.me3` file.
-   - If don't already have a mod profile you can use the default `nightreign-default` and `eldenring-default` profiles. They can be found in %LOCALAPPDATA%/garyttierney/me3/config/profiles.
+3. Run your Mod Profile by double-clicking the `.me3` file.
+   - If you don't already have a mod profile you can use the default `nightreign-default` and `eldenring-default` profiles. They can be found in %LOCALAPPDATA%/garyttierney/me3/config/profiles.
 
 ## Key Features
 
