@@ -112,7 +112,7 @@ Function .onInit
 FunctionEnd
 
 function .onInstSuccess
-  nsExec::Exec 'setx PATH=$INSTDIR\bin;%PATH%'
+  nsExec::Exec 'setx /u PATH=$INSTDIR\bin;%PATH%'
   nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er eldenring-default'
   nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr nightreign-default'
 FunctionEnd
