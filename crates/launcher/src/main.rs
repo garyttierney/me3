@@ -5,7 +5,10 @@ use std::{
     fs::{File, OpenOptions},
     path::PathBuf,
     sync::{
-        atomic::{AtomicBool, Ordering::SeqCst},
+        atomic::{
+            AtomicBool,
+            Ordering::{self, SeqCst},
+        },
         Arc,
     },
     time::{SystemTime, UNIX_EPOCH},
@@ -83,12 +86,13 @@ fn run() -> LauncherResult<()> {
     let game_path = args.exe.parent();
     let mut game = Game::launch(&args.exe, game_path)?;
 
+    let monitor_thread_shutdown = shutdown_requested.clone();
     let monitor_thread = std::thread::spawn(move || {
         info!("Starting monitor thread");
         let (receiver, client) = monitor_server.accept().unwrap();
         info!("Host connected to monitor with message {:?}", client);
 
-        loop {
+        while monitor_thread_shutdown.load(Ordering::SeqCst) {
             match receiver.recv() {
                 Ok(msg) => match msg {
                     HostMessage::CrashDumpRequest {
