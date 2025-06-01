@@ -186,7 +186,7 @@ Section "Main Application" SEC01
     ; Generate an uninstaller executable
     WriteUninstaller "$INSTDIR\uninstall.exe"
 
-    !insertmacro APP_ASSOCIATE "me3" "me3.mod-profile" "me3 mod profile" \
+    !insertmacro APP_ASSOCIATE "me3" "me3.mod-profile" "me3 Mod Profile" \
       "$INSTDIR\bin\me3.exe,0" "Open with me3" "$INSTDIR\bin\me3.exe launch --auto-detect -p $\"%1$\""
 
     IfFileExists "$INSTDIR\config\me3.toml" file_found file_not_found
