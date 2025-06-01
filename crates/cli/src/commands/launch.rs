@@ -215,8 +215,9 @@ pub fn launch(
                 me3_mod_protocol::Game::EldenRing => {
                     profile_supported_games.insert(Game::EldenRing);
                 }
-                me3_mod_protocol::Game::Sekiro => continue,
-                me3_mod_protocol::Game::DarkSouls3 => continue,
+                me3_mod_protocol::Game::Nightrein => {
+                    profile_supported_games.insert(Game::Nightrein);
+                }
             }
         }
     }

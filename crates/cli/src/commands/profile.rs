@@ -2,10 +2,10 @@ use std::{error::Error, fs, path::PathBuf};
 
 use clap::{ArgAction, Args, Subcommand};
 use color_eyre::eyre::eyre;
-use me3_mod_protocol::{dependency::Dependency, package::WithPackageSource, ModProfile};
+use me3_mod_protocol::{dependency::Dependency, package::WithPackageSource, ModProfile, Supports};
 use tracing::{debug, warn};
 
-use crate::{output::OutputBuilder, Config};
+use crate::{output::OutputBuilder, Config, Game};
 
 #[derive(Subcommand)]
 #[command(flatten_help = true)]
@@ -25,6 +25,16 @@ pub enum ProfileCommands {
 pub struct ProfileCreateArgs {
     /// Name of the profile.
     name: String,
+
+    /// An optional game to associate with this profile for one-click launches.
+    #[clap(
+        short('g'),
+        long,
+        hide_possible_values = false,
+        help_heading = "Game selection"
+    )]
+    #[arg(value_enum)]
+    game: Option<Game>,
 
     /// Optional flag to treat the input as a filename instead of a profile ID to store in
     /// ME3_PROFILE_DIR.
@@ -71,7 +81,20 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         ));
     }
 
-    let profile = ModProfile::default();
+    let mut profile = ModProfile::default();
+
+    if let Some(game) = args.game {
+        let supports = profile.supports_mut();
+
+        supports.push(Supports {
+            game: match game {
+                Game::EldenRing => me3_mod_protocol::Game::EldenRing,
+                Game::Nightrein => me3_mod_protocol::Game::Nightrein,
+            },
+            since_version: None,
+        });
+    }
+
     let contents = toml::to_string_pretty(&profile)?;
 
     std::fs::write(profile_path, contents)?;
