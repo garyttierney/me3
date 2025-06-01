@@ -8,12 +8,12 @@ comments: false
 
 [Download :fontawesome-solid-download:](https://github.com/garyttierney/me3){ .md-button .md-button--primary }
 
-## Getting Started
+## Quickstart (Windows)
 
-Check the guides below to find the most appropriate documentation for your use-case.
-
-- **[Getting started](./user-guide/installation.md)**: Get started with running mods by installing me3. For most users.
-- **[Building from source](./building-from-source.md)**: For developers, this guide will walk you through compiling me3.
+1. Get the latest installer from [GitHub releases](https://github.com/garyttierney/me3/releases/latest).
+2. Launch the installer and optionally configure the crash reporting setting to send me3 developers error reports.
+3. Run your mod profile by running `me3 launch -p <profile>` on the command-line or by double-clicking the `.me3` file.
+   - If don't already have a mod profile you can use the default `nightreign-default` and `eldenring-default` profiles. They can be found in %LOCALAPPDATA%/garyttierney/me3/config/profiles.
 
 ## Key Features
 
