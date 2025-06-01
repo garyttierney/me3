@@ -36,7 +36,7 @@ This guide provides step-by-step instructions to install `me3`, a mod loader for
         ```
 
 
-    The installation wizard will then guide you through the setup. After the install location, click "Install" to begin copying files. A progress bar will show the installation status, and once complete, a final screen will appear. Click "Finish" to close the installer.
+    The installation wizard will then guide you through the setup. After choosing the install location, click "Install" to begin copying files. A progress bar will show the installation status, and once complete, a final screen will appear. Click "Finish" to close the installer.
 
 === ":fontawesome-brands-linux: Linux"
 
