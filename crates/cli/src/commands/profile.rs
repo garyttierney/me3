@@ -89,7 +89,7 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         supports.push(Supports {
             game: match game {
                 Game::EldenRing => me3_mod_protocol::Game::EldenRing,
-                Game::Nightrein => me3_mod_protocol::Game::Nightrein,
+                Game::Nightreign => me3_mod_protocol::Game::Nightreign,
             },
             since_version: None,
         });

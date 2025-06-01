@@ -22,7 +22,7 @@ pub enum Game {
     EldenRing,
 
     #[serde(rename = "nightrein")]
-    Nightrein,
+    Nightreign,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]

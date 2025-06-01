@@ -113,7 +113,7 @@ FunctionEnd
 
 function .onInstSuccess
   nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er eldenring-default'
-  nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr nightrein-default'
+  nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr nightreign-default'
 FunctionEnd
 
 Function onFinish
