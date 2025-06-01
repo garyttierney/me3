@@ -141,7 +141,7 @@ Function nsDialogsPage
 	${NSD_CreateCheckbox} 0 30u 100% 10u "Share crash reports with me3 developers?"
 	Pop $Checkbox
 
-	${NSD_CreateLabel} 0 0 100% 64u "me3 will upload crash reports to Sentry.io to alert the developers of frequent issues and help with triaging bug reports"
+	${NSD_CreateLabel} 0 0 100% 64u "me3 will upload crash reports to Sentry.io to alert the developers of frequent issues and help with triaging bug reports. This telemetry contains information about interactions with the me3 tool and the mods being loaded."
 	Pop $Label
 
 	${If} $TelemetryEnabled == ${BST_CHECKED}
@@ -193,10 +193,8 @@ Section "Main Application" SEC01
 file_found:
     goto end
 file_not_found:
-    File /oname=config\me3.toml "support/config-dist.toml"
-
     ${If} $TelemetryEnabled == ${BST_CHECKED}
-      WriteINIStr "config\me3.toml" "me3" "crash_telemetry" "true"
+      File /oname=config\me3.toml "support/config-dist.toml"
     ${EndIf}
 end:
 SectionEnd

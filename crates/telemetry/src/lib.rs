@@ -13,7 +13,7 @@ pub struct TelemetryGuard {
     client: ClientInitGuard,
 }
 
-pub fn install<W>(writer: W) -> TelemetryGuard
+pub fn install<W>(telemetry: bool, writer: W) -> TelemetryGuard
 where
     W: for<'writer> MakeWriter<'writer> + 'static + Send + Sync,
 {

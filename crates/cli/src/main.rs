@@ -212,7 +212,6 @@ fn bins_dir(_config: &Config) -> PathBuf {
 
 fn main() {
     let cli = Cli::parse();
-    let _guard = me3_telemetry::install(stderr);
 
     color_eyre::config::HookBuilder::default()
         .install()
@@ -265,6 +264,7 @@ fn main() {
         .unwrap_or_default()
         .merge(cli.config);
 
+    let _guard = me3_telemetry::install(config.crash_reporting, stderr);
     let bins_path = bins_dir(&config);
 
     let result = match cli.command {

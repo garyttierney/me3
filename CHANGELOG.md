@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixes
 
 - Trampoline pointer should be dereferenced by @garyttierney in <https://github.com/garyttierney/me3/pull/39>
+- Allow opting out of telemetry by @garyttierney in <https://github.com/garyttierney/me3/pull/61>
 
 ### Changes
 

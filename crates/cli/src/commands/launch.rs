@@ -314,6 +314,10 @@ pub fn launch(
     injector_command.env("SteamAppId", app_id.to_string());
     injector_command.env("SteamGameId", app_id.to_string());
 
+    if config.crash_reporting {
+        injector_command.env("ME3_TELEMETRY", "true");
+    }
+
     info!(?injector_command, "running injector command");
 
     let running = Arc::new(AtomicBool::new(true));
