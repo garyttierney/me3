@@ -1,5 +1,3 @@
-#![feature(windows_process_extensions_show_window)]
-
 use std::{error::Error, io::stderr, path::PathBuf, str::FromStr};
 
 use clap::{ArgAction, Command, Parser, ValueEnum};
