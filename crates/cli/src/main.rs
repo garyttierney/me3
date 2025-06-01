@@ -275,6 +275,8 @@ fn main() {
         Commands::Profile(ProfileCommands::Show { name }) => commands::profile::show(config, name),
         #[cfg(target_os = "windows")]
         Commands::AddToPath => commands::windows::add_to_path(),
+        #[cfg(target_os = "windows")]
+        Commands::Update => commands::windows::update(),
     };
 
     if let Err(error) = result {
