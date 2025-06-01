@@ -43,7 +43,7 @@ pub struct Native {
     #[serde(default)]
     load_after: Vec<Dependent<String>>,
 
-    /// An optional symbol to be called after this native succesfully loads.
+    /// An optional symbol to be called after this native successfully loads.
     pub initializer: Option<NativeInitializerCondition>,
 
     /// An optional symbol to be called when this native successfully is queued for unload.

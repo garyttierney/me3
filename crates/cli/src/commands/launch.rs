@@ -71,7 +71,7 @@ pub struct LaunchArgs {
         )]
     profiles: Vec<String>,
 
-    /// Path to package directores that the mod host will use as VFS mount points.
+    /// Path to package directories that the mod host will use as VFS mount points.
     #[arg(
             long("package"),
             action = clap::ArgAction::Append,

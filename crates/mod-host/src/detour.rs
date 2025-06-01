@@ -61,14 +61,14 @@ mod test {
         20
     }
 
-    extern "system" fn overriden_target_func() -> i32 {
+    extern "system" fn overridden_target_func() -> i32 {
         42
     }
 
     #[test]
     fn test1() {
         let detour =
-            install_detour::<extern "system" fn() -> i32>(target_func, overriden_target_func)
+            install_detour::<extern "system" fn() -> i32>(target_func, overridden_target_func)
                 .expect("failed to install");
 
         assert_eq!(20, target_func());
