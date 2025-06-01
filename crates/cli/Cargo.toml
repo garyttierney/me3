@@ -24,6 +24,7 @@ me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
 me3_telemetry = { path = "../telemetry" }
 normpath = "1.3.0"
+open = { version = "5.3.2" }
 serde = { workspace = true, features = ["derive"] }
 steamlocate = "2.0.1"
 tempfile = "3.20.0"
@@ -31,9 +32,15 @@ toml.workspace = true
 tracing.workspace = true
 tracing-error.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
+ureq = "3.0.11"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.55.0"
+update-informer = { version = "1.2.0", default-features = false, features = [
+    "github",
+    "ureq",
+    "rustls-tls",
+] }
 
 [lints]
 workspace = true

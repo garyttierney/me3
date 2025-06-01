@@ -1,3 +1,5 @@
+#![feature(windows_process_extensions_show_window)]
+
 use std::{error::Error, io::stderr, path::PathBuf, str::FromStr};
 
 use clap::{ArgAction, Command, Parser, ValueEnum};
@@ -275,6 +277,8 @@ fn main() {
         Commands::Profile(ProfileCommands::Show { name }) => commands::profile::show(config, name),
         #[cfg(target_os = "windows")]
         Commands::AddToPath => commands::windows::add_to_path(),
+        #[cfg(target_os = "windows")]
+        Commands::Update => commands::windows::update(),
     };
 
     if let Err(error) = result {
