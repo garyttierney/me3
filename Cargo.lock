@@ -1639,7 +1639,7 @@ dependencies = [
 
 [[package]]
 name = "me3-binary-mapper"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "clap",
  "memmap",
@@ -1652,7 +1652,7 @@ dependencies = [
 
 [[package]]
 name = "me3-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "clap",
  "color-eyre",
@@ -1679,7 +1679,7 @@ dependencies = [
 
 [[package]]
 name = "me3-launcher"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "crash-context",
  "dll-syringe",
@@ -1698,7 +1698,7 @@ dependencies = [
 
 [[package]]
 name = "me3-launcher-attach-protocol"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "eyre",
  "me3-mod-protocol",
@@ -1708,7 +1708,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-host"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "crash-handler",
  "dll-syringe",
@@ -1731,7 +1731,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-host-assets"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "cxx-stl",
  "me3-mod-protocol",
@@ -1741,7 +1741,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-protocol"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "expect-test",
  "schemars",
@@ -1754,7 +1754,7 @@ dependencies = [
 
 [[package]]
 name = "me3_telemetry"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "sentry",
  "tracing",
