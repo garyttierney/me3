@@ -171,4 +171,7 @@ jobs:
           Import-Module "$env:ChocolateyInstall/helpers/chocolateyInstaller.psm1"
           refreshenv
           me3.exe info
+          me3.exe profile create -g er my-new-profile
+          me3.exe profile list
+          me3.exe profile show my-new-profile
         shell: pwsh
