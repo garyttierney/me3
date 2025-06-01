@@ -112,7 +112,8 @@ Function .onInit
 FunctionEnd
 
 function .onInstSuccess
-  nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create default' 
+  nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er eldenring-default'
+  nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr nightrein-default'
 FunctionEnd
 
 Function onFinish
@@ -162,6 +163,8 @@ FunctionEnd
 ; Installer Section
 Section "Main Application" SEC01
     SectionIn RO
+    SetShellVarContext current
+
     CreateDirectory "$INSTDIR\config"
     CreateDirectory "$INSTDIR\bin"
 
@@ -189,6 +192,8 @@ Section "Main Application" SEC01
     !insertmacro APP_ASSOCIATE "me3-toml" "me3.mod-profile" "me3 mod profile" \
       "$INSTDIR\bin\me3.exe,0" "Open with me3" "$INSTDIR\bin\me3.exe launch --auto-detect -p $\"%1$\""
 
+    nsExec::Exec 'setx PATH=$INSTDIR\bin;%PATH%'
+
     IfFileExists "$INSTDIR\config\me3.toml" file_found file_not_found
 file_found:
     goto end
@@ -208,7 +213,6 @@ Section "Uninstall"
     Delete "$INSTDIR\LICENSE-APACHE"
     Delete "$INSTDIR\LICENSE-MIT"
     Delete "$INSTDIR\CHANGELOG.md"
-    Delete "$INSTDIR\*.pdb"
 
     RMDir "$INSTDIR"
 
