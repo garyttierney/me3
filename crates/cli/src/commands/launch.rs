@@ -94,6 +94,7 @@ pub struct LaunchArgs {
 pub fn launcher_for(name: &str) -> Option<PathBuf> {
     let path = match name {
         "ELDEN RING" => "Game/eldenring.exe",
+        "ELDEN RING NIGHTREIGN" => "Game/nightreign.exe",
         _ => return None,
     };
 
@@ -162,6 +163,7 @@ impl Launcher for CompatToolLauncher {
     }
 }
 
+#[tracing::instrument(skip(config, paths, bins_dir))]
 pub fn launch(
     config: Config,
     paths: AppPaths,
