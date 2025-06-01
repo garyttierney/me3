@@ -1,34 +1,7 @@
-# Getting started with me3
 
-This guide will help you get me3 installed and set up your first mod profile for ELDEN RING.
+# Creating mod profiles
 
-## Installation
-
-### :fontawesome-brands-windows:  Windows
-
-The easiest way to install me3 on Windows is by using the installer provided with each release.
-
-1.  **Download the installer**:
-
-    - Navigate to [GitHub releases](https://github.com/garyttierney/me3/releases/latest).
-    - Find and download the `me3_installer` exe file.
-
-    ???+ tip "Choosing a Release"
-
-        It's recommended to use the latest stable release unless you have a specific reason to use an older version or a pre-release.
-
-2.  **Run the Installer**:
-
-    - Run the downloaded installer file.
-    - Follow the on-screen instructions
-
-### :fontawesome-brands-linux:  Linux
-
-!!! todo "Linux Installation Guide"
-
-## Creating a mod profile
-
-A **Mod Profile** tells me3 which mods to load and how to load them. These profiles are defined in TOML files.
+A **Mod Profile** tells me3 which mods to load and how to load them. These profiles are defined in TOML files and are validated against a JSON schema that is included with me3. See the [configuration reference](../configuration-reference.md) for more information.
 
 1.  **Create a mod profile configuration file**:
     Create a new text file with a `.me3.toml` extension. For example, `elden_ring_essentials.me3.toml`.
@@ -67,10 +40,9 @@ A **Mod Profile** tells me3 which mods to load and how to load them. These profi
 
 You can define two main types of mod entries:
 
-*   **[Packages](./configuration-reference.md#package) (`[[packages]]`)**: Use this to override game assets. Each package entry points to a directory (`source`) containing files that will replace the game's original files. The `id` gives your package a unique name that other packages can use to create a load order.
+- **[Packages](../configuration-reference.md#package) (`[[packages]]`)**: Use this to override game assets. Each package entry points to a directory (`source`) containing files that will replace the game's original files. The `id` gives your package a unique name that other packages can use to create a load order.
 
-*   **[Natives](./configuration-reference.md#native) (`[[natives]]`)**: Use this to load custom DLL files (`.dll`) that inject new code or functionality into the game. Each native entry specifies the `path` to the DLL.
-
+- **[Natives](../configuration-reference.md#native) (`[[natives]]`)**: Use this to load custom DLL files (`.dll`) that inject new code or functionality into the game. Each native entry specifies the `path` to the DLL.
 
 ???+ info "Advanced profile configuration"
 
@@ -79,6 +51,3 @@ You can define two main types of mod entries:
 ## Running your mod profile
 
 !!! todo "Launcher guide"
-
-## What's next?
-

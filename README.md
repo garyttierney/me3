@@ -46,7 +46,7 @@ Currently it supports the following titles:
 ## Installation
 
 > [!IMPORTANT]
-> Follow the [user guide](https://me3.readthedocs.io/quickstart)
+> Follow the [user guide](https://me3.readthedocs.io/en/latest/#quickstart)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
