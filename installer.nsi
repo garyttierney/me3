@@ -112,7 +112,7 @@ Function .onInit
 FunctionEnd
 
 function .onInstSuccess
-  nsExec::Exec 'setx /u PATH=$INSTDIR\bin;%PATH%'
+  nsExec::Exec '"$INSTDIR\bin\me3.exe" add-to-path'
   nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er eldenring-default'
   nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr nightreign-default'
 FunctionEnd
@@ -190,7 +190,7 @@ Section "Main Application" SEC01
     ; Generate an uninstaller executable
     WriteUninstaller "$INSTDIR\uninstall.exe"
 
-    !insertmacro APP_ASSOCIATE "me3-toml" "me3.mod-profile" "me3 mod profile" \
+    !insertmacro APP_ASSOCIATE "me3" "me3.mod-profile" "me3 mod profile" \
       "$INSTDIR\bin\me3.exe,0" "Open with me3" "$INSTDIR\bin\me3.exe launch --auto-detect -p $\"%1$\""
 
     IfFileExists "$INSTDIR\config\me3.toml" file_found file_not_found
@@ -208,12 +208,13 @@ SectionEnd
 Section "Uninstall"
     Delete "$INSTDIR\bin\me3-launcher.exe"
     Delete "$INSTDIR\bin\me3_host.dll"
+    Delete "$INSTDIR\bin\me3.exe"
     Delete "$INSTDIR\uninstall.exe"
     Delete "$INSTDIR\LICENSE-APACHE"
     Delete "$INSTDIR\LICENSE-MIT"
     Delete "$INSTDIR\CHANGELOG.md"
-
-    RMDir "$INSTDIR"
+    Delete "$INSTDIR\README.txt"
+    RMDir "$INSTDIR\bin"
 
     DeleteRegKey HKLM "$UNINSTALL_REG_KEY"
 SectionEnd

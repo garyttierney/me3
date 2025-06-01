@@ -1,6 +1,6 @@
 use std::{error::Error, io::stderr, path::PathBuf, str::FromStr};
 
-use clap::{ArgAction, Parser, ValueEnum};
+use clap::{ArgAction, Command, Parser, ValueEnum};
 use color_eyre::eyre::eyre;
 use commands::{profile::ProfileCommands, Commands};
 use config::{ConfigError, Environment, File, Map, Source};
@@ -273,6 +273,8 @@ fn main() {
         Commands::Profile(ProfileCommands::Create(args)) => commands::profile::create(config, args),
         Commands::Profile(ProfileCommands::List) => commands::profile::list(config),
         Commands::Profile(ProfileCommands::Show { name }) => commands::profile::show(config, name),
+        #[cfg(target_os = "windows")]
+        Commands::AddToPath => commands::windows::add_to_path(),
     };
 
     if let Err(error) = result {

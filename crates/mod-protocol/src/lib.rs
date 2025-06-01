@@ -45,7 +45,7 @@ impl ModProfile {
         let mut file = File::open(path)?;
 
         match path.extension().and_then(|path| path.to_str()) {
-            Some("toml") | Some("me3-toml") | None => {
+            Some("toml") | Some("me3") | None => {
                 let mut file_contents = String::new();
                 let _ = file.read_to_string(&mut file_contents)?;
 

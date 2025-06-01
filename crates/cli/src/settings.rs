@@ -48,7 +48,7 @@ impl Config {
                 .profile_dir
                 .as_ref()
                 .ok_or_else(no_profile_dir)?
-                .join(format!("{profile_name}.me3-toml")))
+                .join(format!("{profile_name}.me3")))
         }
     }
 }

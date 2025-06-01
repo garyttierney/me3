@@ -6,6 +6,9 @@ pub mod info;
 pub mod launch;
 pub mod profile;
 
+#[cfg(target_os = "windows")]
+pub mod windows;
+
 #[derive(Subcommand)]
 #[command(flatten_help = true)]
 pub enum Commands {
@@ -17,4 +20,8 @@ pub enum Commands {
 
     #[clap(subcommand)]
     Profile(ProfileCommands),
+
+    #[cfg(target_os = "windows")]
+    #[clap(hide = true)]
+    AddToPath,
 }
