@@ -41,7 +41,7 @@ me3 is a tool that extends the functionality of FROMSOTWARE games running on Win
 Currently it supports the following titles:
 
 - ELDEN RING
-- ELDEN RING: NIGHTREIN
+- ~~ELDEN RING: NIGHTREIGN~~ (Coming soon)
 
 ## Installation
 
