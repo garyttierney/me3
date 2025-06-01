@@ -112,7 +112,7 @@ mod test {
         assert_eq!(
             path_to_asset_lookup_key(
                 &base_path,
-                &PathBuf::from(format!(
+                PathBuf::from(format!(
                     "{FAKE_MOD_BASE}/parts/aet/aet007/aet007_071.tpf.dcx"
                 )),
             )
@@ -123,7 +123,7 @@ mod test {
         assert_eq!(
             path_to_asset_lookup_key(
                 &base_path,
-                &PathBuf::from(format!(
+                PathBuf::from(format!(
                     "{FAKE_MOD_BASE}/hkxbnd/m60_42_36_00/h60_42_36_00_423601.hkx.dcx"
                 )),
             )
@@ -134,7 +134,7 @@ mod test {
         assert_eq!(
             path_to_asset_lookup_key(
                 &base_path,
-                &PathBuf::from(format!("{FAKE_MOD_BASE}/regulation.bin")),
+                PathBuf::from(format!("{FAKE_MOD_BASE}/regulation.bin")),
             )
             .unwrap(),
             "regulation.bin",
