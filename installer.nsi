@@ -111,12 +111,6 @@ Function .onInit
     StrCpy $TelemetryEnabled "${BST_CHECKED}"
 FunctionEnd
 
-function .onInstSuccess
-  nsExec::Exec '"$INSTDIR\bin\me3.exe" add-to-path'
-  nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er eldenring-default'
-  nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr nightreign-default'
-FunctionEnd
-
 Function onFinish
   ExecShell "open" "$LOCALAPPDATA\garyttierney\me3\config\profiles"
 FunctionEnd
@@ -186,7 +180,9 @@ Section "Main Application" SEC01
     WriteRegDWORD HKCU "$UNINSTALL_REG_KEY" "NoRepair" 1
 
     WriteRegStr HKCU "Software\${PRODUCT}" "Install_Dir" $INSTDIR
-
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" add-to-path'
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er eldenring-default'
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr nightreign-default'
     ; Generate an uninstaller executable
     WriteUninstaller "$INSTDIR\uninstall.exe"
 
