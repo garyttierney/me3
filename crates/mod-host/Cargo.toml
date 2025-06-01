@@ -38,6 +38,7 @@ windows = { version = "0.61", features = [
 ] }
 seq-macro = "0.3.6"
 me3_telemetry = { path = "../telemetry" }
+libloading = "0.8.8"
 
 [lints]
 workspace = true

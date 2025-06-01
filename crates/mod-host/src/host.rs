@@ -1,12 +1,17 @@
 use std::{
+    ffi::CString,
     fmt::Debug,
     marker::{FnPtr, Tuple},
+    path::Path,
     sync::{Arc, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
+    time::Duration,
 };
 
-use me3_mod_protocol::ModProfile;
+use libloading::{Library, Symbol};
+use me3_mod_protocol::{native::NativeInitializerCondition, ModProfile};
 use me3_telemetry::TelemetryGuard;
 use retour::Function;
+use tracing::{error, info};
 
 use self::hook::{thunk::ThunkPool, HookInstaller};
 use crate::detour::UntypedDetour;
@@ -17,6 +22,7 @@ static ATTACHED_INSTANCE: OnceLock<RwLock<ModHost>> = OnceLock::new();
 
 pub struct ModHost {
     hooks: Vec<Arc<UntypedDetour>>,
+    native_modules: Vec<Library>,
     profiles: Vec<ModProfile>,
     telemetry: TelemetryGuard,
     thunk_pool: ThunkPool,
@@ -38,9 +44,40 @@ impl ModHost {
         Self {
             telemetry,
             hooks: vec![],
+            native_modules: vec![],
             profiles: vec![],
             thunk_pool,
         }
+    }
+
+    pub fn load_native(
+        &mut self,
+        path: &Path,
+        condition: Option<NativeInitializerCondition>,
+    ) -> eyre::Result<()> {
+        let module = unsafe { libloading::Library::new(path) }?;
+
+        match condition {
+            Some(NativeInitializerCondition::Delay { ms }) => {
+                std::thread::sleep(Duration::from_millis(ms as u64))
+            }
+            Some(NativeInitializerCondition::Function(symbol)) => unsafe {
+                let sym_name = CString::new(symbol.as_bytes())?;
+                let initializer: Symbol<unsafe extern "C" fn() -> bool> =
+                    module.get(sym_name.as_bytes_with_nul())?;
+
+                if initializer() {
+                    info!(?path, symbol, "native initialized successfully");
+                } else {
+                    error!(?path, symbol, "native failed to initialize");
+                }
+            },
+            None => {}
+        }
+
+        self.native_modules.push(module);
+
+        Ok(())
     }
 
     pub fn get_attached() -> RwLockReadGuard<'static, ModHost> {
