@@ -126,7 +126,7 @@ fn run() -> LauncherResult<()> {
                             None,
                             &mut file,
                         )
-                        .expect("faild to write crash dump to file");
+                        .expect("failed to write crash dump to file");
 
                         #[cfg(feature = "sentry")]
                         sentry::with_scope(

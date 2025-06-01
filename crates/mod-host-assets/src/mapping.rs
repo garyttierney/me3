@@ -83,7 +83,7 @@ impl ArchiveOverrideMapping {
     }
 }
 
-/// Normalizes paths to use / as a path seperator.
+/// Normalizes paths to use / as a path separator.
 fn normalize_path<P: AsRef<Path>>(path: P) -> PathBuf {
     PathBuf::from(path.as_ref().to_string_lossy().replace('\\', "/"))
 }

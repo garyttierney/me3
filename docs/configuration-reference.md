@@ -52,7 +52,7 @@ path = "mods/MyAwesomeMod.dll"
 		 - *An optional symbol to be called when this native successfully is queued for unload.*
 		 - Types: `string`, `null`
 	 - <b id="definitionsnativepropertiesinitializer">initializer</b>
-		 - *An optional symbol to be called after this native succesfully loads.*
+		 - *An optional symbol to be called after this native successfully loads.*
 	 - <b id="definitionsnativepropertiesload-after">load_after</b>
 		 - Type: `array`
 			 - ***Items***

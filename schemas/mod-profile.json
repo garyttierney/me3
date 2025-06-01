@@ -88,7 +88,7 @@
           ]
         },
         "initializer": {
-          "description": "An optional symbol to be called after this native succesfully loads.",
+          "description": "An optional symbol to be called after this native successfully loads.",
           "anyOf": [
             {
               "$ref": "#/$defs/NativeInitializerCondition"
