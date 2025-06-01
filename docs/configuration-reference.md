@@ -56,11 +56,11 @@ path = "mods/MyAwesomeMod.dll"
 	 - <b id="definitionsnativepropertiesload-after">load_after</b>
 		 - Type: `array`
 			 - ***Items***
-			 - &#36;ref: [#/definitions/Dependent](#/definitions/Dependent)
+			 - &#36;ref: [#/definitions/Dependent](#Dependent)
 	 - <b id="definitionsnativepropertiesload-before">load_before</b>
 		 - Type: `array`
 			 - ***Items***
-			 - &#36;ref: [#/definitions/Dependent](#/definitions/Dependent)
+			 - &#36;ref: [#/definitions/Dependent](#Dependent)
 	 - <b id="definitionsnativepropertiesoptional">optional</b>
 		 - *If this native fails to load and this vakye is false, treat it as a critical error.*
 		 - Type: `boolean`
