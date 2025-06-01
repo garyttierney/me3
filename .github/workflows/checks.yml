@@ -21,6 +21,8 @@ jobs:
   check-spelling:
     name: Check spelling
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout Actions Repository
         uses: actions/checkout@v4
