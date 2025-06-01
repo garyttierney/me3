@@ -115,6 +115,17 @@ pub fn show(config: Config, name: String) -> color_eyre::Result<()> {
     output.property("Name", name.clone());
     output.property("Path", profile_path.to_string_lossy());
 
+    output.section("Supports", |builder| {
+        for supports in profile.supports() {
+            let name = match supports.game {
+                me3_mod_protocol::Game::EldenRing => "ELDEN RING",
+                me3_mod_protocol::Game::Nightreign => "ELDEN RING: NIGHTREIGN",
+            };
+
+            builder.property(name, "Supported");
+        }
+    });
+
     output.section("Natives", |builder| {
         for native in profile.natives() {
             builder.section(native.id(), |builder| {
