@@ -1,7 +1,7 @@
 use std::{error::Error, fs, path::PathBuf};
 
 use clap::{ArgAction, Args, Subcommand};
-use color_eyre::eyre::eyre;
+use color_eyre::eyre::{eyre, OptionExt};
 use me3_mod_protocol::{dependency::Dependency, package::WithPackageSource, ModProfile, Supports};
 use tracing::{debug, warn};
 
@@ -75,11 +75,16 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         config.resolve_profile(&args.name)?
     };
 
-    if std::fs::exists(&profile_path)? && !args.overwrite {
+    if let Ok(true) = std::fs::exists(&profile_path) {
         return Err(eyre!(
             "Profile already exists, use --overwrite to ignore this error"
         ));
     }
+
+    let profile_dir = profile_path
+        .parent()
+        .ok_or_eyre("profile parent path was removed")?;
+    fs::create_dir_all(profile_dir)?;
 
     let mut profile = ModProfile::default();
 
@@ -105,7 +110,7 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
 pub fn show(config: Config, name: String) -> color_eyre::Result<()> {
     let profile_path = config.resolve_profile(&name)?;
 
-    if !std::fs::exists(&profile_path)? {
+    if std::fs::exists(&profile_path)? {
         return Err(eyre!("No profile found with this name"));
     }
 
