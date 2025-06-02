@@ -340,7 +340,7 @@ main() {
 
         if check_cmd gh; then
             ensure gh attestation verify --owner garyttierney --predicate-type https://cyclonedx.org/bom "$_dir/$_file" >/dev/null
-            say "succesfully verified $_file"
+            say "successfully verified $_file"
         fi
     done
 
