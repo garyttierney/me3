@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+## [v0.3.0] - 2025-06-02
+
 ### Added
 
 - Linux installer via shell script by @garyttierney
@@ -48,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Crash handling and host<->launcher log transport by @garyttierney in [#24](https://github.com/garyttierney/me3/issues/24)
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/predicates-rs/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/assert-rs/predicates-rs/compare/v0.3.0...HEAD
+[v0.3.0]: https://github.com/assert-rs/predicates-rs/compare/v0.2.0...v0.3.0
 
 [v0.2.0]: https://github.com/assert-rs/predicates-rs/compare/v0.1.0...v0.2.0
