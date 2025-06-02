@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+- Linux installer via shell script by @garyttierney
+
 ## [v0.2.0] - 2025-06-01
 
 ### Added
