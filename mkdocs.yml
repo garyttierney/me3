@@ -90,7 +90,7 @@ markdown_extensions:
   - footnotes
   - md_in_html
   - toc:
-      toc_depth : "1-2"
+      toc_depth: '1-3'
       permalink: true
   # Python Markdown Extensions
   - pymdownx.arithmatex:
