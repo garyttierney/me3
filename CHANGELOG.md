@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Linux installer via shell script by @garyttierney
 
+### Fixes
+
+- Assign default profile-dir when none has been set by @garyttierney
+
 ## [v0.2.0] - 2025-06-01
 
 ### Added
