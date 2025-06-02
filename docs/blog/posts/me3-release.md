@@ -14,6 +14,7 @@ This blog post explores installation, configuration, use of the new release.
 
 !!! tip
     Looking for the installer? See the [user guide](../../user-guide/installation.md).
+<!-- more -->
 
 ## Introduction
 
@@ -122,4 +123,3 @@ To everyone involved, thank you, in no particular order:
 - [horkrux](https://github.com/horkrux) - Dark Souls 3 debug UI patches and ModEngine2 contributions
 - Gote - feedback on end-user experience and documentation
 - Everyone else who helped along the way
-<!-- more -->
