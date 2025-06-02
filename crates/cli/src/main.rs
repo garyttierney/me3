@@ -248,21 +248,18 @@ fn main() {
         .add_source(OptionalConfigSource(cli_config_source))
         .add_source(Environment::with_prefix("ME3"));
 
-    if let Some(profile_dir) = app_project_dirs
-        .as_ref()
-        .map(|dirs| dirs.config_local_dir().join("profiles"))
-    {
-        config = config
-            .set_default("profile_dir", &*profile_dir.to_string_lossy())
-            .expect("failed to set default profile dir");
-    }
-
-    let config = config
+    let mut config = config
         .build()
         .and_then(|cfg| cfg.try_deserialize::<Config>())
         .inspect_err(|err| warn!("Failed to load configuration: {err:?}"))
         .unwrap_or_default()
         .merge(cli.config);
+
+    if config.profile_dir.is_none() {
+        config.profile_dir = app_project_dirs
+            .as_ref()
+            .map(|dirs| dirs.config_local_dir().join("profiles"));
+    }
 
     let _guard = me3_telemetry::install(config.crash_reporting, stderr);
     let bins_path = bins_dir(&config);
