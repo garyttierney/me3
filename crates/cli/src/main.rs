@@ -1,12 +1,10 @@
-use std::{error::Error, io::stderr, path::PathBuf, str::FromStr};
+use std::{error::Error, io::stderr, iter, path::PathBuf, str::FromStr};
 
-use clap::{ArgAction, Command, Parser, ValueEnum};
+use clap::{ArgAction, Parser, ValueEnum};
 use color_eyre::eyre::eyre;
 use commands::{profile::ProfileCommands, Commands};
-use config::{ConfigError, Environment, File, Map, Source};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 
 mod commands;
 pub mod output;
@@ -157,22 +155,6 @@ impl AppInstallInfo {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct OptionalConfigSource<T: Source + Clone + Send + Sync>(Option<T>);
-
-impl<T: Source + Clone + Send + Sync + 'static> Source for OptionalConfigSource<T> {
-    fn clone_into_box(&self) -> Box<dyn Source + Send + Sync> {
-        Box::new(self.clone())
-    }
-
-    fn collect(&self) -> Result<config::Map<String, config::Value>, ConfigError> {
-        match &self.0 {
-            None => Ok(Map::new()),
-            Some(source) => Ok(source.collect().unwrap_or_default()),
-        }
-    }
-}
-
 pub struct AppContext {
     config: Config,
     installation: Option<AppInstallInfo>,
@@ -238,22 +220,17 @@ fn main() {
         )
         .cache_path(app_project_dirs.as_ref().map(|dirs| dirs.cache_dir()));
 
-    let system_config_source = app_paths.system_config_path.clone().map(File::from);
-    let user_config_source = app_paths.user_config_path.clone().map(File::from);
-    let cli_config_source = app_paths.cli_config_path.clone().map(File::from);
+    let system_config_source = app_paths.system_config_path.clone();
+    let user_config_source = app_paths.user_config_path.clone();
+    let cli_config_source = app_paths.cli_config_path.clone();
+    let config_sources = [system_config_source, user_config_source, cli_config_source];
 
-    let mut config = config::Config::builder()
-        .add_source(OptionalConfigSource(system_config_source))
-        .add_source(OptionalConfigSource(user_config_source))
-        .add_source(OptionalConfigSource(cli_config_source))
-        .add_source(Environment::with_prefix("ME3"));
-
-    let mut config = config
-        .build()
-        .and_then(|cfg| cfg.try_deserialize::<Config>())
-        .inspect_err(|err| warn!("Failed to load configuration: {err:?}"))
-        .unwrap_or_default()
-        .merge(cli.config);
+    let mut config = config_sources
+        .into_iter()
+        .flatten()
+        .flat_map(Config::from_file)
+        .chain(iter::once(cli.config))
+        .fold(Config::default(), |a, b| a.merge(b));
 
     if config.profile_dir.is_none() {
         config.profile_dir = app_project_dirs

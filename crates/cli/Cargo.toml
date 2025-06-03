@@ -16,10 +16,8 @@ sentry = ["me3_telemetry/sentry"]
 [dependencies]
 clap = { version = "4.5.38", features = ["derive"] }
 color-eyre = { version = "0.6.4" }
-config = "0.15.11"
 ctrlc = "3.4.7"
 directories = "6.0.0"
-is-terminal = "0.4.16"
 me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
 me3_telemetry = { path = "../telemetry" }
