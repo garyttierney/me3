@@ -241,6 +241,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d902e3d592a523def97af8f317b08ce16b7ab854c1985a0c671e6f15cebc236"
 
 [[package]]
+name = "arrayvec"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
+
+[[package]]
 name = "async-trait"
 version = "0.1.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -617,9 +623,9 @@ dependencies = [
 
 [[package]]
 name = "cstl-sys"
-version = "2.2.1"
+version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94f649cfeee5615f2422ac1d2bcd08ddc2e57b8e51a0a60cec3b6af88326fa74"
+checksum = "6e1bb64030c0ca780a06613b91b55ca2fddd6700a2500ae934da3c42dff10b13"
 dependencies = [
  "cc",
 ]
@@ -646,9 +652,9 @@ dependencies = [
 
 [[package]]
 name = "cxx-stl"
-version = "3.2.0"
+version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c954d474a5def48b7ef73af5e05141ece320f93c7ce2fb330254ede785eb219"
+checksum = "dbbfc377618e9df6b8d8ba4c208f390303e69cd094c931f3d2517b403899e509"
 dependencies = [
  "cstl-sys",
 ]
@@ -932,6 +938,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
+]
+
+[[package]]
+name = "from-singleton"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86641e977a490a2685ca46c43e16508bde5735ce342c12821f3eb8ba4b4df1d5"
+dependencies = [
+ "pelite",
+ "regex",
+ "windows 0.61.1",
 ]
 
 [[package]]
@@ -1734,9 +1751,14 @@ name = "me3-mod-host-assets"
 version = "0.4.0"
 dependencies = [
  "cxx-stl",
+ "from-singleton",
  "me3-mod-protocol",
+ "pelite",
+ "regex",
  "thiserror 2.0.12",
  "tracing",
+ "undname",
+ "windows 0.61.1",
 ]
 
 [[package]]
@@ -1931,6 +1953,12 @@ name = "no-std-compat"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b93853da6d84c2e3c7d730d6473e8817692dd89be387eb01b94d7f108ecb5b8c"
+
+[[package]]
+name = "nonmax"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "610a5acd306ec67f907abe5567859a3c693fb9886eb1f012ab8f2a47bef3db51"
 
 [[package]]
 name = "normpath"
@@ -3671,6 +3699,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b72f89f0ca32e4db1c04e2a72f5345d59796d4866a1ee0609084569f73683dc8"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "undname"
+version = "2.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39c24bc2141770ebc4a3703143f0cbdf275ed8d03cf7f5dda754c2f60c758ed4"
+dependencies = [
+ "arrayvec",
+ "bitflags 2.9.1",
+ "bumpalo",
+ "nonmax",
+ "smallvec",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
