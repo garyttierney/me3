@@ -43,6 +43,7 @@ pub enum DlCharacterSet {
 pub type DlUtf8String<A = DlStdAllocator> = DlString<CxxUtf8String<A>, { UTF8 }>;
 
 pub type DlUtf16String<A = DlStdAllocator> = DlString<CxxUtf16String<A>, { UTF16 }>;
+pub type DlUtf16HashString<A = DlStdAllocator> = DlHashString<CxxUtf16String<A>, { UTF16 }>;
 
 pub type DlIso8859String<A = DlStdAllocator> = DlString<CxxNarrowString<A>, { ISO_8859 }>;
 
@@ -57,6 +58,15 @@ pub type DlUtf32String<A = DlStdAllocator> = DlString<CxxUtf32String<A>, { UTF32
 pub struct DlString<T, const E: u8> {
     inner: T,
     encoding: u8,
+}
+
+#[repr(C)]
+#[derive(Clone, Debug)]
+pub struct DlHashString<T, const E: u8> {
+    _vtable: usize,
+    string: DlString<T, E>,
+    _hash: u32,
+    _is_unhashed: bool,
 }
 
 #[repr(transparent)]
@@ -141,6 +151,32 @@ impl TryFrom<u8> for DlCharacterSet {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         Self::from_raw(value)
+    }
+}
+
+impl<T, const E: u8> AsRef<DlString<T, E>> for TrustedDlString<T, E> {
+    fn as_ref(&self) -> &DlString<T, E> {
+        &self.0
+    }
+}
+
+impl<T, const E: u8> AsMut<DlString<T, E>> for TrustedDlString<T, E> {
+    fn as_mut(&mut self) -> &mut DlString<T, E> {
+        &mut self.0
+    }
+}
+
+impl<T, const E: u8> Deref for DlHashString<T, E> {
+    type Target = DlString<T, E>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.string
+    }
+}
+
+impl<T, const E: u8> DerefMut for DlHashString<T, E> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.string
     }
 }
 
