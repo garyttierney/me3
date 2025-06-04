@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, VecDeque},
+    ffi::OsString,
     fs::read_dir,
     os::windows::ffi::OsStrExt,
     path::{Path, PathBuf, StripPrefixError},
@@ -10,7 +11,7 @@ use thiserror::Error;
 
 #[derive(Debug, Default)]
 pub struct ArchiveOverrideMapping {
-    map: HashMap<String, (PathBuf, Vec<u16>)>,
+    map: HashMap<String, (String, Vec<u16>)>,
 }
 
 #[derive(Debug, Error)]
@@ -47,10 +48,10 @@ impl ArchiveOverrideMapping {
         &mut self,
         base_directory: P,
     ) -> Result<(), ArchiveOverrideMappingError> {
-        let base_directory = normalize_path(base_directory.as_ref());
+        let base_directory = base_directory.as_ref().to_path_buf();
         if !base_directory.is_dir() {
             return Err(ArchiveOverrideMappingError::InvalidDirectory(
-                base_directory.clone(),
+                base_directory.to_path_buf(),
             ));
         }
 
@@ -64,9 +65,13 @@ impl ArchiveOverrideMapping {
                 if dir_entry.is_dir() {
                     paths_to_scan.push_back(dir_entry);
                 } else {
-                    let override_path = normalize_path(dir_entry);
+                    let override_path = normalize_path(&dir_entry);
                     let vfs_path = path_to_asset_lookup_key(&base_directory, &override_path)?;
-                    let as_wide = override_path.as_os_str().encode_wide().collect();
+                    let mut as_wide: Vec<u16> =
+                        OsString::from(&override_path).encode_wide().collect();
+
+                    // IMPORTANT: push a null terminator!
+                    as_wide.push(0);
 
                     self.map.insert(vfs_path, (override_path, as_wide));
                 }
@@ -76,7 +81,7 @@ impl ArchiveOverrideMapping {
         Ok(())
     }
 
-    pub fn get_override(&self, path: &str) -> Option<(&Path, &[u16])> {
+    pub fn get_override(&self, path: &str) -> Option<(&str, &[u16])> {
         let key = path.split_once(":/").map(|r| r.1).unwrap_or(path);
 
         self.map.get(key).map(|(path, wide)| (&**path, &**wide))
@@ -84,8 +89,8 @@ impl ArchiveOverrideMapping {
 }
 
 /// Normalizes paths to use / as a path separator.
-fn normalize_path<P: AsRef<Path>>(path: P) -> PathBuf {
-    PathBuf::from(path.as_ref().to_string_lossy().replace('\\', "/"))
+fn normalize_path<P: AsRef<Path>>(path: P) -> String {
+    path.as_ref().to_string_lossy().replace('\\', "/")
 }
 
 /// Turns an asset path into an asset lookup key using the mods base path.

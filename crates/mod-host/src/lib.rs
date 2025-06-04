@@ -13,11 +13,11 @@ use crash_handler::CrashEventResult;
 use ipc_channel::ipc::IpcSender;
 use me3_launcher_attach_protocol::{AttachRequest, AttachResult, Attachment, HostMessage};
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
-use tracing::info;
+use tracing::{error, info};
 
 use crate::host::{hook::thunk::ThunkPool, ModHost};
 
-mod asset_archive;
+mod asset_hooks;
 mod detour;
 mod host;
 
@@ -83,11 +83,20 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
     let mut override_mapping = ArchiveOverrideMapping::default();
     override_mapping.scan_directories(config.packages.iter())?;
-    asset_archive::attach(&mut host, Arc::new(override_mapping))?;
+    let override_mapping = Arc::new(override_mapping);
 
     host.attach();
 
     info!("Host successfully attached");
+
+    std::thread::spawn({
+        let override_mapping = override_mapping.clone();
+        move || {
+            if let Err(e) = asset_hooks::attach_override(override_mapping) {
+                error!("{e}");
+            };
+        }
+    });
 
     Ok(Attachment)
 }
