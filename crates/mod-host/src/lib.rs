@@ -81,7 +81,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         host.load_native(&native.path, native.initializer)?;
     }
 
-    let mut override_mapping = ArchiveOverrideMapping::default();
+    let mut override_mapping = ArchiveOverrideMapping::new()?;
     override_mapping.scan_directories(config.packages.iter())?;
     let override_mapping = Arc::new(override_mapping);
 

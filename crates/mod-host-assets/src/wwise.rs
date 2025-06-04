@@ -100,7 +100,7 @@ mod test {
 
     #[test]
     fn scan_directory_and_overrides() {
-        let mut asset_mapping = ArchiveOverrideMapping::default();
+        let mut asset_mapping = ArchiveOverrideMapping::new().unwrap();
 
         let test_mod_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data/test-mod");
         asset_mapping.scan_directory(test_mod_dir).unwrap();

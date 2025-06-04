@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, VecDeque},
+    env,
     ffi::OsString,
     fmt,
     fs::read_dir,
@@ -9,10 +10,11 @@ use std::{
 
 use me3_mod_protocol::package::AssetOverrideSource;
 use thiserror::Error;
+use tracing::debug;
 
-#[derive(Default)]
 pub struct ArchiveOverrideMapping {
     map: HashMap<String, (String, Vec<u16>)>,
+    current_dir: PathBuf,
 }
 
 #[derive(Debug, Error)]
@@ -31,6 +33,15 @@ pub enum ArchiveOverrideMappingError {
 }
 
 impl ArchiveOverrideMapping {
+    pub fn new() -> Result<Self, ArchiveOverrideMappingError> {
+        let current_dir = env::current_dir().map_err(ArchiveOverrideMappingError::ReadDir)?;
+
+        Ok(Self {
+            map: HashMap::new(),
+            current_dir,
+        })
+    }
+
     /// Scans a set of directories, mapping discovered assets into itself.
     pub fn scan_directories<I, S>(&mut self, sources: I) -> Result<(), ArchiveOverrideMappingError>
     where
@@ -82,10 +93,18 @@ impl ArchiveOverrideMapping {
         Ok(())
     }
 
-    pub fn get_override(&self, path: &str) -> Option<(&str, &[u16])> {
-        let key = path.split_once(":/").map(|r| r.1).unwrap_or(path);
+    pub fn get_override<T: AsRef<str>>(&self, path: T) -> Option<(&str, &[u16])> {
+        let path = path.as_ref();
 
-        self.map.get(key).map(|(path, wide)| (&**path, &**wide))
+        debug!("{path}");
+
+        let val = if let Ok(key) = Path::new(path).strip_prefix(&self.current_dir) {
+            self.map.get(&*key.as_os_str().to_string_lossy())
+        } else {
+            self.map.get(path.split_once(":/").map_or(path, |r| r.1))
+        };
+
+        val.map(|(path, wide)| (&**path, &**wide))
     }
 }
 
@@ -157,7 +176,7 @@ mod test {
 
     #[test]
     fn scan_directory_and_overrides() {
-        let mut asset_mapping = ArchiveOverrideMapping::default();
+        let mut asset_mapping = ArchiveOverrideMapping::new().unwrap();
 
         let test_mod_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data/test-mod");
         asset_mapping.scan_directory(test_mod_dir).unwrap();
