@@ -15,15 +15,16 @@ stable-eyre = { version = "0.2" }
 crash-context.workspace = true
 eyre = "0.6"
 dll-syringe.workspace = true
-ipc-channel.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
 minidump-writer = "0.10"
 tracing.workspace = true
 sentry = { version = "0.38.1", optional = true }
 toml.workspace = true
-libc = "0.2.172"
 me3_telemetry = { path = "../telemetry" }
+
+[dependencies.windows]
+version = "0.61"
 
 [lints]
 workspace = true

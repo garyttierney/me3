@@ -247,6 +247,8 @@ fn main() {
         Commands::Profile(ProfileCommands::Create(args)) => commands::profile::create(config, args),
         Commands::Profile(ProfileCommands::List) => commands::profile::list(config),
         Commands::Profile(ProfileCommands::Show { name }) => commands::profile::show(config, name),
+        Commands::Profile(ProfileCommands::Open { name }) => commands::profile::open(config, name),
+
         #[cfg(target_os = "windows")]
         Commands::AddToPath => commands::windows::add_to_path(),
         #[cfg(target_os = "windows")]
