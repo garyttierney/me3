@@ -388,7 +388,7 @@ fn is_root_separator(w: &[u16]) -> bool {
     w[0] == ':' as u16 && w[1] == '/' as u16
 }
 
-#[derive(Error, Debug)]
+#[derive(Clone, Debug, Error)]
 pub enum FindError {
     #[error("{0}")]
     PeSection(pe::SectionError),

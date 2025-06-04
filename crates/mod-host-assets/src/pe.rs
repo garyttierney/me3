@@ -53,7 +53,7 @@ pub unsafe fn section_vranges<const N: usize>(
     Ok(result)
 }
 
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error)]
 #[error("section \"{section}\" not found in module with base address {image_base:#016x?}")]
 pub struct SectionError {
     section: &'static str,

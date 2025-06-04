@@ -35,9 +35,7 @@ pub fn attach_override(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre:
 
     hook_file_init(image_base, mapping.clone())?;
 
-    let device_manager = locate_device_manager(image_base);
-    debug!("DLDeviceManager found at {device_manager:?}");
-    hook_device_manager(image_base, device_manager, mapping.clone())?;
+    hook_device_manager(image_base, mapping.clone())?;
 
     if let Err(e) = try_hook_wwise(mapping.clone()) {
         debug!("Skipping Wwise hook: {e}");
@@ -46,8 +44,10 @@ pub fn attach_override(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre:
     Ok(())
 }
 
-fn locate_device_manager(image_base: *const u8) -> NonNull<DlDeviceManager> {
-    struct DeviceManager(NonNull<DlDeviceManager>);
+fn locate_device_manager(
+    image_base: *const u8,
+) -> Result<NonNull<DlDeviceManager>, dl_device::FindError> {
+    struct DeviceManager(Result<NonNull<DlDeviceManager>, dl_device::FindError>);
 
     static DEVICE_MANAGER: OnceLock<DeviceManager> = OnceLock::new();
 
@@ -55,16 +55,16 @@ fn locate_device_manager(image_base: *const u8) -> NonNull<DlDeviceManager> {
     unsafe impl Sync for DeviceManager {}
 
     DEVICE_MANAGER
-        .get_or_init(|| unsafe {
-            DeviceManager(dl_device::find_device_manager(image_base).expect("not found"))
-        })
-        .0
+        .get_or_init(|| unsafe { DeviceManager(dl_device::find_device_manager(image_base)) })
+        .0.clone()
 }
 
 fn hook_file_init(
     image_base: *const u8,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
+    let device_manager = locate_device_manager(image_base)?;
+
     let init_fn = unsafe { file_step::find_init_fn(image_base)? };
 
     debug!("FileStep::STEP_Init found at {init_fn:?}");
@@ -77,7 +77,7 @@ fn hook_file_init(
         .with_closure(move |ctx, p1| {
             debug!("FileStep::STEP_Init called");
 
-            let mut device_manager = DlDeviceManager::lock(locate_device_manager(image_base));
+            let mut device_manager = DlDeviceManager::lock(device_manager);
 
             let snap = device_manager.snapshot();
 
@@ -115,6 +115,8 @@ fn hook_ebl_utility(
     image_base: *const u8,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
+    let device_manager = locate_device_manager(image_base)?;
+
     let ebl_utility_vtable = unsafe { EblFileManager::ebl_utility_vtable(image_base)?.read() };
 
     let mut mod_host = ModHost::get_attached_mut();
@@ -122,7 +124,7 @@ fn hook_ebl_utility(
     mod_host
         .hook(ebl_utility_vtable.make_ebl_object)
         .with_closure(move |ctx, p1, path, p3| {
-            let mut device_manager = DlDeviceManager::lock(locate_device_manager(image_base));
+            let mut device_manager = DlDeviceManager::lock(device_manager);
 
             let path_cstr = PCWSTR::from_raw(path);
             let expanded = unsafe { device_manager.expand_path(path_cstr.as_wide()) };
@@ -144,7 +146,7 @@ fn hook_ebl_utility(
     mod_host
         .hook(ebl_utility_vtable.mount_ebl)
         .with_closure(move |ctx, p1, p2, p3, p4, p5, p6, p7| {
-            let mut device_manager = DlDeviceManager::lock(locate_device_manager(image_base));
+            let mut device_manager = DlDeviceManager::lock(device_manager);
 
             let snap = device_manager.snapshot();
 
@@ -178,9 +180,12 @@ fn hook_ebl_utility(
 
 fn hook_device_manager(
     image_base: *const u8,
-    device_manager: NonNull<DlDeviceManager>,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
+    let device_manager = locate_device_manager(image_base)?;
+
+    debug!("DLDeviceManager found at {device_manager:?}");
+
     let mut mod_host = ModHost::get_attached_mut();
 
     let open_disk_file = DlDeviceManager::lock(device_manager).open_disk_file_fn();
@@ -191,7 +196,7 @@ fn hook_device_manager(
         move |path: &DlUtf16String| {
             let path = path.get().ok()?;
 
-            let expanded = DlDeviceManager::lock(locate_device_manager(image_base))
+            let expanded = DlDeviceManager::lock(device_manager)
                 .expand_path(path.as_bytes());
 
             let expanded = expanded
@@ -256,11 +261,13 @@ fn hook_set_path(
 ) -> Result<(), eyre::Error> {
     let set_path = unsafe { file_operator.as_ref().as_ref().set_path };
 
+    let device_manager = locate_device_manager(image_base)?;
+
     let override_path = move |path: &DlUtf16String| {
         let path = path.get().ok()?;
 
         let expanded =
-            DlDeviceManager::lock(locate_device_manager(image_base)).expand_path(path.as_bytes());
+            DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
 
         let expanded = expanded
             .map(|ex| OsString::from_wide(&ex))?
