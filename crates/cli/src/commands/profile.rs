@@ -61,7 +61,8 @@ pub fn open(config: Config, name: Option<String>) -> color_eyre::Result<()> {
         config.profile_dir.ok_or_else(no_profile_dir)?
     };
 
-    open::that_detached(profile_dir);
+    open::that_detached(profile_dir)?;
+
     Ok(())
 }
 
@@ -94,7 +95,7 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         config.resolve_profile(&args.name)?
     };
 
-    if std::fs::exists(&profile_path).is_ok_and(|exists| exists) && args.overwrite {
+    if std::fs::exists(&profile_path).is_ok_and(|exists| exists) && !args.overwrite {
         return Err(eyre!(
             "Profile already exists, use --overwrite to ignore this error"
         ));
