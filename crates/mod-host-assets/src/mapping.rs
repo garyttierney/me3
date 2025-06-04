@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, VecDeque},
     ffi::OsString,
+    fmt,
     fs::read_dir,
     os::windows::ffi::OsStrExt,
     path::{Path, PathBuf, StripPrefixError},
@@ -9,7 +10,7 @@ use std::{
 use me3_mod_protocol::package::AssetOverrideSource;
 use thiserror::Error;
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct ArchiveOverrideMapping {
     map: HashMap<String, (String, Vec<u16>)>,
 }
@@ -101,6 +102,14 @@ fn path_to_asset_lookup_key<P1: AsRef<Path>, P2: AsRef<Path>>(
     path.as_ref()
         .strip_prefix(base)
         .map(|p| p.to_string_lossy().to_lowercase())
+}
+
+impl fmt::Debug for ArchiveOverrideMapping {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_map()
+            .entries(self.map.iter().map(|(k, (v, _))| (k, v)))
+            .finish()
+    }
 }
 
 #[cfg(test)]
