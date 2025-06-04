@@ -16,6 +16,10 @@ pub enum ProfileCommands {
     /// List all profiles stored in the ME3_PROFILE_DIR.
     List,
 
+    /// Open the directory containing the profile, or the default proile directory if none is
+    /// given.
+    Open { name: Option<String> },
+
     /// Show information on a profile identified by a name.
     #[clap(name = "show")]
     Show { name: String },
@@ -44,6 +48,22 @@ pub struct ProfileCreateArgs {
     /// Overwrite the profile if it already exists
     #[clap(long, action = ArgAction::SetTrue)]
     overwrite: bool,
+}
+
+pub fn open(config: Config, name: Option<String>) -> color_eyre::Result<()> {
+    let profile_dir = if let Some(profile_name) = name {
+        config
+            .resolve_profile(&profile_name)?
+            .parent()
+            .ok_or_eyre("unable to access profile directory")?
+            .to_path_buf()
+    } else {
+        config.profile_dir.ok_or_else(no_profile_dir)?
+    };
+
+    open::that_detached(profile_dir)?;
+
+    Ok(())
 }
 
 #[tracing::instrument]
@@ -75,7 +95,7 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         config.resolve_profile(&args.name)?
     };
 
-    if std::fs::exists(&profile_path).is_ok_and(|exists| exists) && args.overwrite {
+    if std::fs::exists(&profile_path).is_ok_and(|exists| exists) && !args.overwrite {
         return Err(eyre!(
             "Profile already exists, use --overwrite to ignore this error"
         ));

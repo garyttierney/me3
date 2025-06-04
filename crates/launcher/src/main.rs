@@ -2,33 +2,30 @@
 
 use std::{
     env,
-    fs::{File, OpenOptions},
+    fs::OpenOptions,
+    os::windows::prelude::{AsHandle, AsRawHandle, IntoRawHandle},
     path::PathBuf,
     sync::{
-        atomic::{
-            AtomicBool,
-            Ordering::{self, SeqCst},
-        },
+        atomic::{AtomicBool, Ordering::SeqCst},
         Arc,
     },
-    time::{SystemTime, UNIX_EPOCH},
 };
 
-use crash_context::CrashContext;
 use eyre::Context;
-use ipc_channel::ipc::{IpcError, IpcOneShotServer};
-use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
-use minidump_writer::minidump_writer::MinidumpWriter;
-#[cfg(feature = "sentry")]
-use sentry::{
-    protocol::{Attachment, AttachmentType, Event},
-    Level,
-};
+use me3_launcher_attach_protocol::{AttachRequest, MonitorPipeHandle};
 use tracing::{error, info, info_span};
+use windows::Win32::{
+    Foundation::{
+        DuplicateHandle, DUPLICATE_CLOSE_SOURCE, DUPLICATE_HANDLE_OPTIONS, DUPLICATE_SAME_ACCESS,
+        HANDLE,
+    },
+    System::Threading::GetCurrentProcess,
+};
 
 use crate::game::Game;
 
 mod game;
+mod monitor;
 
 pub type LauncherResult<T> = stable_eyre::Result<T>;
 
@@ -73,95 +70,35 @@ fn run() -> LauncherResult<()> {
     let attach_config_text = std::fs::read_to_string(args.config_path)?;
     let attach_config = toml::from_str(&attach_config_text)?;
 
-    let (monitor_server, monitor_name) = IpcOneShotServer::new()?;
-    let request = AttachRequest {
-        monitor_name,
-        config: attach_config,
-    };
-
     info!("Starting game at {:?} with DLL {:?}", args.exe, args.dll);
 
     let shutdown_requested = Arc::new(AtomicBool::new(false));
 
-    let game_path = args.exe.parent();
-    let mut game = Game::launch(&args.exe, game_path)?;
+    let mut game = Game::launch(&args.exe, args.exe.parent())?;
+    let mut game_monitor_handle = HANDLE::default();
+    let game_pid = game.child.id() as u64;
+
+    let (pipe_rx, pipe_tx) = std::io::pipe()?;
+
+    unsafe {
+        DuplicateHandle(
+            GetCurrentProcess(),
+            HANDLE(pipe_tx.into_raw_handle()),
+            std::mem::transmute(game_pid),
+            &raw mut game_monitor_handle,
+            0,
+            true,
+            DUPLICATE_SAME_ACCESS | DUPLICATE_CLOSE_SOURCE,
+        )?;
+    }
 
     let monitor_thread_shutdown = shutdown_requested.clone();
-    let monitor_thread = std::thread::spawn(move || {
-        info!("Starting monitor thread");
-        let (receiver, client) = monitor_server.accept().unwrap();
-        info!("Host connected to monitor with message {:?}", client);
+    let monitor_thread = monitor::run_monitor(monitor_thread_shutdown, pipe_rx);
 
-        while monitor_thread_shutdown.load(Ordering::SeqCst) {
-            match receiver.recv() {
-                Ok(msg) => match msg {
-                    HostMessage::CrashDumpRequest {
-                        exception_pointers,
-                        process_id,
-                        thread_id,
-                        exception_code,
-                    } => {
-                        info!(
-                            "Host requested a crashdump for exception {:x}",
-                            exception_code
-                        );
-
-                        let start = SystemTime::now();
-                        let timestamp = start
-                            .duration_since(UNIX_EPOCH)
-                            .expect("system clock is broken")
-                            .as_secs();
-
-                        let file_path = format!("me3_crash_{timestamp}.dmp");
-                        let mut file =
-                            File::create_new(&file_path).expect("unable to create crash dump file");
-
-                        MinidumpWriter::dump_crash_context(
-                            CrashContext {
-                                exception_pointers: exception_pointers as *const _,
-                                exception_code,
-                                process_id,
-                                thread_id,
-                            },
-                            None,
-                            &mut file,
-                        )
-                        .expect("failed to write crash dump to file");
-
-                        #[cfg(feature = "sentry")]
-                        sentry::with_scope(
-                            move |scope| {
-                                // Remove event.process because this event came from the
-                                // main app process
-                                scope.remove_extra("event.process");
-
-                                if let Ok(buffer) = std::fs::read(&file_path) {
-                                    scope.add_attachment(Attachment {
-                                        buffer,
-                                        filename: "minidump.dmp".to_string(),
-                                        ty: Some(AttachmentType::Minidump),
-                                        ..Default::default()
-                                    });
-                                }
-                            },
-                            || {
-                                sentry::capture_event(Event {
-                                    level: Level::Fatal,
-                                    ..Default::default()
-                                })
-                            },
-                        );
-                    }
-                    HostMessage::Attached => info!("Attach completed"),
-                },
-                Err(IpcError::Disconnected) => break,
-                Err(e) => {
-                    error!("Error from monitor channel {:?}", e);
-                    break;
-                }
-            }
-        }
-    });
+    let request = AttachRequest {
+        monitor_pipe: MonitorPipeHandle(game_monitor_handle.0.addr()),
+        config: attach_config,
+    };
 
     if let Err(e) = game.attach(&args.dll, request) {
         error!("Failed to attach to game: {e:?}");

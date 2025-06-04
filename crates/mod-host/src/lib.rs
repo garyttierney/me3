@@ -4,13 +4,15 @@
 #![feature(unboxed_closures)]
 
 use std::{
+    cell::UnsafeCell,
     fs::OpenOptions,
+    io::PipeWriter,
+    os::windows::prelude::{FromRawHandle, RawHandle},
     sync::{Arc, Mutex, OnceLock},
     time::Duration,
 };
 
 use crash_handler::CrashEventResult;
-use ipc_channel::ipc::IpcSender;
 use me3_launcher_attach_protocol::{AttachRequest, AttachResult, Attachment, HostMessage};
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use tracing::info;
@@ -33,35 +35,31 @@ dll_syringe::payload_procedure! {
 
 fn on_attach(request: AttachRequest) -> AttachResult {
     let AttachRequest {
-        monitor_name,
+        monitor_pipe,
         config,
     } = request;
 
-    let socket = IpcSender::connect(monitor_name).unwrap();
-    let socket = Arc::new(Mutex::new(socket));
-    let crash_handler_socket = socket.clone();
+    let mut socket = unsafe { PipeWriter::from_raw_handle(monitor_pipe.0 as *mut _) };
 
-    crash_handler::CrashHandler::attach(unsafe {
-        crash_handler::make_crash_event(move |crash_context: &crash_handler::CrashContext| {
-            info!("Handling crash event");
-            let _ = crash_handler_socket
-                .lock()
-                .unwrap()
-                .send(HostMessage::CrashDumpRequest {
-                    exception_pointers: crash_context.exception_pointers as u64,
-                    process_id: crash_context.process_id,
-                    thread_id: crash_context.thread_id,
-                    exception_code: crash_context.exception_code,
-                });
+    HostMessage::Attached.write(&mut socket);
 
-            // TODO: we need a safe way keep the process alive until the minidump is captured.
-            std::thread::sleep(Duration::from_secs(5));
+    // crash_handler::CrashHandler::attach(unsafe {
+    //     crash_handler::make_crash_event(move |crash_context: &crash_handler::CrashContext| {
+    //         info!("Handling crash event");
 
-            CrashEventResult::Handled(false)
-        })
-    })?;
+    //         let request = HostMessage::CrashDumpRequest {
+    //             exception_pointers: crash_context.exception_pointers as u64,
+    //             process_id: crash_context.process_id,
+    //             thread_id: crash_context.thread_id,
+    //             exception_code: crash_context.exception_code,
+    //         };
 
-    socket.lock().unwrap().send(HostMessage::Attached).unwrap();
+    //         let _ = request.write(socket.as_mut_unchecked());
+
+    //         std::thread::sleep(Duration::from_secs(5));
+    //         CrashEventResult::Handled(false)
+    //     })
+    // })?;
 
     let log_file_path = std::env::var("ME3_LOG_FILE").expect("log file location not set");
     let log_file = OpenOptions::new()
