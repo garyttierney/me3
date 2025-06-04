@@ -1,4 +1,4 @@
-use std::{mem, ops::Range, ptr::NonNull, slice, usize};
+use std::{mem, ops::Range, ptr::NonNull, slice};
 
 use pelite::pe::msvc::{RTTICompleteObjectLocator, TypeDescriptor};
 use thiserror::Error;
@@ -84,9 +84,8 @@ pub unsafe fn find_vmt<T>(image_base: *const u8, type_name: &str) -> Result<NonN
 
     let Range { start, end } = rdata.as_ptr_range();
 
-    let mut rdata_ptr = start
-        .wrapping_byte_offset(start.align_offset(ALIGNMENT) as isize - SIZE as isize)
-        as *const u8;
+    let mut rdata_ptr =
+        start.wrapping_byte_offset(start.align_offset(ALIGNMENT) as isize - SIZE as isize);
 
     // One less than actual because a COL must be followed by at least one function pointer.
     let rdata_end = end.wrapping_byte_sub(SIZE);
@@ -113,7 +112,7 @@ unsafe fn find_type_name(
     type_name: &str,
     max_len: usize,
 ) -> Option<&'static str> {
-    let name_bytes = type_name.as_bytes().into_iter().cloned().fuse();
+    let name_bytes = type_name.as_bytes().iter().cloned().fuse();
     let mut next_name_byte = name_bytes.clone();
 
     let ptr = (*desc).name.as_ptr();
@@ -135,7 +134,7 @@ unsafe fn find_type_name(
         }
 
         // Check for non-ASCII contents.
-        if next_byte > '\x7f' as u8 {
+        if next_byte > b'\x7f' {
             return None;
         }
 
