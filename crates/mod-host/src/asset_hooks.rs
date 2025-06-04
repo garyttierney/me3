@@ -56,7 +56,8 @@ fn locate_device_manager(
 
     DEVICE_MANAGER
         .get_or_init(|| unsafe { DeviceManager(dl_device::find_device_manager(image_base)) })
-        .0.clone()
+        .0
+        .clone()
 }
 
 fn hook_file_init(
@@ -196,8 +197,7 @@ fn hook_device_manager(
         move |path: &DlUtf16String| {
             let path = path.get().ok()?;
 
-            let expanded = DlDeviceManager::lock(device_manager)
-                .expand_path(path.as_bytes());
+            let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
 
             let expanded = expanded
                 .map(|ex| OsString::from_wide(&ex))?
@@ -266,8 +266,7 @@ fn hook_set_path(
     let override_path = move |path: &DlUtf16String| {
         let path = path.get().ok()?;
 
-        let expanded =
-            DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
+        let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
 
         let expanded = expanded
             .map(|ex| OsString::from_wide(&ex))?
