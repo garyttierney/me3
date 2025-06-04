@@ -18,14 +18,13 @@ use me3_mod_host_assets::{
     string::DlUtf16String,
     wwise::{self, poll_wwise_open_file_fn, AkOpenMode},
 };
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, info};
 use windows::{core::PCWSTR, Win32::System::LibraryLoader::GetModuleHandleW};
 
 use crate::host::ModHost;
 
 static VFS: Mutex<VfsMounts> = Mutex::new(VfsMounts::new());
 
-#[instrument]
 pub fn attach_override(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Error> {
     let image_base = image_base();
 
