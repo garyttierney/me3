@@ -24,11 +24,11 @@ pub fn strip_prefix(input: &str) -> &str {
 
 #[repr(u32)]
 pub enum AkOpenMode {
-    Read = 0x0,
-    Write = 0x1,
-    WriteOverwrite = 0x2,
-    ReadWrite = 0x3,
-    ReadEbl = 0x9,
+    Read = 0,
+    Write = 1,
+    WriteOverwrite = 2,
+    ReadWrite = 3,
+    ReadEbl = 10,
 }
 
 /// Tries to find an override for a sound archive entry.
