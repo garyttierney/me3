@@ -156,7 +156,7 @@ unsafe fn find_type_name(
 pub enum FindError {
     #[error("{0}")]
     PeSection(pe::SectionError),
-    #[error("DlDeviceManager instance not found")]
+    #[error("Instance not found")]
     Instance,
 }
 
