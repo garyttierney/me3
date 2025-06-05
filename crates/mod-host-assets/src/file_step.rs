@@ -5,9 +5,11 @@ use thiserror::Error;
 
 use crate::pe;
 
+type FileStepInit = extern "C" fn(usize);
+
 /// # Safety
 /// [`pelite::pe64::PeView::module`] must be safe to call on `image_base`
-pub unsafe fn find_init_fn(image_base: *const u8) -> Result<NonNull<u8>, FindError> {
+pub unsafe fn find_init_fn(image_base: *const u8) -> Result<FileStepInit, FindError> {
     // SAFETY: must be upheld by caller.
     let [data, rdata] = unsafe { pe::sections(image_base, [".data", ".rdata"])? };
 
@@ -44,7 +46,10 @@ pub unsafe fn find_init_fn(image_base: *const u8) -> Result<NonNull<u8>, FindErr
         let name_ptr = unsafe { data_ptr.cast::<*const u8>().read() };
 
         if strings.contains(&name_ptr) {
-            return NonNull::new(fn_ptr).ok_or(FindError::Method);
+            let fn_ptr = NonNull::new(fn_ptr).ok_or(FindError::Method)?;
+
+            // SAFETY: non-null function pointer conversion.
+            return unsafe { Ok(mem::transmute(fn_ptr.as_ptr())) };
         }
     }
 

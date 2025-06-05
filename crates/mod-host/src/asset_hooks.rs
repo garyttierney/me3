@@ -70,11 +70,10 @@ fn hook_file_init(
 
     debug!("FileStep::STEP_Init found at {init_fn:?}");
 
-    let mut mod_host = ModHost::get_attached_mut();
-    let hook_location = unsafe { mem::transmute::<_, extern "C" fn(usize)>(init_fn) };
+    let hook_span = info_span!("hook");
 
-    mod_host
-        .hook(hook_location)
+    ModHost::get_attached_mut()
+        .hook(init_fn)
         .with_closure(move |ctx, p1| {
             debug!("FileStep::STEP_Init called");
 
