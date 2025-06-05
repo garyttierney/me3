@@ -1,16 +1,16 @@
 use std::{
     collections::{HashMap, VecDeque},
     env,
-    ffi::OsString,
+    ffi::OsStr,
     fmt,
     fs::read_dir,
+    iter,
     os::windows::ffi::OsStrExt,
     path::{Path, PathBuf, StripPrefixError},
 };
 
 use me3_mod_protocol::package::AssetOverrideSource;
 use thiserror::Error;
-use tracing::debug;
 
 pub struct ArchiveOverrideMapping {
     map: HashMap<String, (String, Vec<u16>)>,
@@ -79,11 +79,7 @@ impl ArchiveOverrideMapping {
                 } else {
                     let override_path = normalize_path(&dir_entry);
                     let vfs_path = path_to_asset_lookup_key(&base_directory, &override_path)?;
-                    let mut as_wide: Vec<u16> =
-                        OsString::from(&override_path).encode_wide().collect();
-
-                    // IMPORTANT: push a null terminator!
-                    as_wide.push(0);
+                    let as_wide = override_path.encode_wide_with_nul().collect();
 
                     self.map.insert(vfs_path, (override_path, as_wide));
                 }
@@ -126,6 +122,16 @@ impl fmt::Debug for ArchiveOverrideMapping {
         f.debug_map()
             .entries(self.map.iter().map(|(k, (v, _))| (k, v)))
             .finish()
+    }
+}
+
+trait OsStrEncodeExt {
+    fn encode_wide_with_nul(&self) -> impl Iterator<Item = u16>;
+}
+
+impl<T: AsRef<OsStr>> OsStrEncodeExt for T {
+    fn encode_wide_with_nul(&self) -> impl Iterator<Item = u16> {
+        self.as_ref().encode_wide().chain(iter::once(0))
     }
 }
 
