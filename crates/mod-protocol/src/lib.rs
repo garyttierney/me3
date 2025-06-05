@@ -18,9 +18,11 @@ pub enum ModProfile {
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, JsonSchema)]
 pub enum Game {
+    #[serde(alias = "eldenring")]
     #[serde(rename = "elden-ring")]
     EldenRing,
 
+    #[serde(alias = "nightreign")]
     #[serde(rename = "nightrein")]
     Nightreign,
 }
