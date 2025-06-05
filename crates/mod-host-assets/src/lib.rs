@@ -5,8 +5,8 @@ pub mod file_step;
 pub mod mapping;
 pub mod rtti;
 pub mod singleton;
+pub mod sleep;
 pub mod string;
 pub mod wwise;
-pub mod sleep;
 
 mod pe;
