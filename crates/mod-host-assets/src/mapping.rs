@@ -96,8 +96,6 @@ impl ArchiveOverrideMapping {
     pub fn get_override<T: AsRef<str>>(&self, path: T) -> Option<(&str, &[u16])> {
         let path = path.as_ref();
 
-        debug!("{path}");
-
         let val = if let Ok(key) = Path::new(path).strip_prefix(&self.current_dir) {
             self.map.get(&*key.as_os_str().to_string_lossy())
         } else {
