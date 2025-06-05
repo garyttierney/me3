@@ -301,7 +301,7 @@ fn hook_set_path(
 
 fn try_hook_wwise(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Error> {
     let wwise_open_file =
-        poll_wwise_open_file_fn(Duration::from_micros(500), Duration::from_secs(5))?;
+        poll_wwise_open_file_fn(Duration::from_millis(1), Duration::from_secs(5))?;
 
     ModHost::get_attached_mut()
         .hook(wwise_open_file)
@@ -340,6 +340,6 @@ fn image_base() -> *const u8 {
 }
 
 fn poll_singletons() -> Result<&'static HashMap<String, NonNull<*mut u8>>, eyre::Error> {
-    singleton::poll_map(Duration::from_micros(500), Duration::from_secs(5))
+    singleton::poll_map(Duration::from_millis(1), Duration::from_secs(5))
         .ok_or_eyre("singleton mapping timed out; no singletons found")
 }
