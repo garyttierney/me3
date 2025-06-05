@@ -118,7 +118,7 @@ fn hook_ebl_utility(
 ) -> Result<(), eyre::Error> {
     let device_manager = locate_device_manager(image_base)?;
 
-    let ebl_utility_vtable = unsafe { EblFileManager::ebl_utility_vtable(image_base)?.read() };
+    let ebl_utility_vtable = unsafe { EblFileManager::ebl_utility_vtable(image_base)? };
 
     let mut mod_host = ModHost::get_attached_mut();
 
