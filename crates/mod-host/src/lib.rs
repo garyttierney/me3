@@ -17,7 +17,7 @@ use tracing::info;
 
 use crate::host::{hook::thunk::ThunkPool, ModHost};
 
-mod asset_archive;
+mod asset_hooks;
 mod detour;
 mod host;
 
@@ -81,13 +81,17 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         host.load_native(&native.path, native.initializer)?;
     }
 
-    let mut override_mapping = ArchiveOverrideMapping::default();
+    let mut override_mapping = ArchiveOverrideMapping::new()?;
     override_mapping.scan_directories(config.packages.iter())?;
-    asset_archive::attach(&mut host, Arc::new(override_mapping))?;
+    let override_mapping = Arc::new(override_mapping);
 
     host.attach();
 
     info!("Host successfully attached");
+
+    asset_hooks::attach_override(override_mapping.clone())?;
+
+    info!("Applied asset override hooks");
 
     Ok(Attachment)
 }

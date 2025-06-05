@@ -7,6 +7,10 @@ use std::{
     ptr::NonNull,
 };
 
+use default::DEFAULT_DLALLOC;
+
+mod default;
+
 /// Commonly used polymorphic `DlAllocator` adapter for objects and containers.
 ///
 /// Contains a pointer to a `DlAllocator` interface and implements [`GlobalAlloc`].
@@ -114,6 +118,14 @@ unsafe impl GlobalAlloc for DlStdAllocator {
     unsafe fn dealloc(&self, ptr: *mut u8, _: Layout) {
         let vtable = unsafe { self.inner.as_ref().vtable.as_ref() };
         (vtable.free)(self.inner, ptr);
+    }
+}
+
+impl Default for DlStdAllocator {
+    fn default() -> Self {
+        Self {
+            inner: NonNull::from(&DEFAULT_DLALLOC),
+        }
     }
 }
 

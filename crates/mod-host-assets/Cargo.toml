@@ -8,9 +8,22 @@ description = "Override game assets with local versions"
 
 [dependencies]
 cxx-stl = { version = "3", features = ["msvc2012"] }
+from-singleton = { version = "2", features = ["regex-unicode"] }
+undname = "2.1"
+pelite = "0.10"
+regex = "1"
 thiserror.workspace = true
 me3-mod-protocol.workspace = true
 tracing.workspace = true
+
+[dependencies.windows]
+version = "0.61"
+features = [
+    "Win32_Media",
+    "Win32_System_Memory",
+    "Win32_System_Kernel",
+    "Win32_System_Threading",
+]
 
 [lints]
 workspace = true
