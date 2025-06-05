@@ -7,5 +7,6 @@ pub mod rtti;
 pub mod singleton;
 pub mod string;
 pub mod wwise;
+pub mod sleep;
 
 mod pe;

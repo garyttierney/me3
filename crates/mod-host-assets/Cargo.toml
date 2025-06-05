@@ -19,6 +19,7 @@ tracing.workspace = true
 [dependencies.windows]
 version = "0.61"
 features = [
+    "Win32_Media",
     "Win32_System_Memory",
     "Win32_System_Kernel",
     "Win32_System_Threading",

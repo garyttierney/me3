@@ -7,7 +7,7 @@ use windows::{
     Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress},
 };
 
-use crate::{mapping::ArchiveOverrideMapping, pe, rtti};
+use crate::{mapping::ArchiveOverrideMapping, pe, rtti, sleep::with_precise_sleep};
 
 type FileLocationResolver = *const *const u8;
 
@@ -124,44 +124,47 @@ pub fn poll_wwise_open_file_fn(
     freq: time::Duration,
     timeout: time::Duration,
 ) -> Result<WwiseOpenFileByName, TimeoutError> {
-    let mut rtti_scan = Some(std::thread::spawn(|| unsafe {
-        find_wwise_open_file_fn_by_rtti()
-            .inspect_err(|e| debug!("DLMOW::FilePackageLowLevelIOBlocking RTTI scan error: {e}"))
-    }));
+    with_precise_sleep(|| {
+        let mut rtti_scan = Some(std::thread::spawn(|| unsafe {
+            find_wwise_open_file_fn_by_rtti().inspect_err(|e| {
+                debug!("DLMOW::FilePackageLowLevelIOBlocking RTTI scan error: {e}")
+            })
+        }));
 
-    let start = time::Instant::now();
+        let start = time::Instant::now();
 
-    let result = loop {
-        if rtti_scan.as_ref().is_some_and(|t| t.is_finished()) {
-            if let Some(Ok(open_file_fn)) = rtti_scan.take().and_then(|t| t.join().ok()) {
+        let result = loop {
+            if rtti_scan.as_ref().is_some_and(|t| t.is_finished()) {
+                if let Some(Ok(open_file_fn)) = rtti_scan.take().and_then(|t| t.join().ok()) {
+                    debug!(
+                        "WwiseOpenFileByName found at {:?} via RTTI",
+                        open_file_fn as *const u8
+                    );
+
+                    break Ok(open_file_fn);
+                }
+            }
+
+            let by_export_result = find_wwise_open_file_fn_by_export();
+
+            if let &Ok(open_file_fn) = &by_export_result {
                 debug!(
-                    "WwiseOpenFileByName found at {:?} via RTTI",
+                    "WwiseOpenFileByName found at {:?} via AK::StreamMgr::GetFileLocationResolver",
                     open_file_fn as *const u8
                 );
 
                 break Ok(open_file_fn);
             }
-        }
 
-        let by_export_result = find_wwise_open_file_fn_by_export();
+            if time::Instant::now().checked_duration_since(start).unwrap() >= timeout {
+                break by_export_result;
+            }
 
-        if let &Ok(open_file_fn) = &by_export_result {
-            debug!(
-                "WwiseOpenFileByName found at {:?} via AK::StreamMgr::GetFileLocationResolver",
-                open_file_fn as *const u8
-            );
+            std::thread::sleep(freq);
+        };
 
-            break Ok(open_file_fn);
-        }
-
-        if time::Instant::now().checked_duration_since(start).unwrap() >= timeout {
-            break by_export_result;
-        }
-
-        std::thread::sleep(freq);
-    };
-
-    result.map_err(TimeoutError)
+        result.map_err(TimeoutError)
+    })
 }
 
 /// # Safety
