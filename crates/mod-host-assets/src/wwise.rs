@@ -136,10 +136,7 @@ pub fn poll_wwise_open_file_fn(
         let result = loop {
             if rtti_scan.as_ref().is_some_and(|t| t.is_finished()) {
                 if let Some(Ok(open_file_fn)) = rtti_scan.take().and_then(|t| t.join().ok()) {
-                    debug!(
-                        "WwiseOpenFileByName found at {:?} via RTTI",
-                        open_file_fn as *const u8
-                    );
+                    debug!("WwiseOpenFileByName" = ?open_file_fn, source = "RTTI");
 
                     break Ok(open_file_fn);
                 }
@@ -148,10 +145,7 @@ pub fn poll_wwise_open_file_fn(
             let by_export_result = find_wwise_open_file_fn_by_export();
 
             if let &Ok(open_file_fn) = &by_export_result {
-                debug!(
-                    "WwiseOpenFileByName found at {:?} via AK::StreamMgr::GetFileLocationResolver",
-                    open_file_fn as *const u8
-                );
+                debug!("WwiseOpenFileByName" = ?open_file_fn, source = "AK::StreamMgr::GetFileLocationResolver");
 
                 break Ok(open_file_fn);
             }

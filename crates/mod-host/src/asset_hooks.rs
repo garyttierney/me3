@@ -18,18 +18,23 @@ use me3_mod_host_assets::{
     string::DlUtf16String,
     wwise::{self, poll_wwise_open_file_fn, AkOpenMode},
 };
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, info_span, instrument};
 use windows::{core::PCWSTR, Win32::System::LibraryLoader::GetModuleHandleW};
 
 use crate::host::ModHost;
 
 static VFS: Mutex<VfsMounts> = Mutex::new(VfsMounts::new());
 
+#[instrument(name = "assets", skip_all)]
 pub fn attach_override(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Error> {
     let image_base = image_base();
 
-    poll_singletons()?;
-    debug!("Singleton initialization passed");
+    let singletons = poll_singletons()?;
+
+    debug!(
+        "CSEblFileManager" = ?singletons.get("CSEblFileManager"),
+        "singleton initialization passed"
+    );
 
     // TODO: might want to freeze all threads here?
 
@@ -38,28 +43,13 @@ pub fn attach_override(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre:
     hook_device_manager(image_base, mapping.clone())?;
 
     if let Err(e) = try_hook_wwise(mapping.clone()) {
-        debug!("Skipping Wwise hook: {e}");
+        debug!("err" = &*e, "skipping Wwise hook");
     }
 
     Ok(())
 }
 
-fn locate_device_manager(
-    image_base: *const u8,
-) -> Result<NonNull<DlDeviceManager>, dl_device::FindError> {
-    struct DeviceManager(Result<NonNull<DlDeviceManager>, dl_device::FindError>);
-
-    static DEVICE_MANAGER: OnceLock<DeviceManager> = OnceLock::new();
-
-    unsafe impl Send for DeviceManager {}
-    unsafe impl Sync for DeviceManager {}
-
-    DEVICE_MANAGER
-        .get_or_init(|| unsafe { DeviceManager(dl_device::find_device_manager(image_base)) })
-        .0
-        .clone()
-}
-
+#[instrument(name = "file_step", skip_all)]
 fn hook_file_init(
     image_base: *const u8,
     mapping: Arc<ArchiveOverrideMapping>,
@@ -68,14 +58,14 @@ fn hook_file_init(
 
     let init_fn = unsafe { file_step::find_init_fn(image_base)? };
 
-    debug!("FileStep::STEP_Init found at {init_fn:?}");
+    debug!("FileStep::STEP_Init" = ?init_fn);
 
     let hook_span = info_span!("hook");
 
     ModHost::get_attached_mut()
         .hook(init_fn)
         .with_closure(move |ctx, p1| {
-            debug!("FileStep::STEP_Init called");
+            let _span_guard = hook_span.enter();
 
             let mut device_manager = DlDeviceManager::lock(device_manager);
 
@@ -87,14 +77,14 @@ fn hook_file_init(
                 Ok(snap) => {
                     let new = device_manager.extract_new(snap);
 
-                    debug!("Extracted BND4 mounts: {new:#?}");
+                    debug!("extracted_mounts" = ?new);
 
                     let mut vfs = VFS.lock().unwrap();
 
                     *vfs = new;
 
                     if let Err(e) = hook_ebl_utility(image_base, mapping.clone()) {
-                        error!("Failed to apply EBL hooks, restoring BND4 mounts; {e}");
+                        error!("err" = &*e, "failed to apply EBL hooks");
 
                         let vfs = mem::take(&mut *vfs);
 
@@ -111,6 +101,7 @@ fn hook_file_init(
     Ok(())
 }
 
+#[instrument(name = "ebl", skip_all)]
 fn hook_ebl_utility(
     image_base: *const u8,
     mapping: Arc<ArchiveOverrideMapping>,
@@ -118,6 +109,8 @@ fn hook_ebl_utility(
     let device_manager = locate_device_manager(image_base)?;
 
     let ebl_utility_vtable = unsafe { EblFileManager::ebl_utility_vtable(image_base)? };
+
+    debug!(?ebl_utility_vtable);
 
     let mut mod_host = ModHost::get_attached_mut();
 
@@ -143,9 +136,13 @@ fn hook_ebl_utility(
         })
         .install()?;
 
+    let hook_span = info_span!("hook");
+
     mod_host
         .hook(ebl_utility_vtable.mount_ebl)
         .with_closure(move |ctx, p1, p2, p3, p4, p5, p6, p7| {
+            let _span_guard = hook_span.enter();
+
             let mut device_manager = DlDeviceManager::lock(device_manager);
 
             let snap = device_manager.snapshot();
@@ -158,7 +155,7 @@ fn hook_ebl_utility(
                 Ok(snap) => {
                     let new = device_manager.extract_new(snap);
 
-                    debug!("Extracted BND4 mounts: {new:#?}");
+                    debug!("extracted_mounts" = ?new);
 
                     let mut vfs = VFS.lock().unwrap();
 
@@ -178,23 +175,27 @@ fn hook_ebl_utility(
     Ok(())
 }
 
+#[instrument(name = "device_manager", skip_all)]
 fn hook_device_manager(
     image_base: *const u8,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     let device_manager = locate_device_manager(image_base)?;
 
-    debug!("DLDeviceManager found at {device_manager:?}");
-
-    let mut mod_host = ModHost::get_attached_mut();
+    debug!("DLDeviceManager" = ?device_manager);
 
     let open_disk_file = DlDeviceManager::lock(device_manager).open_disk_file_fn();
 
     let override_path = {
         let mapping = mapping.clone();
 
+        let hook_span = info_span!("hook");
+
         move |path: &DlUtf16String| {
+            let _span_guard = hook_span.enter();
+
             let path = path.get().ok()?;
+            debug!("asset" = path.to_string());
 
             let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
 
@@ -203,11 +204,8 @@ fn hook_device_manager(
                 .to_string_lossy()
                 .to_string();
 
-            debug!("[Asset] Requested \"{expanded}\"");
-
             let (mapped_path, mapped_override) = mapping.get_override(&expanded)?;
-
-            info!("[Asset] Supplied override \"{mapped_path}\"");
+            info!("override" = mapped_path);
 
             let mut path = path.clone();
             path.replace(mapped_override);
@@ -218,11 +216,11 @@ fn hook_device_manager(
 
     let hook_set_path = move |file_operator: NonNull<DlFileOperator>| {
         hook_set_path(image_base, file_operator, mapping.clone())
-            .inspect_err(|e| error!("Failed to hook DLFileOperator::set_path: {e}"))
+            .inspect_err(|e| error!("Failed to hook DLFileOperator::SetPath: {e}"))
             .is_ok()
     };
 
-    mod_host
+    ModHost::get_attached_mut()
         .hook(open_disk_file)
         .with_closure(move |ctx, p1, path, p3, p4, p5, p6| {
             let file_operator = if let Some(path) = override_path(unsafe { path.as_ref() }) {
@@ -272,11 +270,7 @@ fn hook_set_path(
             .to_string_lossy()
             .to_string();
 
-        debug!("[Asset] Requested \"{expanded}\"");
-
-        let (mapped_path, mapped_override) = mapping.get_override(&expanded)?;
-
-        info!("[Asset] Supplied override \"{mapped_path}\"");
+        let (_, mapped_override) = mapping.get_override(&expanded)?;
 
         let mut path = path.clone();
         path.replace(mapped_override);
@@ -298,21 +292,25 @@ fn hook_set_path(
     Ok(())
 }
 
+#[instrument(name = "wwise", skip_all)]
 fn try_hook_wwise(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Error> {
     let wwise_open_file =
         poll_wwise_open_file_fn(Duration::from_millis(1), Duration::from_secs(5))?;
 
+    let hook_span = info_span!("hook");
+
     ModHost::get_attached_mut()
         .hook(wwise_open_file)
         .with_closure(move |ctx, p1, path, open_mode, p4, p5, p6| {
-            let path_string = unsafe { PCWSTR::from_raw(path).to_string().unwrap() };
+            let _span_guard = hook_span.enter();
 
-            debug!("[Wwise] Requested \"{path_string}\"");
+            let path_string = unsafe { PCWSTR::from_raw(path).to_string().unwrap() };
+            debug!("asset" = path_string);
 
             if let Some((mapped_path, mapped_override)) =
                 wwise::find_override(&mapping, &path_string)
             {
-                info!("[Wwise] Supplied override \"{mapped_path}\"");
+                info!("override" = mapped_path);
 
                 // Force lookup to wwise's ordinary read (from disk) mode instead of the EBL read.
                 (ctx.trampoline)(
@@ -341,4 +339,20 @@ fn image_base() -> *const u8 {
 fn poll_singletons() -> Result<&'static HashMap<String, NonNull<*mut u8>>, eyre::Error> {
     singleton::poll_map(Duration::from_millis(1), Duration::from_secs(5))
         .ok_or_eyre("singleton mapping timed out; no singletons found")
+}
+
+fn locate_device_manager(
+    image_base: *const u8,
+) -> Result<NonNull<DlDeviceManager>, dl_device::FindError> {
+    struct DeviceManager(Result<NonNull<DlDeviceManager>, dl_device::FindError>);
+
+    static DEVICE_MANAGER: OnceLock<DeviceManager> = OnceLock::new();
+
+    unsafe impl Send for DeviceManager {}
+    unsafe impl Sync for DeviceManager {}
+
+    DEVICE_MANAGER
+        .get_or_init(|| unsafe { DeviceManager(dl_device::find_device_manager(image_base)) })
+        .0
+        .clone()
 }

@@ -11,6 +11,7 @@ use crate::{
 #[repr(C)]
 pub struct EblFileManager;
 
+#[derive(Debug)]
 pub struct EblUtilityVtable {
     pub make_ebl_object: MakeEblObject,
     pub mount_ebl: MountEbl,
