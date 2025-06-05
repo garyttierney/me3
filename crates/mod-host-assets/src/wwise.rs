@@ -123,7 +123,7 @@ mod test {
 pub fn poll_wwise_open_file_fn(
     freq: time::Duration,
     timeout: time::Duration,
-) -> Result<WwiseOpenFileByName, FindError> {
+) -> Result<WwiseOpenFileByName, TimeoutError> {
     let mut rtti_scan = Some(std::thread::spawn(|| unsafe {
         find_wwise_open_file_fn_by_rtti()
             .inspect_err(|e| debug!("DLMOW::FilePackageLowLevelIOBlocking RTTI scan error: {e}"))
@@ -131,9 +131,7 @@ pub fn poll_wwise_open_file_fn(
 
     let start = time::Instant::now();
 
-    let mut by_export_result = None;
-
-    while time::Instant::now().checked_duration_since(start).unwrap() < timeout {
+    let result = loop {
         if rtti_scan.as_ref().is_some_and(|t| t.is_finished()) {
             if let Some(Ok(open_file_fn)) = rtti_scan.take().and_then(|t| t.join().ok()) {
                 debug!(
@@ -141,29 +139,29 @@ pub fn poll_wwise_open_file_fn(
                     open_file_fn as *const u8
                 );
 
-                return Ok(open_file_fn);
+                break Ok(open_file_fn);
             }
         }
 
-        by_export_result = Some(find_wwise_open_file_fn_by_export());
+        let by_export_result = find_wwise_open_file_fn_by_export();
 
-        if let &Some(Ok(open_file_fn)) = &by_export_result {
+        if let &Ok(open_file_fn) = &by_export_result {
             debug!(
                 "WwiseOpenFileByName found at {:?} via AK::StreamMgr::GetFileLocationResolver",
                 open_file_fn as *const u8
             );
 
-            return Ok(open_file_fn);
+            break Ok(open_file_fn);
+        }
+
+        if time::Instant::now().checked_duration_since(start).unwrap() >= timeout {
+            break by_export_result;
         }
 
         std::thread::sleep(freq);
-    }
+    };
 
-    if let Some(Err(e)) = by_export_result {
-        debug!("poll_wwise_open_file_fn timed out; last error: {e}");
-    }
-
-    Err(FindError::TimedOut)
+    result.map_err(TimeoutError)
 }
 
 /// # Safety
@@ -244,9 +242,11 @@ pub enum FindError {
     Uninit,
     #[error("Virtual function table layout mismatch")]
     Vtable,
-    #[error("Function timed out")]
-    TimedOut,
 }
+
+#[derive(Error, Debug)]
+#[error("Function timed out; last error: {0}")]
+pub struct TimeoutError(FindError);
 
 impl From<rtti::FindError> for FindError {
     fn from(value: rtti::FindError) -> Self {
