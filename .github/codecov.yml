@@ -1,0 +1,23 @@
+comment:
+  layout: 'header, diff, flags, components' # show component info in the PR comment
+
+component_management:
+  default_rules: # default rules that will be inherited by all components
+    statuses:
+      - type: patch # in this case every component that doens't have a status defined will have a project type one
+        target: auto
+        branches:
+          - '!main'
+  individual_components:
+    - component_id: host # this is an identifier that should not be changed
+      name: host # this is a display name, and can be changed freely
+      paths:
+        - crates/mod-host/**
+    - component_id: cli
+      name: cli
+      paths:
+        - crates/cli/**
+    - component_id: launcher
+      name: launcher
+      paths:
+        - crates/launcher/**
