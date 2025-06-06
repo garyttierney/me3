@@ -33,10 +33,6 @@ pub struct Selector {
     #[clap(long, help_heading = "Game selection", action = ArgAction::SetTrue)]
     auto_detect: bool,
 
-    /// A path to the game executable to launch with mod support.
-    #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
-    exe: Option<PathBuf>,
-
     /// Short name of a game to launch. The launcher will look for the the installation in
     /// available Steam libraries.
     #[clap(
@@ -59,6 +55,11 @@ pub struct Selector {
 pub struct LaunchArgs {
     #[clap(flatten)]
     pub target_selector: Selector,
+
+    /// An optional path to the game executable to launch with mod support. Uses the default
+    /// launcher if not present.
+    #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
+    exe: Option<PathBuf>,
 
     /// Path to a ModProfile configuration file (TOML, JSON, or YAML) or name of a profile
     /// stored in the me3 profile folder ($XDG_CONFIG_HOME/me3).
@@ -237,7 +238,7 @@ pub fn launch(
     let app_install_path = steam_library.resolve_app_dir(&steam_app);
     info!(?app_install_path, "found steam app path");
 
-    let launcher_path = game.launcher();
+    let launcher_path = args.exe.unwrap_or_else(|| game.launcher());
     info!(?launcher_path, "found steam app launcher");
 
     let launcher = app_install_path.join(launcher_path);
