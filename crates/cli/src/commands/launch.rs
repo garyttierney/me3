@@ -174,7 +174,7 @@ impl ProfileDetails {
     pub fn from_file<P: AsRef<Path>>(path: P) -> color_eyre::Result<Self> {
         let path = path.as_ref();
         let name = path
-            .file_name()
+            .file_stem()
             .expect("profile was loaded by filename")
             .to_string_lossy();
 
