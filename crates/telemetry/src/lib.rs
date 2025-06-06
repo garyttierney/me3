@@ -29,7 +29,6 @@ where
         .with(file_writer.map(|file_writer| {
             fmt::layer()
                 .with_ansi(false)
-                .pretty()
                 .without_time()
                 .with_writer(file_writer)
         }))
