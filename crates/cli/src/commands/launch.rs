@@ -1,17 +1,19 @@
 use std::{
     collections::BTreeSet,
-    fs,
+    fs::{self, File},
     io::{BufRead, BufReader},
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::Command,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
+    time::SystemTime,
 };
 
+use chrono::Local;
 use clap::{ArgAction, Args};
-use color_eyre::eyre::{eyre, OptionExt};
+use color_eyre::eyre::{eyre, Context, OptionExt};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{
     dependency::sort_dependencies,
@@ -24,7 +26,7 @@ use steamlocate::{CompatTool, SteamDir};
 use tempfile::NamedTempFile;
 use tracing::info;
 
-use crate::{AppPaths, Config, Game};
+use crate::{commands::profile, AppPaths, Config, Game};
 
 #[derive(Debug, clap::Args)]
 #[group(required = true, multiple = false)]
@@ -66,11 +68,10 @@ pub struct LaunchArgs {
     #[arg(
             short('p'),
             long("profile"),
-            action = clap::ArgAction::Append,
             help_heading = "Mod configuration",
             value_hint = clap::ValueHint::FilePath,
         )]
-    profiles: Vec<String>,
+    profile: Option<String>,
 
     /// Path to package directories that the mod host will use as VFS mount points.
     #[arg(
@@ -153,7 +154,45 @@ impl Launcher for CompatToolLauncher {
     }
 }
 
-#[tracing::instrument(skip(config, paths, bins_dir))]
+pub struct ProfileDetails {
+    name: String,
+    base_dir: PathBuf,
+    profile: ModProfile,
+}
+
+impl Default for ProfileDetails {
+    fn default() -> Self {
+        Self {
+            name: "transient-profile".to_string(),
+            base_dir: Default::default(),
+            profile: Default::default(),
+        }
+    }
+}
+
+impl ProfileDetails {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> color_eyre::Result<Self> {
+        let path = path.as_ref();
+        let name = path
+            .file_stem()
+            .expect("profile was loaded by filename")
+            .to_string_lossy();
+
+        let base = path
+            .parent()
+            .and_then(|parent| parent.normalize().ok())
+            .ok_or_eyre("failed to normalize base directory for mod profile")?;
+
+        let profile = ModProfile::from_file(path)?;
+
+        Ok(Self {
+            name: name.to_string(),
+            base_dir: base.into_path_buf(),
+            profile,
+        })
+    }
+}
+
 pub fn launch(
     config: Config,
     paths: AppPaths,
@@ -179,32 +218,31 @@ pub fn launch(
 
     let mut profile_supported_games = BTreeSet::new();
 
-    for profile_name in args.profiles {
-        let profile_path = config.resolve_profile(&profile_name)?;
+    let profile_details = if let Some(profile_name) = args.profile {
+        config
+            .resolve_profile(&profile_name)
+            .and_then(ProfileDetails::from_file)?
+    } else {
+        ProfileDetails::default()
+    };
 
-        let base = profile_path
-            .parent()
-            .and_then(|parent| parent.normalize().ok())
-            .ok_or_eyre("failed to normalize base directory for mod profile")?;
+    let profile = profile_details.profile;
+    let base = profile_details.base_dir;
+    let mut packages = profile.packages();
+    let mut natives = profile.natives();
 
-        let profile = ModProfile::from_file(&profile_path)?;
+    packages
+        .iter_mut()
+        .for_each(|pkg| pkg.source_mut().make_absolute(base.as_path()));
+    natives
+        .iter_mut()
+        .for_each(|pkg| pkg.source_mut().make_absolute(base.as_path()));
 
-        let mut packages = profile.packages();
-        let mut natives = profile.natives();
+    all_packages.extend(packages);
+    all_natives.extend(natives);
 
-        packages
-            .iter_mut()
-            .for_each(|pkg| pkg.source_mut().make_absolute(base.as_path()));
-        natives
-            .iter_mut()
-            .for_each(|pkg| pkg.source_mut().make_absolute(base.as_path()));
-
-        all_packages.extend(packages);
-        all_natives.extend(natives);
-
-        for supports in profile.supports() {
-            profile_supported_games.insert(Game(supports.game));
-        }
+    for supports in profile.supports() {
+        profile_supported_games.insert(Game(supports.game));
     }
 
     let game = if args.target_selector.auto_detect {
@@ -279,17 +317,49 @@ pub fn launch(
         DirectLauncher.into_command(injector_path)
     }?;
 
-    if let Some(dir) = paths.logs_path.as_ref() {
-        fs::create_dir_all(dir)?;
+    let now = Local::now();
+    let log_id = now.format("%Y-%m-%d_%H-%M-%S").to_string();
+
+    let log_folder = paths
+        .logs_path
+        .unwrap_or_default()
+        .join(profile_details.name);
+
+    info!(?log_folder, "creating profile log folder");
+    fs::create_dir_all(&log_folder)?;
+
+    let log_files: Vec<(SystemTime, PathBuf)> = fs::read_dir(&log_folder)
+        .map(|dir| {
+            dir.filter_map(|entry| {
+                let entry = entry.ok()?;
+                let metadata = entry.metadata().ok()?;
+                if metadata.is_file() && entry.path().extension().is_some_and(|ext| ext == "log") {
+                    Some((metadata.modified().ok()?, entry.path()))
+                } else {
+                    None
+                }
+            })
+            .collect()
+        })
+        .unwrap_or_default();
+
+    if log_files.len() >= 5 {
+        if let Some((_, path_to_delete)) = log_files.iter().min_by_key(|(time, _)| *time) {
+            let _ = fs::remove_file(path_to_delete);
+        }
     }
 
-    let log_file = tempfile::Builder::new()
-        .disable_cleanup(true)
-        .suffix(".log")
-        .prefix("me3-log-")
-        .tempfile_in(paths.logs_path.unwrap_or_default())?;
+    let log_file_path = log_folder.join(format!("{log_id}.log"));
+    let monitor_log_file = NamedTempFile::with_suffix(".log")?;
 
-    injector_command.env("ME3_LOG_FILE", log_file.path().normalize()?);
+    // Ensure log file exits so `normalize()` succeeds on Unix
+    let log_file = File::create(&log_file_path)?;
+    drop(log_file);
+
+    info!(path = ?monitor_log_file.path(), "temporary log file created");
+
+    injector_command.env("ME3_LOG_FILE", log_file_path.normalize()?);
+    injector_command.env("ME3_MONITOR_LOG_FILE", monitor_log_file.path().normalize()?);
     injector_command.env("ME3_GAME_EXE", launcher);
     injector_command.env("ME3_HOST_DLL", dll_path);
     injector_command.env("ME3_HOST_CONFIG_PATH", attach_config_file.path());
@@ -306,8 +376,9 @@ pub fn launch(
     let mut launcher_proc = injector_command.spawn()?;
 
     let monitor_thread_running = running.clone();
+
     let monitor_thread = std::thread::spawn(move || {
-        let mut log_reader = BufReader::new(log_file);
+        let mut log_reader = BufReader::new(monitor_log_file);
 
         while monitor_thread_running.load(Ordering::SeqCst) {
             if let Some(_exit_code) = launcher_proc

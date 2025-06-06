@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Clean-up old log files and store them in a per-profile directory by @garyttierney in <https://github.com/garyttierney/me3/pull/84>
 - Support overriding files with a game agnostic approach by @Dasaav-dsv in <https://github.com/garyttierney/me3/pull/74>
 
 ## [v0.3.0] - 2025-06-02
