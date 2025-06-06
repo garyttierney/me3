@@ -11,7 +11,6 @@ sentry = ["me3_telemetry/sentry", "dep:sentry"]
 default = []
 
 [dependencies]
-stable-eyre = { version = "0.2" }
 crash-context.workspace = true
 eyre = "0.6"
 dll-syringe.workspace = true

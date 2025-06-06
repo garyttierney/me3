@@ -25,23 +25,23 @@ where
         .unwrap();
 
     tracing_subscriber::registry()
-        .with(ErrorLayer::default())
         .with(filter_layer)
         .with(file_writer.map(|file_writer| {
             fmt::layer()
-                .pretty()
                 .with_ansi(false)
+                .pretty()
                 .without_time()
                 .with_writer(file_writer)
         }))
         .with(monitor_writer.map(|writer| {
             fmt::layer()
-                .compact()
                 .with_ansi(true)
+                .compact()
                 .without_time()
                 .with_writer(writer)
         }))
         .with(telemetry_enabled.then(sentry::integrations::tracing::layer))
+        .with(ErrorLayer::default())
         .init();
 
     #[cfg(feature = "sentry")]

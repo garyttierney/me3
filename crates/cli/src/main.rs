@@ -1,7 +1,7 @@
 use std::{error::Error, io::stderr, path::PathBuf, str::FromStr};
 
 use clap::{builder::PossibleValue, ArgAction, Command, Parser, ValueEnum};
-use color_eyre::eyre::eyre;
+use color_eyre::eyre::{self, eyre, DefaultHandler, EyreHandler};
 use commands::{profile::ProfileCommands, Commands};
 use config::{ConfigError, Environment, File, Map, Source};
 use directories::ProjectDirs;
@@ -258,10 +258,6 @@ fn bins_dir(_config: &Config) -> PathBuf {
 fn main() {
     let cli = Cli::parse();
 
-    color_eyre::config::HookBuilder::default()
-        .install()
-        .expect("failed to install error handler");
-
     let app_install = AppInstallInfo::try_from_cargo()
         .or_else(|_| AppInstallInfo::try_from_os())
         .ok();
@@ -306,7 +302,12 @@ fn main() {
             .map(|dirs| dirs.config_local_dir().join("profiles"));
     }
 
-    let _guard = me3_telemetry::install(config.crash_reporting, BoxMakeWriter::new(stderr), None);
+    let _guard = me3_telemetry::install(
+        config.crash_reporting,
+        None,
+        Some(BoxMakeWriter::new(stderr)),
+    );
+
     let bins_path = bins_dir(&config);
 
     let result = match cli.command {
@@ -321,8 +322,5 @@ fn main() {
         Commands::Update => commands::windows::update(),
     };
 
-    if let Err(error) = result {
-        eprintln!("{error:#}");
-        std::process::exit(1);
-    }
+    result.expect("command failed");
 }

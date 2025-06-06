@@ -16,7 +16,10 @@ sentry = ["me3_telemetry/sentry"]
 [dependencies]
 chrono = "0.4.41"
 clap = { version = "4.5.38", features = ["derive"] }
-color-eyre = { version = "0.6.4" }
+color-eyre = { version = "0.6", default-features = false, features = [
+    "track-caller",
+    "capture-spantrace",
+] }
 config = "0.15.11"
 ctrlc = "3.4.7"
 directories = "6.0.0"

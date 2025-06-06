@@ -13,7 +13,7 @@ use std::{
 
 use chrono::Local;
 use clap::{ArgAction, Args};
-use color_eyre::eyre::{eyre, OptionExt};
+use color_eyre::eyre::{eyre, Context, OptionExt};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{
     dependency::sort_dependencies,
@@ -193,7 +193,6 @@ impl ProfileDetails {
     }
 }
 
-#[tracing::instrument(skip(config, paths, bins_dir))]
 pub fn launch(
     config: Config,
     paths: AppPaths,
@@ -318,10 +317,6 @@ pub fn launch(
         DirectLauncher.into_command(injector_path)
     }?;
 
-    if let Some(dir) = paths.logs_path.as_ref() {
-        fs::create_dir_all(dir)?;
-    }
-
     let now = Local::now();
     let log_id = now.format("%Y-%m-%d_%H-%M-%S").to_string();
 
@@ -330,19 +325,23 @@ pub fn launch(
         .unwrap_or_default()
         .join(profile_details.name);
 
+    info!(?log_folder, "creating profile log folder");
     fs::create_dir_all(&log_folder)?;
 
-    let log_files: Vec<(SystemTime, PathBuf)> = fs::read_dir(&log_folder)?
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let metadata = entry.metadata().ok()?;
-            if metadata.is_file() && entry.path().extension().is_some_and(|ext| ext == "log") {
-                Some((metadata.modified().ok()?, entry.path()))
-            } else {
-                None
-            }
+    let log_files: Vec<(SystemTime, PathBuf)> = fs::read_dir(&log_folder)
+        .map(|dir| {
+            dir.filter_map(|entry| {
+                let entry = entry.ok()?;
+                let metadata = entry.metadata().ok()?;
+                if metadata.is_file() && entry.path().extension().is_some_and(|ext| ext == "log") {
+                    Some((metadata.modified().ok()?, entry.path()))
+                } else {
+                    None
+                }
+            })
+            .collect()
         })
-        .collect();
+        .unwrap_or_default();
 
     if log_files.len() >= 5 {
         if let Some((_, path_to_delete)) = log_files.iter().min_by_key(|(time, _)| *time) {
@@ -352,6 +351,12 @@ pub fn launch(
 
     let log_file_path = log_folder.join(format!("{log_id}.log"));
     let monitor_log_file = NamedTempFile::with_suffix(".log")?;
+
+    // Ensure log file exits so `normalize()` succeeds on Unix
+    let log_file = File::create(&log_file_path)?;
+    drop(log_file);
+
+    info!(path = ?monitor_log_file.path(), "temporary log file created");
 
     injector_command.env("ME3_LOG_FILE", log_file_path.normalize()?);
     injector_command.env("ME3_MONITOR_LOG_FILE", monitor_log_file.path().normalize()?);

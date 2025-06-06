@@ -32,7 +32,7 @@ use crate::game::Game;
 
 mod game;
 
-pub type LauncherResult<T> = stable_eyre::Result<T>;
+pub type LauncherResult<T> = eyre::Result<T>;
 
 /// Launch a Steam game with the me3 mod loader attached.
 #[derive(Debug)]
