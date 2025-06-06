@@ -112,7 +112,7 @@ jobs:
 
           if gh release view prerelease -R garyttierney/me3 ; then
               gh release delete prerelease -R garyttierney/me3 -y --cleanup-tag
-              sleep 5s
+              sleep 15s
           fi
 
           release_notes=$(awk 'NR == 1, /^## / { next }; /^## / { exit }; { print }' CHANGELOG.md )
