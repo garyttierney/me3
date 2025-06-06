@@ -30,7 +30,7 @@ jobs:
           cargo install --locked cargo-sbom
           cargo sbom --output-format spdx_json_2_3 > all.spdx.json
       - name: Submit SBOM to GitHub
-        uses: advanced-security/spdx-dependency-submission-action@v0.1.1
+        uses: advanced-security/spdx-dependency-submission-action@5530bab9ee4bbe66420ce8280624036c77f89746 # v0.1.1
       - name: "Dependency Review"
         uses: actions/dependency-review-action@da24556b548a50705dd671f47852072ea4c105d9 # v4.7.1
         with:

@@ -27,7 +27,7 @@ jobs:
       attestations: write
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: my-artifact
       - name: Display structure of downloaded files
@@ -38,22 +38,22 @@ jobs:
           subject-path: |
             me3_installer.exe
 
-      - uses: actions/attest-sbom@v2
+      - uses: actions/attest-sbom@115c3be05ff3974bcbd596578934b3f9ce39bf68 # v2.2.0
         with:
           subject-path: "target/x86_64-pc-windows-msvc/release/me3_mod_host.dll"
           sbom-path: "crates/mod-host/me3-mod-host_x86_64-pc-windows-msvc.cdx.json"
 
-      - uses: actions/attest-sbom@v2
+      - uses: actions/attest-sbom@115c3be05ff3974bcbd596578934b3f9ce39bf68 # v2.2.0
         with:
           subject-path: "target/x86_64-pc-windows-msvc/release/me3-launcher.exe"
           sbom-path: "crates/launcher/me3-launcher_x86_64-pc-windows-msvc.cdx.json"
 
-      - uses: actions/attest-sbom@v2
+      - uses: actions/attest-sbom@115c3be05ff3974bcbd596578934b3f9ce39bf68 # v2.2.0
         with:
           subject-path: "target/x86_64-pc-windows-msvc/release/me3.exe"
           sbom-path: "crates/cli/me3-cli_x86_64-pc-windows-msvc.cdx.json"
 
-      - uses: actions/attest-sbom@v2
+      - uses: actions/attest-sbom@115c3be05ff3974bcbd596578934b3f9ce39bf68 # v2.2.0
         with:
           subject-path: "target/x86_64-unknown-linux-musl/release/me3"
           sbom-path: "crates/cli/me3-cli_x86_64-unknown-linux-musl.cdx.json"
@@ -194,7 +194,7 @@ jobs:
       actions: read
     steps:
       - name: Download installer
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: me3-artifacts
       - run: ls -R
