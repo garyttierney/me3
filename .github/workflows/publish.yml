@@ -194,7 +194,8 @@ jobs:
       - name: Download installer
         uses: actions/download-artifact@v4
         with:
-          name: me3-installer
+          name: me3-artifacts
+      - run: ls -R
       - run: ./me3_installer.exe /S
 
       - run: |
