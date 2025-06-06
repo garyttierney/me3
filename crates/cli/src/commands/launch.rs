@@ -336,7 +336,7 @@ pub fn launch(
         .filter_map(|entry| {
             let entry = entry.ok()?;
             let metadata = entry.metadata().ok()?;
-            if metadata.is_file() {
+            if metadata.is_file() && entry.path().extension().is_some_and(|ext| ext == "log") {
                 Some((metadata.modified().ok()?, entry.path()))
             } else {
                 None
