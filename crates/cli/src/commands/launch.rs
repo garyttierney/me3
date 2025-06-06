@@ -33,10 +33,6 @@ pub struct Selector {
     #[clap(long, help_heading = "Game selection", action = ArgAction::SetTrue)]
     auto_detect: bool,
 
-    /// A path to the game executable to launch with mod support.
-    #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
-    exe: Option<PathBuf>,
-
     /// Short name of a game to launch. The launcher will look for the the installation in
     /// available Steam libraries.
     #[clap(
@@ -59,6 +55,11 @@ pub struct Selector {
 pub struct LaunchArgs {
     #[clap(flatten)]
     pub target_selector: Selector,
+
+    /// An optional path to the game executable to launch with mod support. Uses the default
+    /// launcher if not present.
+    #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
+    exe: Option<PathBuf>,
 
     /// Path to a ModProfile configuration file (TOML, JSON, or YAML) or name of a profile
     /// stored in the me3 profile folder ($XDG_CONFIG_HOME/me3).
@@ -90,17 +91,6 @@ pub struct LaunchArgs {
         )]
     natives: Vec<PathBuf>,
 }
-
-pub fn launcher_for(name: &str) -> Option<PathBuf> {
-    let path = match name {
-        "ELDEN RING" => "Game/eldenring.exe",
-        "ELDEN RING NIGHTREIGN" => "Game/nightreign.exe",
-        _ => return None,
-    };
-
-    Some(PathBuf::from(path))
-}
-
 pub trait Launcher {
     fn into_command(self, launcher: PathBuf) -> color_eyre::Result<Command>;
 }
@@ -213,18 +203,11 @@ pub fn launch(
         all_natives.extend(natives);
 
         for supports in profile.supports() {
-            match supports.game {
-                me3_mod_protocol::Game::EldenRing => {
-                    profile_supported_games.insert(Game::EldenRing);
-                }
-                me3_mod_protocol::Game::Nightreign => {
-                    profile_supported_games.insert(Game::Nightreign);
-                }
-            }
+            profile_supported_games.insert(Game(supports.game));
         }
     }
 
-    let app_id = if args.target_selector.auto_detect {
+    let game = if args.target_selector.auto_detect {
         if profile_supported_games.len() > 1 {
             Err(eyre!(
                 "profile supports more than one game, unable to auto-detect"
@@ -232,17 +215,17 @@ pub fn launch(
         } else {
             profile_supported_games
                 .pop_first()
-                .map(Game::app_id)
                 .ok_or_eyre("unable to auto-detect appid of game")
         }
     } else {
         args.target_selector
-            .steam_id
-            .or_else(|| args.target_selector.game.map(Game::app_id))
+            .game
+            .or_else(|| args.target_selector.steam_id.and_then(Game::from_app_id))
             .ok_or_eyre("unable to determine app ID for game")
     }?;
 
-    info!(app_id, "resolved app id");
+    let app_id = game.app_id();
+    info!(?game, app_id, "resolved game");
 
     let steam_dir = config.resolve_steam_dir()?;
     info!(?steam_dir, "found steam dir");
@@ -255,8 +238,7 @@ pub fn launch(
     let app_install_path = steam_library.resolve_app_dir(&steam_app);
     info!(?app_install_path, "found steam app path");
 
-    let launcher_path = launcher_for(&steam_app.name.expect("app must have a name"))
-        .ok_or_eyre("unable to determine path to launcher for game")?;
+    let launcher_path = args.exe.unwrap_or_else(|| game.launcher());
     info!(?launcher_path, "found steam app launcher");
 
     let launcher = app_install_path.join(launcher_path);

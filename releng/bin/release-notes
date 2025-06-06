@@ -1,0 +1,13 @@
+#!/bin/bash
+
+script_dir=$(dirname "$(realpath "$0")")
+
+VERSION="$1"
+SUMMARY=$(git tag -l --format='%(contents:subject)' "$VERSION")
+BODY=$(git tag -l --format='%(contents:body)' "$VERSION")
+SIGNATURE=$(git tag -l --format='%(contents:signature)' "$VERSION")
+
+CHANGES=$(awk "NR == 1, /^## \[$VERSION\]/ { next }; /^## / { exit }; { print }" CHANGELOG.md)
+
+export CHANGES VERSION SUMMARY SIGNATURE BODY
+envsubst <"$script_dir/../RELEASE_NOTES.md"

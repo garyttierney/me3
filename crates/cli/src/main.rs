@@ -1,6 +1,6 @@
 use std::{error::Error, io::stderr, path::PathBuf, str::FromStr};
 
-use clap::{ArgAction, Command, Parser, ValueEnum};
+use clap::{builder::PossibleValue, ArgAction, Command, Parser, ValueEnum};
 use color_eyre::eyre::eyre;
 use commands::{profile::ProfileCommands, Commands};
 use config::{ConfigError, Environment, File, Map, Source};
@@ -46,23 +46,67 @@ where
 mod settings;
 pub use self::settings::Config;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Serialize, Deserialize)]
-pub enum Game {
-    #[serde(alias = "er")]
-    #[value(alias("er"))]
-    EldenRing,
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct Game(me3_mod_protocol::Game);
 
-    #[serde(alias = "nr", alias = "elden-ring-nightreign")]
-    #[value(alias("nr"), alias("elden-ring-nightreign"))]
-    Nightreign,
+impl ValueEnum for Game {
+    fn value_variants<'a>() -> &'a [Self] {
+        use me3_mod_protocol::Game as G;
+        &[
+            Game(G::EldenRing),
+            Game(G::Nightreign),
+            Game(G::ArmoredCore6),
+        ]
+    }
+
+    fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {
+        use me3_mod_protocol::Game as G;
+        Some(match self.0 {
+            G::EldenRing => PossibleValue::new("eldenring").aliases(["er", "elden-ring"]),
+            G::Nightreign => PossibleValue::new("nightreign").aliases(["nr", "nightrein"]),
+            G::ArmoredCore6 => PossibleValue::new("armoredcore6").alias("ac6"),
+        })
+    }
 }
 
 impl Game {
     pub fn app_id(self) -> u32 {
-        match self {
-            Self::EldenRing => 1245620,
-            Self::Nightreign => 2622380,
+        use me3_mod_protocol::Game as G;
+
+        match self.0 {
+            G::EldenRing => 1245620,
+            G::Nightreign => 2622380,
+            G::ArmoredCore6 => 1888160,
         }
+    }
+
+    pub fn launcher(&self) -> PathBuf {
+        use me3_mod_protocol::Game as G;
+
+        PathBuf::from(match self.0 {
+            G::EldenRing => "Game/eldenring.exe",
+            G::Nightreign => "Game/nightreign.exe",
+            G::ArmoredCore6 => "Game/armoredcore6.exe",
+        })
+    }
+
+    fn from_app_id(id: u32) -> Option<Self> {
+        use me3_mod_protocol::Game as G;
+
+        let game = match id {
+            1245620 => G::EldenRing,
+            2622380 => G::Nightreign,
+            1888160 => G::ArmoredCore6,
+            _ => return None,
+        };
+
+        Some(Game(game))
+    }
+}
+
+impl From<Game> for me3_mod_protocol::Game {
+    fn from(val: Game) -> Self {
+        val.0
     }
 }
 

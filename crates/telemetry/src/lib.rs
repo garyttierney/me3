@@ -44,6 +44,7 @@ where
         }
 
         sentry::init(sentry::ClientOptions {
+            release: Some(env!("CARGO_PKG_VERSION").into()),
             debug: cfg!(debug_assertions),
             traces_sample_rate: 1.0,
             dsn: sentry_dsn,

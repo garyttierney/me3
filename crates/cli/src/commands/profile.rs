@@ -92,10 +92,7 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         let supports = profile.supports_mut();
 
         supports.push(Supports {
-            game: match game {
-                Game::EldenRing => me3_mod_protocol::Game::EldenRing,
-                Game::Nightreign => me3_mod_protocol::Game::Nightreign,
-            },
+            game: game.into(),
             since_version: None,
         });
     }
@@ -122,12 +119,7 @@ pub fn show(config: Config, name: String) -> color_eyre::Result<()> {
 
     output.section("Supports", |builder| {
         for supports in profile.supports() {
-            let name = match supports.game {
-                me3_mod_protocol::Game::EldenRing => "ELDEN RING",
-                me3_mod_protocol::Game::Nightreign => "ELDEN RING: NIGHTREIGN",
-            };
-
-            builder.property(name, "Supported");
+            builder.property(format!("{:?}", supports.game), "Supported");
         }
     });
 

@@ -1,7 +1,7 @@
 name: Delete unused caches
 
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
 
 jobs:
@@ -11,3 +11,6 @@ jobs:
       - uses: snnaplab/delete-branch-cache-action@20f7992a7b8b51aa719420d11b32c9d34a5eb362 # v1.0.0
         with:
           ref: refs/pull/${{ github.event.number }}/merge
+      - uses: snnaplab/delete-branch-cache-action@20f7992a7b8b51aa719420d11b32c9d34a5eb362 # v1.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}

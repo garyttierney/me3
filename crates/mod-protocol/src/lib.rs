@@ -1,9 +1,10 @@
-use std::{fs::File, io::Read, path::Path};
+use std::{error::Error, fmt::Display, fs::File, io::Read, path::Path, str::FromStr};
 
 use native::Native;
 use package::Package;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 pub mod dependency;
 pub mod native;
@@ -16,7 +17,9 @@ pub enum ModProfile {
     V1(ModProfileV1),
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(
+    Clone, Copy, Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, PartialOrd, Ord,
+)]
 pub enum Game {
     #[serde(alias = "eldenring")]
     #[serde(rename = "elden-ring")]
@@ -25,6 +28,31 @@ pub enum Game {
     #[serde(alias = "nightreign")]
     #[serde(rename = "nightrein")]
     Nightreign,
+
+    #[serde(rename = "armoredcore6")]
+    #[serde(alias = "ac6")]
+    ArmoredCore6,
+}
+
+#[derive(Debug)]
+pub struct InvalidGame(String);
+impl Error for InvalidGame {}
+impl Display for InvalidGame {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} is not a supported game", self.0)
+    }
+}
+impl FromStr for Game {
+    type Err = InvalidGame;
+
+    fn from_str(name: &str) -> Result<Self, Self::Err> {
+        match name.to_ascii_lowercase().as_str() {
+            "eldenring" | "elden-ring" => Ok(Game::EldenRing),
+            "nightreign" | "nightrein" => Ok(Game::Nightreign),
+            "ac6" | "armoredcore6" => Ok(Game::ArmoredCore6),
+            _ => Err(InvalidGame(name.to_string())),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]

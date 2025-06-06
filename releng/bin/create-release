@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -xe
+
+trap "git worktree remove mkrelease || true" EXIT
+script_dir=$(dirname "$(realpath "$0")")
+
+SHA=$1
+
+if [ -z "$SHA" ]; then
+    exit 1
+fi
+
+git fetch origin
+git worktree add -B "release-prep" mkrelease "$SHA"
+(
+    pushd mkrelease || exit 1
+
+    version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
+    tag_name="v$version"
+
+    git tag --sign -a "$tag_name" "$SHA"
+
+    notes=$("$script_dir/release-notes" "$tag_name")
+    echo "$notes"
+
+    if [ -n "$RELEASE_PUSH" ]; then
+        git push origin "$tag_name"
+        gh release create "$tag_name" --notes "$notes" --verify-tag --discussion-category "Announcements"
+        git fetch origin main:main
+        git merge --ff-only --into-name main "release-$tag_name"
+        git push origin main
+    fi
+
+)

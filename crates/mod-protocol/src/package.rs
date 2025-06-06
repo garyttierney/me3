@@ -49,6 +49,7 @@ pub struct Package {
     pub(crate) id: String,
 
     /// A path to the source of this package.
+    #[serde(alias = "path")]
     pub(crate) source: ModFile,
 
     /// A list of package IDs that this package should load after.
