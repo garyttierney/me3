@@ -117,7 +117,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## License
 
-Distributed under the terms of both the Apache Software License 2.0 and MIT License. See LICENSE-APACHE and LICENSE-MIT for more information.
+With the exception of the [me3 logo](distribution/assets/me3.ico), this project is distributed under the terms of both the Apache Software License 2.0 and MIT License. See [LICENSE-APACHE] and [LICENSE-MIT] for more information.
+
+The me3 logo is not available under any license - all rights are reserved.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

@@ -6,6 +6,10 @@
 !define PRODUCT "garyttierney\me3"
 !define PRODUCT_URL "https://github.com/garyttierney/me3"
 
+!define MUI_ICON "distribution/assets/me3.ico"
+
+
+; https://gist.github.com/nikku/281d0ef126dbc215dd58bfd5b3a5cd5b
 !macro APP_ASSOCIATE EXT FILECLASS DESCRIPTION ICON COMMANDTEXT COMMAND
   ; Backup the previously associated file class
   ReadRegStr $R0 SHELL_CONTEXT "Software\Classes\.${EXT}" ""
@@ -188,6 +192,9 @@ Section "Main Application" SEC01
 
     !insertmacro APP_ASSOCIATE "me3" "me3.mod-profile" "me3 Mod Profile" \
       "$INSTDIR\bin\me3.exe,0" "Open with me3" "$INSTDIR\bin\me3.exe launch --auto-detect -p $\"%1$\""
+
+    !insertmacro APP_ASSOCIATE_ADDVERB "me3.mod-profile" "open-with-diagnostics" "Open with me3 (diagnostics)" \
+      "$INSTDIR\bin\me3.exe launch --diagnostics --auto-detect -p $\"%1$\""
 
     IfFileExists "$INSTDIR\config\me3.toml" file_found file_not_found
 file_found:
