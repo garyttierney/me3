@@ -3,6 +3,8 @@
 # shellcheck disable=SC2039  # local is non-POSIX
 set -u
 
+INSTALLER_VERSION=prerelease
+
 need_cmd() {
     if ! check_cmd "$1"; then
         err "need '$1' (command not found)"
@@ -311,7 +313,12 @@ main() {
     local me3_version
     local me3_windows_binary_dir
 
-    me3_version=${VERSION:-"v0.2.0"}
+    me3_version=${VERSION:-"$INSTALLER_VERSION"}
+
+    if [ "$me3_version" = "prerelease" ]; then
+        warn "installing prerelease version"
+    fi
+
     me3_windows_binary_dir="${WINDOWS_BINARY_DIR:-$HOME/.local/share/me3/windows-bin}"
     me3_binary_dir="$HOME/.local/bin"
 
