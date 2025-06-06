@@ -2,6 +2,7 @@
 
 use std::{
     env,
+    error::Error,
     fs::{File, OpenOptions},
     path::PathBuf,
     sync::{
@@ -156,7 +157,7 @@ fn run() -> LauncherResult<()> {
                 },
                 Err(IpcError::Disconnected) => break,
                 Err(e) => {
-                    error!("Error from monitor channel {:?}", e);
+                    error!(error = &e as &dyn Error, "Error from monitor channel");
                     break;
                 }
             }
@@ -164,7 +165,7 @@ fn run() -> LauncherResult<()> {
     });
 
     if let Err(e) = game.attach(&args.dll, request) {
-        error!("Failed to attach to game: {e:?}");
+        error!(error = &*e, "Failed to attach to game");
     }
 
     drop(span_guard);

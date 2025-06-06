@@ -14,6 +14,7 @@ default = []
 sentry = ["me3_telemetry/sentry"]
 
 [dependencies]
+chrono = "0.4.41"
 clap = { version = "4.5.38", features = ["derive"] }
 color-eyre = { version = "0.6.4" }
 config = "0.15.11"
