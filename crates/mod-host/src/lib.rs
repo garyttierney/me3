@@ -14,6 +14,7 @@ use ipc_channel::ipc::IpcSender;
 use me3_launcher_attach_protocol::{AttachRequest, AttachResult, Attachment, HostMessage};
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use tracing::info;
+use tracing_subscriber::fmt::writer::BoxMakeWriter;
 
 use crate::host::{hook::thunk::ThunkPool, ModHost};
 
@@ -69,9 +70,19 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         .open(log_file_path)
         .expect("couldn't open log file");
 
-    let telemetry = me3_telemetry::install(std::env::var("ME3_TELEMETRY").is_ok(), move || {
-        log_file.try_clone().unwrap()
-    });
+    let monitor_log_file_path =
+        std::env::var("ME3_MONITOR_LOG_FILE").expect("log file location not set");
+
+    let monitor_log_file = OpenOptions::new()
+        .append(true)
+        .open(monitor_log_file_path)
+        .expect("couldn't open log file");
+
+    let telemetry = me3_telemetry::install(
+        std::env::var("ME3_TELEMETRY").is_ok(),
+        Some(BoxMakeWriter::new(log_file)),
+        Some(BoxMakeWriter::new(monitor_log_file)),
+    );
 
     info!("Host monitoring configured");
 

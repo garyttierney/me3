@@ -351,8 +351,10 @@ pub fn launch(
     }
 
     let log_file_path = log_folder.join(format!("{log_id}.log"));
+    let monitor_log_file = NamedTempFile::with_suffix(".log")?;
 
     injector_command.env("ME3_LOG_FILE", log_file_path.normalize()?);
+    injector_command.env("ME3_MONITOR_LOG_FILE", monitor_log_file.path().normalize()?);
     injector_command.env("ME3_GAME_EXE", launcher);
     injector_command.env("ME3_HOST_DLL", dll_path);
     injector_command.env("ME3_HOST_CONFIG_PATH", attach_config_file.path());
@@ -369,7 +371,6 @@ pub fn launch(
     let mut launcher_proc = injector_command.spawn()?;
 
     let monitor_thread_running = running.clone();
-    let monitor_log_file = File::open(log_file_path)?;
 
     let monitor_thread = std::thread::spawn(move || {
         let mut log_reader = BufReader::new(monitor_log_file);

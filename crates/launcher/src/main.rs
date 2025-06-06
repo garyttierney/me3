@@ -26,6 +26,7 @@ use sentry::{
     Level,
 };
 use tracing::{error, info, info_span};
+use tracing_subscriber::fmt::writer::BoxMakeWriter;
 
 use crate::game::Game;
 
@@ -181,12 +182,23 @@ fn main() {
     let log_file_path = std::env::var("ME3_LOG_FILE").expect("log file location not set");
     let log_file = OpenOptions::new()
         .append(true)
+        .create(true)
         .open(log_file_path)
         .expect("couldn't open log file");
 
-    let _guard = me3_telemetry::install(std::env::var("ME3_TELEMETRY").is_ok(), move || {
-        log_file.try_clone().unwrap()
-    });
+    let monitor_log_file_path =
+        std::env::var("ME3_MONITOR_LOG_FILE").expect("log file location not set");
+
+    let monitor_log_file = OpenOptions::new()
+        .append(true)
+        .open(monitor_log_file_path)
+        .expect("couldn't open log file");
+
+    let _telemetry = me3_telemetry::install(
+        std::env::var("ME3_TELEMETRY").is_ok(),
+        Some(BoxMakeWriter::new(log_file)),
+        Some(BoxMakeWriter::new(monitor_log_file)),
+    );
 
     if let Err(e) = run() {
         error!(?e, "Failed to run launcher: {e}");

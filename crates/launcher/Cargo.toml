@@ -24,6 +24,7 @@ sentry = { version = "0.38.1", optional = true }
 toml.workspace = true
 libc = "0.2.172"
 me3_telemetry = { path = "../telemetry" }
+tracing-subscriber.workspace = true
 
 [lints]
 workspace = true
