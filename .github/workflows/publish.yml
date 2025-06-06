@@ -3,6 +3,11 @@ on:
     types:
       - released
   push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 name: Publishing
 concurrency:
@@ -60,36 +65,44 @@ jobs:
       - uses: taiki-e/install-action@2ee2c006bbe55b0c2924d63f440aa76ecdd09aea # v2.52.3
         with:
           tool: cargo-cyclonedx
+        if: github.event_name == 'release' || (github.event_name == 'push' && github.ref_name == 'main')
 
       - name: Generate SBOMs
         run: |
           cargo cyclonedx --target=x86_64-pc-windows-msvc --target-in-filename --format=json
           cargo cyclonedx --target=x86_64-unknown-linux-musl --target-in-filename --format=json
+        if: github.event_name == 'release' || (github.event_name == 'push' && github.ref_name == 'main')
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd # v2.3.0
         with:
           subject-path: |
             me3_installer.exe
+        if: github.event_name == 'release' || (github.event_name == 'push' && github.ref_name == 'main')
+
       - uses: actions/attest-sbom@v2
         with:
           subject-path: "target/x86_64-pc-windows-msvc/release/me3_mod_host.dll"
           sbom-path: "crates/mod-host/me3-mod-host_x86_64-pc-windows-msvc.cdx.json"
+        if: github.event_name == 'release' || (github.event_name == 'push' && github.ref_name == 'main')
 
       - uses: actions/attest-sbom@v2
         with:
           subject-path: "target/x86_64-pc-windows-msvc/release/me3-launcher.exe"
           sbom-path: "crates/launcher/me3-launcher_x86_64-pc-windows-msvc.cdx.json"
+        if: github.event_name == 'release' || (github.event_name == 'push' && github.ref_name == 'main')
 
       - uses: actions/attest-sbom@v2
         with:
           subject-path: "target/x86_64-pc-windows-msvc/release/me3.exe"
           sbom-path: "crates/cli/me3-cli_x86_64-pc-windows-msvc.cdx.json"
+        if: github.event_name == 'release' || (github.event_name == 'push' && github.ref_name == 'main')
 
       - uses: actions/attest-sbom@v2
         with:
           subject-path: "target/x86_64-unknown-linux-musl/release/me3"
           sbom-path: "crates/cli/me3-cli_x86_64-unknown-linux-musl.cdx.json"
+        if: github.event_name == 'release' || (github.event_name == 'push' && github.ref_name == 'main')
 
       - run: |
           set +e
@@ -122,6 +135,7 @@ jobs:
       - name: Update tag in Linux installer
         run: |
           sed -i "s/INSTALLER_VERSION=.*/INSTALLER_VERSION=${{ steps.collect-release-info.outputs.release_tag }}/" installer.sh
+        if: github.event_name == 'release' || (github.event_name == 'push' && github.ref_name == 'main')
 
       - name: Upload installer to release
         run: >-
@@ -152,7 +166,7 @@ jobs:
           SENTRY_ORG: modengine
           SENTRY_PROJECT: me3
         with:
-          release: "$${{ steps.collect-release-info.outputs.release_tag }}"
+          release: "${{ steps.collect-release-info.outputs.release_tag }}"
           finalize: "${{ steps.collect-release-info.outputs.is_prerelease == 'false' }}"
         if: github.event_name == 'release' || (github.event_name == 'push' && github.ref_name == 'main')
 
