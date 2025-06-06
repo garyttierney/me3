@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Problem with me3
+    url: https://github.com/garyttierney/me3/discussions/new?category=bug-reports
+    about: Having issues using me3? Get help or report them here.
