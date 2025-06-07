@@ -62,3 +62,4 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: ${{ matrix.os }}
+        if: ${{ !cancelled() }}

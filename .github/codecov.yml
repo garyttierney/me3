@@ -1,6 +1,4 @@
-comment:
-  layout: 'header, diff, flags, components' # show component info in the PR comment
-
+comment: false
 component_management:
   default_rules: # default rules that will be inherited by all components
     statuses:
@@ -21,3 +19,16 @@ component_management:
       name: launcher
       paths:
         - crates/launcher/**
+coverage:
+  status:
+    project:
+      code-coverage: # default is the status check's name, not default settings
+        target: auto
+        base: auto
+        flags:
+          - unit
+        branches:
+          - main
+        if_ci_failed: error
+        informational: true
+        only_pulls: false
