@@ -4,7 +4,6 @@ use native::Native;
 use package::Package;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 pub mod dependency;
 pub mod native;

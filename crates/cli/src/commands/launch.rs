@@ -21,6 +21,7 @@ use me3_mod_protocol::{
     package::{Package, WithPackageSource},
     ModProfile,
 };
+use me3_telemetry::OtelExporter;
 use normpath::PathExt;
 use steamlocate::{CompatTool, SteamDir};
 use tempfile::NamedTempFile;
@@ -57,6 +58,10 @@ pub struct Selector {
 pub struct LaunchArgs {
     #[clap(flatten)]
     pub target_selector: Selector,
+
+    /// Enable diagnostics for this launch?
+    #[clap(short('d'), long("diagnostics"), action = ArgAction::SetTrue)]
+    diagnostics: bool,
 
     /// An optional path to the game executable to launch with mod support. Uses the default
     /// launcher if not present.
@@ -193,10 +198,12 @@ impl ProfileDetails {
     }
 }
 
+#[tracing::instrument(err, skip(config, paths, bins_dir, otel_exporter, args))]
 pub fn launch(
     config: Config,
     paths: AppPaths,
     bins_dir: PathBuf,
+    otel_exporter: OtelExporter,
     args: LaunchArgs,
 ) -> color_eyre::Result<()> {
     let mut all_natives = vec![];
@@ -358,6 +365,20 @@ pub fn launch(
 
     info!(path = ?monitor_log_file.path(), "temporary log file created");
 
+    if args.diagnostics {
+        injector_command.env("ME3_FILE_LOG_LEVEL", "trace");
+    }
+
+    let exporter = match otel_exporter {
+        OtelExporter::Sentry => "sentry",
+        OtelExporter::Http => "http",
+    };
+
+    if let Some(trace_id) = me3_telemetry::trace_id() {
+        injector_command.env("ME3_TRACE_ID", trace_id);
+    }
+
+    injector_command.env("ME3_OTEL", exporter);
     injector_command.env("ME3_LOG_FILE", log_file_path.normalize()?);
     injector_command.env("ME3_MONITOR_LOG_FILE", monitor_log_file.path().normalize()?);
     injector_command.env("ME3_GAME_EXE", launcher);
@@ -406,6 +427,10 @@ pub fn launch(
     })?;
 
     let _ = monitor_thread.join();
+
+    if args.diagnostics {
+        open::that_detached(log_file_path)?;
+    }
 
     Ok(())
 }

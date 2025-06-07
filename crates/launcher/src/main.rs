@@ -19,6 +19,7 @@ use crash_context::CrashContext;
 use eyre::Context;
 use ipc_channel::ipc::{IpcError, IpcOneShotServer};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
+use me3_telemetry::TelemetryConfig;
 use minidump_writer::minidump_writer::MinidumpWriter;
 #[cfg(feature = "sentry")]
 use sentry::{
@@ -67,6 +68,8 @@ fn run() -> LauncherResult<()> {
     let span = info_span!("run");
     let span_guard = span.enter();
     info!("Launcher started");
+
+    me3_telemetry::inherit_trace_id();
 
     let args = LauncherArgs::from_env()?;
 
@@ -179,26 +182,8 @@ fn run() -> LauncherResult<()> {
 }
 
 fn main() {
-    let log_file_path = std::env::var("ME3_LOG_FILE").expect("log file location not set");
-    let log_file = OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(log_file_path)
-        .expect("couldn't open log file");
-
-    let monitor_log_file_path =
-        std::env::var("ME3_MONITOR_LOG_FILE").expect("log file location not set");
-
-    let monitor_log_file = OpenOptions::new()
-        .append(true)
-        .open(monitor_log_file_path)
-        .expect("couldn't open log file");
-
-    let _telemetry = me3_telemetry::install(
-        std::env::var("ME3_TELEMETRY").is_ok(),
-        Some(BoxMakeWriter::new(log_file)),
-        Some(BoxMakeWriter::new(monitor_log_file)),
-    );
+    let telemetry_config = TelemetryConfig::try_from_env().expect("unable to get logger config");
+    let _guard = me3_telemetry::install("launcher", telemetry_config);
 
     if let Err(e) = run() {
         error!(?e, "Failed to run launcher: {e}");
