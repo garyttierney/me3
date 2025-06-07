@@ -172,6 +172,8 @@ Section "Main Application" SEC01
     File /oname=bin\me3-launcher.exe "${TARGET_DIR}me3-launcher.exe"
     File /oname=bin\me3_mod_host.dll "${TARGET_DIR}me3_mod_host.dll"
     File /oname=README.txt "INSTALLER_README.txt"
+    File /oname=assets\me3.ico "distribution/assets/me3.ico"
+
     File "LICENSE-APACHE"
     File "LICENSE-MIT"
     File "CHANGELOG.md"
@@ -191,7 +193,7 @@ Section "Main Application" SEC01
     WriteUninstaller "$INSTDIR\uninstall.exe"
 
     !insertmacro APP_ASSOCIATE "me3" "me3.mod-profile" "me3 Mod Profile" \
-      "$INSTDIR\bin\me3.exe,0" "Open with me3" "$INSTDIR\bin\me3.exe launch --auto-detect -p $\"%1$\""
+      "$INSTDIR\assets\me3.ico" "Open with me3" "$INSTDIR\bin\me3.exe launch --auto-detect -p $\"%1$\""
 
     !insertmacro APP_ASSOCIATE_ADDVERB "me3.mod-profile" "open-with-diagnostics" "Open with me3 (diagnostics)" \
       "$INSTDIR\bin\me3.exe launch --diagnostics --auto-detect -p $\"%1$\""
@@ -215,6 +217,8 @@ Section "Uninstall"
     Delete "$INSTDIR\LICENSE-MIT"
     Delete "$INSTDIR\CHANGELOG.md"
     Delete "$INSTDIR\README.txt"
+    Delete "$INSTDIR\assets\me3.ico"
+    RMDir "$INSTDIR\assets"
     RMDir "$INSTDIR\bin"
 
     DeleteRegKey HKLM "$UNINSTALL_REG_KEY"
