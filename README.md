@@ -148,7 +148,6 @@ Discussions Board: [https://github.com/garyttierney/me3/discussions](https://git
 - [Mod Organizer 2](https://github.com/ModOrganizer2/modorganizer/) - inspiration for the VFS framework.
 - [Elden Ring Reforged](https://www.nexusmods.com/eldenring/mods/541) - provided invaluable feedback on the end-user perspective
 - [Dassav](https://github.com/dasaav-dsv) - work on compatibility across a variety of FROMSOFTWARE titles.
-<!-- requests to twitter from github IP addresses return 400... -->
 <!-- markdown-link-check-disable -->
 - [Skadi](https://twitter.com/Skadi_sbw) - [me3 icon](./distribution/assets/me3.png) artwork
 <!-- markdown-link-check-enable -->
