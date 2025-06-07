@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Correctly install asset folder in Windows installer by @garyttierney
+
 ## [v0.4.0] - 2025-06-07
 
 ### Added
