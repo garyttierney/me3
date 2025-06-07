@@ -3,7 +3,7 @@
 use std::{
     env,
     error::Error,
-    fs::{File, OpenOptions},
+    fs::File,
     path::PathBuf,
     sync::{
         atomic::{
@@ -27,7 +27,6 @@ use sentry::{
     Level,
 };
 use tracing::{error, info, info_span};
-use tracing_subscriber::fmt::writer::BoxMakeWriter;
 
 use crate::game::Game;
 

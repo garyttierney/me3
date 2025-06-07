@@ -3,7 +3,6 @@ use std::{
     collections::HashMap,
     error::Error,
     fs::{File, OpenOptions},
-    path::Path,
     str::FromStr,
     sync::OnceLock,
     time::Duration,
@@ -11,14 +10,12 @@ use std::{
 
 use opentelemetry::{
     global::{self, BoxedTracer},
-    trace::{TraceContextExt, Tracer, TracerProvider},
-    Context, KeyValue,
+    trace::TracerProvider,
 };
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::LogExporter;
 use opentelemetry_sdk::{
     logs::{log_processor_with_async_runtime::BatchLogProcessor, SdkLoggerProvider},
-    metrics::{MeterProviderBuilder, PeriodicReader, SdkMeterProvider},
     propagation::TraceContextPropagator,
     resource::EnvResourceDetector,
     runtime,
@@ -28,15 +25,14 @@ use opentelemetry_sdk::{
     },
     Resource,
 };
-use sentry::{ClientInitGuard, SentryFutureExt};
-use sentry_opentelemetry::SentrySpanProcessor;
+use sentry_opentelemetry::{SentryPropagator, SentrySpanProcessor};
 use tokio::runtime::Runtime;
 use tracing::{info, Level};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_error::ErrorLayer;
 use tracing_opentelemetry::{OpenTelemetryLayer, OpenTelemetrySpanExt};
 use tracing_subscriber::{
-    fmt::{self, writer::BoxMakeWriter, MakeWriter},
+    fmt::{self, writer::BoxMakeWriter},
     prelude::*,
     EnvFilter,
 };
@@ -85,30 +81,25 @@ pub fn get_tracer() -> &'static BoxedTracer {
     static TRACER: OnceLock<BoxedTracer> = OnceLock::new();
     TRACER.get_or_init(|| global::tracer("me3"))
 }
+
 fn resource(name: &'static str) -> Resource {
     Resource::builder()
         .with_service_name(name)
         .with_detectors(&[Box::new(EnvResourceDetector::new())])
         .build()
 }
+
 pub fn inherit_trace_id() {
     if let Ok(trace_id) = std::env::var("ME3_TRACE_ID") {
         let current = tracing::Span::current();
         let mut map: HashMap<String, String> = HashMap::default();
         map.insert("traceparent".to_string(), trace_id.to_string());
-
+        map.insert("sentry-trace".to_string(), trace_id.to_string());
         let cx =
             opentelemetry::global::get_text_map_propagator(|propagator| propagator.extract(&map));
 
         current.set_parent(cx);
     }
-}
-
-pub fn root_span<T>(callback: impl FnOnce() -> T) -> T {
-    // let tracer = get_tracer();
-    // let _span = tracer.start("root");
-
-    callback()
 }
 
 pub fn trace_id() -> Option<String> {
@@ -119,7 +110,7 @@ pub fn trace_id() -> Option<String> {
 
     info!(?map, "trace_id map");
 
-    map.remove("traceparent")
+    map.remove("traceparent").or(map.remove("sentry-trace"))
 }
 
 impl TelemetryConfig {
@@ -231,8 +222,6 @@ pub fn install(component: &'static str, config: TelemetryConfig) -> TelemetryGua
         .build()
         .expect("couldn't create tokio runtime for telemetry");
 
-    // Just for passing trace parents across processes, not sentry specific
-    opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
     let _guard = rt.enter();
 
     let (tracer_provider, logger_provider) = match config.otel_exporter {
@@ -244,6 +233,7 @@ pub fn install(component: &'static str, config: TelemetryConfig) -> TelemetryGua
                 .build();
 
             opentelemetry::global::set_tracer_provider(tracer_provider.clone());
+            opentelemetry::global::set_text_map_propagator(SentryPropagator::new());
 
             (Some(tracer_provider), None)
         }
@@ -260,6 +250,7 @@ pub fn install(component: &'static str, config: TelemetryConfig) -> TelemetryGua
                 .with_span_processor(BatchSpanProcessor::builder(exporter, runtime::Tokio).build())
                 .build();
 
+            opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
             opentelemetry::global::set_tracer_provider(tracer_provider.clone());
 
             let log_exporter = LogExporter::builder()

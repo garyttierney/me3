@@ -13,7 +13,7 @@ use std::{
 
 use chrono::Local;
 use clap::{ArgAction, Args};
-use color_eyre::eyre::{eyre, Context, OptionExt};
+use color_eyre::eyre::{eyre, OptionExt};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{
     dependency::sort_dependencies,
@@ -27,7 +27,7 @@ use steamlocate::{CompatTool, SteamDir};
 use tempfile::NamedTempFile;
 use tracing::info;
 
-use crate::{commands::profile, AppPaths, Config, Game};
+use crate::{AppPaths, Config, Game};
 
 #[derive(Debug, clap::Args)]
 #[group(required = true, multiple = false)]

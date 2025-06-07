@@ -1,7 +1,7 @@
 use std::{error::Error, io::stderr, path::PathBuf, str::FromStr};
 
-use clap::{builder::PossibleValue, ArgAction, Command, Parser, ValueEnum};
-use color_eyre::eyre::{self, eyre, DefaultHandler, EyreHandler};
+use clap::{builder::PossibleValue, ArgAction, Parser, ValueEnum};
+use color_eyre::eyre::eyre;
 use commands::{profile::ProfileCommands, Commands};
 use config::{ConfigError, Environment, File, Map, Source};
 use directories::ProjectDirs;
@@ -11,8 +11,7 @@ use opentelemetry::{
     Context,
 };
 use serde::{Deserialize, Serialize};
-use tracing::{info, info_span, warn};
-use tracing_subscriber::fmt::writer::BoxMakeWriter;
+use tracing::warn;
 
 mod commands;
 pub mod output;
@@ -290,7 +289,7 @@ fn main() {
     let user_config_source = app_paths.user_config_path.clone().map(File::from);
     let cli_config_source = app_paths.cli_config_path.clone().map(File::from);
 
-    let mut config = config::Config::builder()
+    let config = config::Config::builder()
         .add_source(OptionalConfigSource(system_config_source))
         .add_source(OptionalConfigSource(user_config_source))
         .add_source(OptionalConfigSource(cli_config_source))

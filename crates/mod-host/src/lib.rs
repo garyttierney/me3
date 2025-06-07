@@ -4,18 +4,16 @@
 #![feature(unboxed_closures)]
 
 use std::{
-    fs::OpenOptions,
     sync::{Arc, Mutex, OnceLock},
     time::Duration,
 };
 
-use crash_handler::{CrashEventResult, CrashHandler};
+use crash_handler::CrashEventResult;
 use ipc_channel::ipc::IpcSender;
 use me3_launcher_attach_protocol::{AttachRequest, AttachResult, Attachment, HostMessage};
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
-use me3_telemetry::{inherit_trace_id, TelemetryConfig};
+use me3_telemetry::TelemetryConfig;
 use tracing::{info, info_span};
-use tracing_subscriber::fmt::writer::BoxMakeWriter;
 
 use crate::host::{hook::thunk::ThunkPool, ModHost};
 
