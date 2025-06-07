@@ -4,7 +4,6 @@
 #![feature(unboxed_closures)]
 
 use std::{
-    fs::OpenOptions,
     sync::{Arc, Mutex, OnceLock},
     time::Duration,
 };
@@ -13,8 +12,8 @@ use crash_handler::CrashEventResult;
 use ipc_channel::ipc::IpcSender;
 use me3_launcher_attach_protocol::{AttachRequest, AttachResult, Attachment, HostMessage};
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
-use tracing::info;
-use tracing_subscriber::fmt::writer::BoxMakeWriter;
+use me3_telemetry::TelemetryConfig;
+use tracing::{info, info_span};
 
 use crate::host::{hook::thunk::ThunkPool, ModHost};
 
@@ -64,47 +63,35 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
     socket.lock().unwrap().send(HostMessage::Attached).unwrap();
 
-    let log_file_path = std::env::var("ME3_LOG_FILE").expect("log file location not set");
-    let log_file = OpenOptions::new()
-        .append(true)
-        .open(log_file_path)
-        .expect("couldn't open log file");
+    let telemetry_config = TelemetryConfig::try_from_env().expect("unable to get logger config");
+    let telemetry_guard = me3_telemetry::install("mod-host", telemetry_config);
 
-    let monitor_log_file_path =
-        std::env::var("ME3_MONITOR_LOG_FILE").expect("log file location not set");
+    let attach_span = info_span!("attach");
+    attach_span.in_scope(|| {
+        me3_telemetry::inherit_trace_id();
 
-    let monitor_log_file = OpenOptions::new()
-        .append(true)
-        .open(monitor_log_file_path)
-        .expect("couldn't open log file");
+        info!("Host monitoring configured");
 
-    let telemetry = me3_telemetry::install(
-        std::env::var("ME3_TELEMETRY").is_ok(),
-        Some(BoxMakeWriter::new(log_file)),
-        Some(BoxMakeWriter::new(monitor_log_file)),
-    );
+        let mut host = ModHost::new(telemetry_guard, ThunkPool::new()?);
 
-    info!("Host monitoring configured");
+        for native in config.natives {
+            host.load_native(&native.path, native.initializer)?;
+        }
 
-    let mut host = ModHost::new(telemetry, ThunkPool::new()?);
+        let mut override_mapping = ArchiveOverrideMapping::new()?;
+        override_mapping.scan_directories(config.packages.iter())?;
+        let override_mapping = Arc::new(override_mapping);
 
-    for native in config.natives {
-        host.load_native(&native.path, native.initializer)?;
-    }
+        host.attach();
 
-    let mut override_mapping = ArchiveOverrideMapping::new()?;
-    override_mapping.scan_directories(config.packages.iter())?;
-    let override_mapping = Arc::new(override_mapping);
+        info!("Host successfully attached");
 
-    host.attach();
+        asset_hooks::attach_override(override_mapping.clone())?;
 
-    info!("Host successfully attached");
+        info!("Applied asset override hooks");
 
-    asset_hooks::attach_override(override_mapping.clone())?;
-
-    info!("Applied asset override hooks");
-
-    Ok(Attachment)
+        Ok(Attachment)
+    })
 }
 
 #[no_mangle]

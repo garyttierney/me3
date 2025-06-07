@@ -1,13 +1,17 @@
 use std::{error::Error, io::stderr, path::PathBuf, str::FromStr};
 
-use clap::{builder::PossibleValue, ArgAction, Command, Parser, ValueEnum};
-use color_eyre::eyre::{self, eyre, DefaultHandler, EyreHandler};
+use clap::{builder::PossibleValue, ArgAction, Parser, ValueEnum};
+use color_eyre::eyre::eyre;
 use commands::{profile::ProfileCommands, Commands};
 use config::{ConfigError, Environment, File, Map, Source};
 use directories::ProjectDirs;
+use me3_telemetry::TelemetryConfig;
+use opentelemetry::{
+    trace::{SpanKind, TraceContextExt as _, Tracer},
+    Context,
+};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
-use tracing_subscriber::fmt::writer::BoxMakeWriter;
 
 mod commands;
 pub mod output;
@@ -23,6 +27,10 @@ struct Cli {
     /// Disable tracing logs and diagnostics.
     #[clap(short, long, action = ArgAction::SetTrue)]
     quiet: bool,
+
+    /// Use a local OTEL collector to visualize development logs.
+    #[clap(long, action = ArgAction::SetTrue, hide(true))]
+    enable_opentelemetry: bool,
 
     #[clap(long)]
     config_file: Option<PathBuf>,
@@ -228,23 +236,21 @@ pub struct AppContext {
 fn bins_dir(config: &Config) -> PathBuf {
     const DEBUG_TARGET_DIR: &str = "x86_64-unknown-linux-gnu/debug";
 
-    config.windows_binaries_dir.clone().unwrap_or_else(|| {
-        let cli_exe_path = std::env::current_exe().expect("can't find current exe");
-        let cli_exe_dir = cli_exe_path.parent().expect("can't find current exe dir");
+    let cli_exe_path = std::env::current_exe().expect("can't find current exe");
+    let cli_exe_dir = cli_exe_path.parent().expect("can't find current exe dir");
 
-        if cli_exe_path.is_symlink() {
-            std::fs::read_link(&cli_exe_path).unwrap()
-        } else if cfg!(debug_assertions) && cli_exe_dir.ends_with(DEBUG_TARGET_DIR) {
-            let target_dir = cli_exe_dir
-                .ancestors()
-                .nth(2)
-                .expect("found cargo workspace, but no target dir");
+    if cli_exe_path.is_symlink() {
+        std::fs::read_link(&cli_exe_path).unwrap()
+    } else if cfg!(debug_assertions) && cli_exe_dir.ends_with(DEBUG_TARGET_DIR) {
+        let target_dir = cli_exe_dir
+            .ancestors()
+            .nth(2)
+            .expect("found cargo workspace, but no target dir");
 
-            target_dir.join("x86_64-pc-windows-msvc/debug")
-        } else {
-            cli_exe_dir.to_path_buf()
-        }
-    })
+        target_dir.join("x86_64-pc-windows-msvc/debug")
+    } else {
+        config.windows_binaries_dir.clone().unwrap()
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -283,7 +289,7 @@ fn main() {
     let user_config_source = app_paths.user_config_path.clone().map(File::from);
     let cli_config_source = app_paths.cli_config_path.clone().map(File::from);
 
-    let mut config = config::Config::builder()
+    let config = config::Config::builder()
         .add_source(OptionalConfigSource(system_config_source))
         .add_source(OptionalConfigSource(user_config_source))
         .add_source(OptionalConfigSource(cli_config_source))
@@ -302,17 +308,32 @@ fn main() {
             .map(|dirs| dirs.config_local_dir().join("profiles"));
     }
 
-    let _guard = me3_telemetry::install(
-        config.crash_reporting,
-        None,
-        Some(BoxMakeWriter::new(stderr)),
-    );
+    let otel = if cli.enable_opentelemetry {
+        me3_telemetry::OtelExporter::Http
+    } else {
+        me3_telemetry::OtelExporter::Sentry
+    };
 
+    let telemetry_config = TelemetryConfig::default()
+        .enabled(config.crash_reporting)
+        .with_console_writer(stderr())
+        .with_otel_exporter(otel);
+
+    let _guard = me3_telemetry::install("cli", telemetry_config);
+    let tracer = me3_telemetry::get_tracer();
+    let span = tracer
+        .span_builder(String::from("me3"))
+        .with_kind(SpanKind::Client)
+        .start(tracer);
+    let cx = Context::current_with_span(span);
+    let _cx_guard = cx.attach();
     let bins_path = bins_dir(&config);
 
     let result = match cli.command {
         Commands::Info => commands::info::info(app_install, app_paths, config),
-        Commands::Launch(args) => commands::launch::launch(config, app_paths, bins_path, args),
+        Commands::Launch(args) => {
+            commands::launch::launch(config, app_paths, bins_path, otel, args)
+        }
         Commands::Profile(ProfileCommands::Create(args)) => commands::profile::create(config, args),
         Commands::Profile(ProfileCommands::List) => commands::profile::list(config),
         Commands::Profile(ProfileCommands::Show { name }) => commands::profile::show(config, name),
