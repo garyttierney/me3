@@ -4,7 +4,9 @@
 #![feature(unboxed_closures)]
 
 use std::{
-    mem, sync::{Arc, Mutex, OnceLock}, time::Duration
+    mem,
+    sync::{Arc, Mutex, OnceLock},
+    time::Duration,
 };
 
 use crash_handler::CrashEventResult;
