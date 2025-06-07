@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Linux installer via shell script by @garyttierney
+- Icon for me3 installer and profile files
+- Support for running a mod profile with diagnostics enabled by @garyttierney
 
 ### Fixes
 
