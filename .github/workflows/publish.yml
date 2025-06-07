@@ -124,7 +124,9 @@ jobs:
 
       - name: Upload debug symbols to sentry
         run: |
-          sentry-cli debug-files upload --include-sources -o modengine -p me3 target/x86_64-pc-windows-msvc/release/
+          mkdir sentry-debug-files
+          cp target/x86_64-pc-windows-msvc/release/*.exe target/x86_64-pc-windows-msvc/release/*.pdb sentry-debug-files/
+          sentry-cli debug-files upload --include-sources -o modengine -p me3 sentry-debug-files/
   build-installer:
     name: Installer
     runs-on: ubuntu-latest

@@ -36,7 +36,8 @@
       "type": "string",
       "enum": [
         "elden-ring",
-        "nightrein"
+        "nightrein",
+        "armoredcore6"
       ]
     },
     "ModFile": {
