@@ -1,4 +1,4 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
   - name: Problem with me3
     url: https://github.com/garyttierney/me3/discussions/new?category=bug-reports
