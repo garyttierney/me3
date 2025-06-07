@@ -48,6 +48,7 @@ Currently it supports the following titles:
 
 - ELDEN RING
 - ELDEN RING: NIGHTREIGN
+- Armored Core VI: Fires of Rubicon
 
 ## Installation
 

@@ -13,14 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Clean-up old log files and store them in a per-profile directory by @garyttierney in <https://github.com/garyttierney/me3/pull/84>
 - Support overriding files with a game agnostic approach by @Dasaav-dsv in <https://github.com/garyttierney/me3/pull/74>
+- Icon for me3 installer and profile files
+- Support for running a mod profile with diagnostics enabled by @garyttierney
 
 ## [v0.3.0] - 2025-06-02
 
 ### Added
 
 - Linux installer via shell script by @garyttierney
-- Icon for me3 installer and profile files
-- Support for running a mod profile with diagnostics enabled by @garyttierney
 
 ### Fixes
 
