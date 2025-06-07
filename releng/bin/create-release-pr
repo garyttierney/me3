@@ -4,8 +4,8 @@ set -x
 
 trap "git worktree remove mkrelease || true" EXIT
 
-git fetch origin main:main
-git worktree add -B "release-prep" mkrelease main
+git fetch origin main
+git worktree add -B "release-prep" mkrelease origin/main
 (
     pushd mkrelease || exit 1
 
@@ -35,8 +35,6 @@ git worktree add -B "release-prep" mkrelease main
         set -x
     done
 
-    git add CHANGELOG.md && git commit -S -s -m "release: $version"
-
     sed -i "
 / (Latest)/{
   i\\
@@ -55,12 +53,17 @@ git worktree add -B "release-prep" mkrelease main
 ```
 EOF
 
+    cargo set-version "$version"
+    git add .github Cargo.toml Cargo.lock CHANGELOG.md && git commit -S -s -m "release: $version"
+
     echo "$tag_command_template"
     tag_command=$(TAG_NAME="$tag_name" TAG_SHA="$tag_sha" envsubst <<<"$tag_command_template")
 
-    cargo set-version --bump minor
     new_version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
-    cargo set-version "$new_version-prerelease"
+    v=(${version//./ })
+    ((v[1]++))
+
+    cargo set-version "${v[0]}.${v[1]}.${v[2]}-prerelease"
 
     git add Cargo.* && git commit -S -s -m "chore: start $new_version development"
 

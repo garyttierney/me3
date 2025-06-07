@@ -27,9 +27,10 @@ git worktree add -B "release-prep" mkrelease "$SHA"
     if [ -n "$RELEASE_PUSH" ]; then
         git push origin "$tag_name"
         gh release create "$tag_name" --notes "$notes" --verify-tag --discussion-category "Announcements"
-        git fetch origin main:main
-        git merge --ff-only --into-name main "release-$tag_name"
-        git push origin main
+        git fetch origin main
+        git branch "merge-release-$tag_name" origin/main
+        git merge --ff-only --into-name "merge-release-$tag_name" "release-$tag_name"
+        git push origin "merge-release-$tag_name"
     fi
 
 )
