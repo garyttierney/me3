@@ -3,10 +3,7 @@
 <br />
 <div align="center">
 
-[![Discussions][discussions-shield]][discussions-url]
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![MIT + Apache-2.0 License][license-shield]][license-url]
+
   <p align="center">
     <img src="distribution/assets/me3.png" />
   </p>
@@ -22,7 +19,14 @@
     ·
     <a href="https://github.com/garyttierney/me3/discussions/categories/ideas">Request Feature</a>
   </p>
+
+[![Discussions][discussions-shield]][discussions-url]
+[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![MIT + Apache-2.0 License][license-shield]][license-url]
+
 </div>
+
 
 - [About The Project](#about-the-project)
 - [Installation](#installation)
