@@ -35,6 +35,15 @@ git worktree add -B "release-prep" mkrelease main
     done
 
     git add CHANGELOG.md && git commit -S -s -m "release: $version"
+
+    sed -i "
+/ (Latest)/{
+  i\\
+        - ${tag_name} (Latest)
+  s/ (Latest)//
+}
+" .github/ISSUE_TEMPLATE/bug-report.yml
+
     tag_sha=$(git rev-parse --verify HEAD)
     read -r -d '' tag_command_template <<'EOF'
 ---

@@ -22,7 +22,8 @@ body:
       description: What version of our software are you running?
       options:
         - prerelease
-        - v0.3.0 (Latest)
+        - v0.4.0 (Latest)
+        - v0.3.0
         - v0.2.0
         - v0.1.0
       default: 1
