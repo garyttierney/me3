@@ -183,8 +183,11 @@ jobs:
           path: |
             me3_installer.exe
             target/x86_64-pc-windows-msvc/release/me3_mod_host.dll
+            target/x86_64-pc-windows-msvc/release/me3_mod_host.pdb
             target/x86_64-pc-windows-msvc/release/me3-launcher.exe
+            target/x86_64-pc-windows-msvc/release/me3_launcher.pdb
             target/x86_64-pc-windows-msvc/release/me3.exe
+            target/x86_64-pc-windows-msvc/release/me3.pdb
             target/x86_64-unknown-linux-musl/release/me3
             crates/**/*.cdx.json
             installer.sh
