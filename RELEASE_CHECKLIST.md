@@ -1,0 +1,4 @@
+- [ ] Add new version to GitHub issue template
+- [ ] Ensure a tag/commit signing key is available
+- [ ] Create release pr `./releng/bin/create-release-pr`
+- [ ] Create release `./releng/bin/create-release`
