@@ -112,6 +112,7 @@ impl Launcher for DirectLauncher {
 pub struct CompatToolLauncher {
     tool: CompatTool,
     steam: SteamDir,
+    app_id: u32,
 }
 
 impl Launcher for CompatToolLauncher {
@@ -152,7 +153,9 @@ impl Launcher for CompatToolLauncher {
         command.env("STEAM_COMPAT_CLIENT_INSTALL_PATH", self.steam.path());
         command.env(
             "STEAM_COMPAT_DATA_PATH",
-            self.steam.path().join("steamapps/compatdata/1245620"),
+            self.steam
+                .path()
+                .join(format!("steamapps/compatdata/{}", self.app_id)),
         );
 
         Ok(command)
@@ -315,6 +318,7 @@ pub fn launch(
         info!(?app_compat_tool, "found compat tool for appid");
 
         let launcher = CompatToolLauncher {
+            app_id,
             steam: steam_dir,
             tool: app_compat_tool.clone(),
         };
