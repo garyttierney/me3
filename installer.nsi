@@ -166,6 +166,7 @@ Section "Main Application" SEC01
 
     CreateDirectory "$INSTDIR\config"
     CreateDirectory "$INSTDIR\bin"
+    CreateDirectory "$INSTDIR\assets"
 
     SetOutPath "$INSTDIR"
     File /oname=bin\me3.exe "${TARGET_DIR}me3.exe"
