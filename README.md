@@ -7,7 +7,9 @@
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
 [![MIT + Apache-2.0 License][license-shield]][license-url]
-
+  <p align="center">
+    <img src="distribution/assets/me3.png" />
+  </p>
   <h2 align="center">me<sup>3</sup></h2>
 
   <p align="center">
