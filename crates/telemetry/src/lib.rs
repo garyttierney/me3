@@ -285,12 +285,6 @@ pub fn install(component: &'static str, config: TelemetryConfig) -> TelemetryGua
         .with(ErrorLayer::default())
         .init();
 
-    info!(
-        "initialized tracing with otel tracer={}, logger={}",
-        tracer_provider.is_some(),
-        logger_provider.is_some()
-    );
-
     resources_held.push(Box::from(console_guard));
     resources_held.push(Box::from(file_guard));
 
