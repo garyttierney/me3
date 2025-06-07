@@ -12,6 +12,7 @@ git worktree add -B "release-prep" mkrelease main
     git fetch origin --tags
     release_notes=$(awk 'NR == 1, /^## / { next }; /^## / { exit }; { print }' CHANGELOG.md)
     version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
+    version=${version%"-prerelease"}
     tag_name="v$version"
 
     if git rev-parse "$tag_name" >/dev/null 2>&1; then
@@ -59,6 +60,7 @@ EOF
 
     cargo set-version --bump minor
     new_version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
+    cargo set-version "$new_version-prerelease"
 
     git add Cargo.* && git commit -S -s -m "chore: start $new_version development"
 
