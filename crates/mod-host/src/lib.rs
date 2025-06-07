@@ -4,6 +4,7 @@
 #![feature(unboxed_closures)]
 
 use std::{
+    mem,
     sync::{Arc, Mutex, OnceLock},
     time::Duration,
 };
@@ -41,7 +42,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     let socket = Arc::new(Mutex::new(socket));
     let crash_handler_socket = socket.clone();
 
-    crash_handler::CrashHandler::attach(unsafe {
+    let crash_handler_guard = crash_handler::CrashHandler::attach(unsafe {
         crash_handler::make_crash_event(move |crash_context: &crash_handler::CrashContext| {
             info!("Handling crash event");
             let _ = crash_handler_socket
@@ -60,6 +61,11 @@ fn on_attach(request: AttachRequest) -> AttachResult {
             CrashEventResult::Handled(false)
         })
     })?;
+
+    // Keep the crash handler installed for the duration of the program.
+    // `CrashHandler` is an empty struct with a `Drop` impl that uninstalls
+    // the program-wide handler.
+    mem::forget(crash_handler_guard);
 
     socket.lock().unwrap().send(HostMessage::Attached).unwrap();
 
