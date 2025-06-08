@@ -24,13 +24,13 @@ pub enum Game {
     #[serde(rename = "elden-ring")]
     EldenRing,
 
-    #[serde(alias = "nightreign")]
-    #[serde(rename = "nightrein")]
-    Nightreign,
-
     #[serde(rename = "armoredcore6")]
     #[serde(alias = "ac6")]
     ArmoredCore6,
+
+    #[serde(alias = "nightreign")]
+    #[serde(rename = "nightrein")]
+    Nightreign,
 }
 
 #[derive(Debug)]
