@@ -78,6 +78,8 @@ pub struct DlFileOperatorVtable {
     _dtor: usize,
     _copy: usize,
     pub set_path: DlFileOperatorSetPath,
+    pub set_path2: DlFileOperatorSetPath,
+    pub set_path3: DlFileOperatorSetPath,
 }
 
 pub struct BndSnapshot {
