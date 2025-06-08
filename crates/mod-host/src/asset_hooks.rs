@@ -256,7 +256,7 @@ fn hook_set_path(
     file_operator: NonNull<DlFileOperator>,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
-    let set_path = unsafe { file_operator.as_ref().as_ref().set_path };
+    let vtable = unsafe { file_operator.as_ref().as_ref() };
 
     let device_manager = locate_device_manager(image_base)?;
 
@@ -278,16 +278,20 @@ fn hook_set_path(
         Some(path)
     };
 
-    ModHost::get_attached_mut()
-        .hook(set_path)
-        .with_closure(move |ctx, p1, path, p3, p4| {
-            if let Some(path) = override_path(unsafe { path.as_ref() }) {
-                (ctx.trampoline)(p1, path.as_ref().into(), p3, p4)
-            } else {
-                (ctx.trampoline)(p1, path, p3, p4)
-            }
-        })
-        .install()?;
+    for set_path in [vtable.set_path, vtable.set_path2, vtable.set_path3] {
+        let override_path = override_path.clone();
+
+        ModHost::get_attached_mut()
+            .hook(set_path)
+            .with_closure(move |ctx, p1, path, p3, p4| {
+                if let Some(path) = override_path(unsafe { path.as_ref() }) {
+                    (ctx.trampoline)(p1, path.as_ref().into(), p3, p4)
+                } else {
+                    (ctx.trampoline)(p1, path, p3, p4)
+                }
+            })
+            .install()?;
+    }
 
     Ok(())
 }
