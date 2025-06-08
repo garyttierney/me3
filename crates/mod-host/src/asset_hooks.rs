@@ -174,7 +174,7 @@ fn hook_ebl_utility(
             // starting with "sd:" causes an infinite loop trying to resolve the
             // root. Reporting the EBL as having failed to mount prevents it from
             // being added to the lookup list, leaving it empty so that branch not taken.
-            game >= Game::EldenRing && game < Game::Nightreign
+            game < Game::EldenRing || game >= Game::Nightreign
         })
         .install()?;
 
