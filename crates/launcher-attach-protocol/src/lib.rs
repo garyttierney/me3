@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use me3_mod_protocol::{native::Native, package::Package};
+use me3_mod_protocol::{native::Native, package::Package, Game};
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -12,6 +12,9 @@ pub struct AttachRequest {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AttachConfig {
+    /// The attached to game.
+    pub game: Game,
+
     /// An ordered list of natives to be loaded on attach.
     pub natives: Vec<Native>,
 

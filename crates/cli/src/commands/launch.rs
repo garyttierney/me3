@@ -299,6 +299,7 @@ pub fn launch(
 
     let attach_config_file = NamedTempFile::new_in(&attach_config_dir)?;
     let attach_config = AttachConfig {
+        game: game.into(),
         packages: ordered_packages,
         natives: ordered_natives,
     };
