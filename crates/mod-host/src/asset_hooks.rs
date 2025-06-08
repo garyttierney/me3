@@ -18,6 +18,7 @@ use me3_mod_host_assets::{
     string::DlUtf16String,
     wwise::{self, poll_wwise_open_file_fn, AkOpenMode},
 };
+use me3_mod_protocol::Game;
 use tracing::{debug, error, info, info_span, instrument};
 use windows::{core::PCWSTR, Win32::System::LibraryLoader::GetModuleHandleW};
 
@@ -26,19 +27,22 @@ use crate::host::ModHost;
 static VFS: Mutex<VfsMounts> = Mutex::new(VfsMounts::new());
 
 #[instrument(name = "assets", skip_all)]
-pub fn attach_override(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Error> {
+pub fn attach_override(
+    game: Game,
+    mapping: Arc<ArchiveOverrideMapping>,
+) -> Result<(), eyre::Error> {
     let image_base = image_base();
 
     let singletons = poll_singletons()?;
 
     debug!(
-        "CSEblFileManager" = ?singletons.get("CSEblFileManager"),
+        "total_singletons" = singletons.len(),
         "singleton initialization passed"
     );
 
     // TODO: might want to freeze all threads here?
 
-    hook_file_init(image_base, mapping.clone())?;
+    hook_file_init(game, image_base, mapping.clone())?;
 
     hook_device_manager(image_base, mapping.clone())?;
 
@@ -51,6 +55,7 @@ pub fn attach_override(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre:
 
 #[instrument(name = "file_step", skip_all)]
 fn hook_file_init(
+    game: Game,
     image_base: *const u8,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
@@ -83,7 +88,7 @@ fn hook_file_init(
 
                     *vfs = new;
 
-                    if let Err(e) = hook_ebl_utility(image_base, mapping.clone()) {
+                    if let Err(e) = hook_ebl_utility(game, image_base, mapping.clone()) {
                         error!("err" = &*e, "failed to apply EBL hooks");
 
                         let vfs = mem::take(&mut *vfs);
@@ -103,6 +108,7 @@ fn hook_file_init(
 
 #[instrument(name = "ebl", skip_all)]
 fn hook_ebl_utility(
+    game: Game,
     image_base: *const u8,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
@@ -168,7 +174,7 @@ fn hook_ebl_utility(
             // starting with "sd:" causes an infinite loop trying to resolve the
             // root. Reporting the EBL as having failed to mount prevents it from
             // being added to the lookup list, leaving it empty so that branch not taken.
-            false
+            game < Game::EldenRing || game >= Game::Nightreign
         })
         .install()?;
 
@@ -256,7 +262,7 @@ fn hook_set_path(
     file_operator: NonNull<DlFileOperator>,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
-    let set_path = unsafe { file_operator.as_ref().as_ref().set_path };
+    let vtable = unsafe { file_operator.as_ref().as_ref() };
 
     let device_manager = locate_device_manager(image_base)?;
 
@@ -278,16 +284,20 @@ fn hook_set_path(
         Some(path)
     };
 
-    ModHost::get_attached_mut()
-        .hook(set_path)
-        .with_closure(move |ctx, p1, path, p3, p4| {
-            if let Some(path) = override_path(unsafe { path.as_ref() }) {
-                (ctx.trampoline)(p1, path.as_ref().into(), p3, p4)
-            } else {
-                (ctx.trampoline)(p1, path, p3, p4)
-            }
-        })
-        .install()?;
+    for set_path in [vtable.set_path, vtable.set_path2, vtable.set_path3] {
+        let override_path = override_path.clone();
+
+        ModHost::get_attached_mut()
+            .hook(set_path)
+            .with_closure(move |ctx, p1, path, p3, p4| {
+                if let Some(path) = override_path(unsafe { path.as_ref() }) {
+                    (ctx.trampoline)(p1, path.as_ref().into(), p3, p4)
+                } else {
+                    (ctx.trampoline)(p1, path, p3, p4)
+                }
+            })
+            .install()?;
+    }
 
     Ok(())
 }

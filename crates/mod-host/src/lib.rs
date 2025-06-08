@@ -11,7 +11,9 @@ use std::{
 
 use crash_handler::CrashEventResult;
 use ipc_channel::ipc::IpcSender;
-use me3_launcher_attach_protocol::{AttachRequest, AttachResult, Attachment, HostMessage};
+use me3_launcher_attach_protocol::{
+    AttachConfig, AttachRequest, AttachResult, Attachment, HostMessage,
+};
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use me3_telemetry::TelemetryConfig;
 use tracing::{info, info_span};
@@ -35,7 +37,12 @@ dll_syringe::payload_procedure! {
 fn on_attach(request: AttachRequest) -> AttachResult {
     let AttachRequest {
         monitor_name,
-        config,
+        config:
+            AttachConfig {
+                game,
+                natives,
+                packages,
+            },
     } = request;
 
     let socket = IpcSender::connect(monitor_name).unwrap();
@@ -80,19 +87,19 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         let mut host = ModHost::new(telemetry_guard, ThunkPool::new()?);
 
-        for native in config.natives {
+        for native in natives {
             host.load_native(&native.path, native.initializer)?;
         }
 
         let mut override_mapping = ArchiveOverrideMapping::new()?;
-        override_mapping.scan_directories(config.packages.iter())?;
+        override_mapping.scan_directories(packages.iter())?;
         let override_mapping = Arc::new(override_mapping);
 
         host.attach();
 
         info!("Host successfully attached");
 
-        asset_hooks::attach_override(override_mapping.clone())?;
+        asset_hooks::attach_override(game, override_mapping.clone())?;
 
         info!("Applied asset override hooks");
 

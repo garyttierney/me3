@@ -16,6 +16,9 @@ pub enum ModProfile {
     V1(ModProfileV1),
 }
 
+/// Chronologically sorted list of games supported by me3.
+///
+/// Feature gates can use [`Ord`] comparisons between game type constants.
 #[derive(
     Clone, Copy, Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, PartialOrd, Ord,
 )]
@@ -24,13 +27,13 @@ pub enum Game {
     #[serde(rename = "elden-ring")]
     EldenRing,
 
-    #[serde(alias = "nightreign")]
-    #[serde(rename = "nightrein")]
-    Nightreign,
-
     #[serde(rename = "armoredcore6")]
     #[serde(alias = "ac6")]
     ArmoredCore6,
+
+    #[serde(alias = "nightreign")]
+    #[serde(rename = "nightrein")]
+    Nightreign,
 }
 
 #[derive(Debug)]
