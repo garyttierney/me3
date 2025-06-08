@@ -32,7 +32,7 @@ pub fn attach_override(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre:
     let singletons = poll_singletons()?;
 
     debug!(
-        "CSEblFileManager" = ?singletons.get("CSEblFileManager"),
+        "total_singletons" = singletons.len(),
         "singleton initialization passed"
     );
 
