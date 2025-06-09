@@ -44,6 +44,7 @@ impl Display for InvalidGame {
         write!(f, "{} is not a supported game", self.0)
     }
 }
+
 impl FromStr for Game {
     type Err = InvalidGame;
 

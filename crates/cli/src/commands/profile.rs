@@ -1,9 +1,18 @@
-use std::{error::Error, fs, path::PathBuf};
+use std::{
+    error::{self, Error},
+    fs,
+    path::PathBuf,
+};
 
 use clap::{ArgAction, Args, Subcommand};
 use color_eyre::eyre::{eyre, OptionExt};
-use me3_mod_protocol::{dependency::Dependency, package::WithPackageSource, ModProfile, Supports};
-use tracing::{debug, warn};
+use me3_mod_protocol::{
+    dependency::Dependency,
+    native::Native,
+    package::{Package, WithPackageSource},
+    ModProfile, Supports,
+};
+use tracing::{debug, error, warn};
 
 use crate::{output::OutputBuilder, Config, Game};
 
@@ -35,6 +44,14 @@ pub struct ProfileCreateArgs {
     )]
     #[arg(value_enum)]
     game: Option<Game>,
+
+    /// Path to a list of packages to add to the profile.
+    #[clap(long("package"))]
+    packages: Vec<PathBuf>,
+
+    /// Path to a list of native DLLs to add to the profile.
+    #[clap(long("native"))]
+    natives: Vec<PathBuf>,
 
     /// Optional flag to treat the input as a filename instead of a profile ID to store in
     /// ME3_PROFILE_DIR.
@@ -76,9 +93,8 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
     };
 
     if std::fs::exists(&profile_path).is_ok_and(|exists| exists) && args.overwrite {
-        return Err(eyre!(
-            "Profile already exists, use --overwrite to ignore this error"
-        ));
+        error!("profile already exists, use --overwrite to ignore this error");
+        return Ok(());
     }
 
     let profile_dir = profile_path
@@ -95,6 +111,26 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
             game: game.into(),
             since_version: None,
         });
+    }
+
+    let packages = profile.packages_mut();
+    for pkg in args.packages {
+        let full_path = if pkg.is_absolute() || std::fs::exists(&pkg)? {
+            pkg
+        } else {
+            profile_dir.join(pkg)
+        };
+
+        if !std::fs::exists(&full_path)? {
+            std::fs::create_dir_all(&full_path)?;
+        }
+
+        packages.push(Package::new(full_path));
+    }
+
+    let natives = profile.natives_mut();
+    for pkg in args.natives {
+        natives.push(Native::new(pkg));
     }
 
     let contents = toml::to_string_pretty(&profile)?;
