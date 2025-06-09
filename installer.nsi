@@ -187,9 +187,19 @@ Section "Main Application" SEC01
     WriteRegDWORD HKCU "$UNINSTALL_REG_KEY" "NoRepair" 1
 
     WriteRegStr HKCU "Software\${PRODUCT}" "Install_Dir" $INSTDIR
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" add-to-path'
     nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr nightreign-default --package nightreign-mods'
     nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er eldenring-default --package eldenring-mods'
-    nsExec::Exec '"$INSTDIR\bin\me3.exe" add-to-path'
+
+    CreateDirectory "$SMPROGRAMS\me3"
+    CreateShortCut "$SMPROGRAMS\me3\ELDEN RING (me3).lnk" "$INSTDIR\bin\me3.exe" \
+      "launch --auto-detect -p eldenring-default" "$INSTDIR\assets\me3.ico" "" "" \
+      "" "Launch ELDEN RING with the eldenring-default mod profile"
+
+    CreateShortCut "$SMPROGRAMS\me3\NIGHTREIGN (me3).lnk" "$INSTDIR\bin\me3.exe" \
+      "launch --auto-detect -p nightreign-default" "$INSTDIR\assets\me3.ico" "" "" \
+      "" "Launch NIGHTREIGN with the nightreign-default mod profile"
+
     ; Generate an uninstaller executable
     WriteUninstaller "$INSTDIR\uninstall.exe"
 
