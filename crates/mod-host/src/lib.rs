@@ -41,6 +41,8 @@ dll_syringe::payload_procedure! {
 }
 
 fn on_attach(request: AttachRequest) -> AttachResult {
+    me3_telemetry::install_error_handler();
+
     let AttachRequest {
         monitor_name,
         config:
