@@ -245,7 +245,6 @@ fn bins_dir(_config: &Config) -> PathBuf {
 }
 
 fn main() {
-
     let cli = Cli::parse();
 
     let app_install = AppInstallInfo::try_from_cargo()
