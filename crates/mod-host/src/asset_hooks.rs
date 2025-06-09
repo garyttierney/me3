@@ -19,7 +19,7 @@ use me3_mod_host_assets::{
     wwise::{self, poll_wwise_open_file_fn, AkOpenMode},
 };
 use me3_mod_protocol::Game;
-use tracing::{debug, error, info, info_span, instrument};
+use tracing::{debug, error, info, info_span, instrument, warn};
 use windows::{core::PCWSTR, Win32::System::LibraryLoader::GetModuleHandleW};
 
 use crate::host::ModHost;
@@ -46,7 +46,7 @@ pub fn attach_override(
 
     hook_device_manager(image_base, mapping.clone())?;
 
-    if let Err(e) = try_hook_wwise(mapping.clone()) {
+    if let Err(e) = try_hook_wwise(game, mapping.clone()) {
         debug!("err" = &*e, "skipping Wwise hook");
     }
 
@@ -303,7 +303,7 @@ fn hook_set_path(
 }
 
 #[instrument(name = "wwise", skip_all)]
-fn try_hook_wwise(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Error> {
+fn try_hook_wwise(game: Game, mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Error> {
     let wwise_open_file =
         poll_wwise_open_file_fn(Duration::from_millis(1), Duration::from_secs(5))?;
 
@@ -320,6 +320,17 @@ fn try_hook_wwise(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Erro
             if let Some((mapped_path, mapped_override)) =
                 wwise::find_override(&mapping, &path_string)
             {
+                // FIXME: work backwards to support NR after fixing infinite looping in ER without
+                // reporting "sd:/" as having failed to mount.
+                if game >= Game::Nightreign {
+                    warn!(
+                        "override" = mapped_path,
+                        "not presently supported for {game:?}"
+                    );
+
+                    return (ctx.trampoline)(p1, path, open_mode, p4, p5, p6);
+                }
+
                 info!("override" = mapped_path);
 
                 // Force lookup to wwise's ordinary read (from disk) mode instead of the EBL read.
