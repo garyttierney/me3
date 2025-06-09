@@ -199,12 +199,14 @@ fn log_filter(env_var: &str, default_directive: Level) -> EnvFilter {
         .from_env_lossy()
 }
 
-pub fn install(config: TelemetryConfig) -> Telemetry {
+pub fn install_error_handler() {
     std::env::set_var("RUST_LIB_BACKTRACE", "1");
     std::env::set_var("RUST_BACKTRACE", "1");
 
     color_eyre::install().expect("failed to install error handler");
+}
 
+pub fn install(config: TelemetryConfig) -> Telemetry {
     let (file_writer, file_guard) = config.file_writer.unzip();
     let (console_writer, console_guard) = config.console_writer.unzip();
 

@@ -245,6 +245,8 @@ fn bins_dir(_config: &Config) -> PathBuf {
 }
 
 fn main() {
+    me3_telemetry::install_error_handler();
+
     let cli = Cli::parse();
 
     let app_install = AppInstallInfo::try_from_cargo()

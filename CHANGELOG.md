@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+- Basic support for Seamless Coop and other ModEngine2 compatible mods by @garyttierney in <https://github.com/garyttierney/me3/pull/116>
+
 ### Fixes
 
 - Correctly install asset folder in Windows installer by @garyttierney

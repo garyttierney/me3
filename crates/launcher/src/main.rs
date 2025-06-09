@@ -141,6 +141,8 @@ fn run() -> LauncherResult<()> {
 }
 
 fn main() {
+    me3_telemetry::install_error_handler();
+
     let telemetry_config = me3_env::deserialize_from_env()
         .wrap_err("couldn't deserialize env vars")
         .and_then(|vars: TelemetryVars| TelemetryConfig::try_from(vars))

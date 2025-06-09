@@ -16,7 +16,9 @@ crate-type = ["cdylib"]
 [dependencies]
 crash-handler = "0.6"
 dll-syringe = { workspace = true, features = ["payload-utils"] }
-eyre = "0.6"
+eyre = { version = "0.6", default-features = false, features = [
+    "track-caller",
+] }
 iced-x86 = "1.21.0"
 ipc-channel.workspace = true
 me3-mod-protocol.workspace = true

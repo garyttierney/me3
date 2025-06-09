@@ -23,7 +23,7 @@ use me3_mod_protocol::{
     ModProfile,
 };
 use normpath::PathExt;
-use steamlocate::{CompatTool, SteamDir};
+use steamlocate::{CompatTool, Library, SteamDir};
 use tempfile::NamedTempFile;
 use tracing::info;
 
@@ -112,6 +112,7 @@ impl Launcher for DirectLauncher {
 pub struct CompatToolLauncher {
     tool: CompatTool,
     steam: SteamDir,
+    library: Library,
     app_id: u32,
 }
 
@@ -153,7 +154,7 @@ impl Launcher for CompatToolLauncher {
         command.env("STEAM_COMPAT_CLIENT_INSTALL_PATH", self.steam.path());
         command.env(
             "STEAM_COMPAT_DATA_PATH",
-            self.steam
+            self.library
                 .path()
                 .join(format!("steamapps/compatdata/{}", self.app_id)),
         );
@@ -319,6 +320,7 @@ pub fn launch(
 
         let launcher = CompatToolLauncher {
             app_id,
+            library: steam_library,
             steam: steam_dir,
             tool: app_compat_tool.clone(),
         };
