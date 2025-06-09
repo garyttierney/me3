@@ -63,17 +63,18 @@ jobs:
       - run: |
           set +e
 
-          echo "RELEASE_TAG=prerelease" >> "$GITHUB_ENV"
+          TAG="${{ needs.build-installer.outputs.version }}"
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
           echo "RELEASE_IS_PRERELEASE=true" >> "$GITHUB_ENV"
 
-          if gh release view prerelease -R garyttierney/me3 ; then
-              gh release delete prerelease -R garyttierney/me3 -y --cleanup-tag
+          if gh release view "$TAG" -R garyttierney/me3 ; then
+              gh release delete "$TAG" -R garyttierney/me3 -y --cleanup-tag
               sleep 15s
           fi
 
           release_notes=$(awk 'NR == 1, /^## / { next }; /^## / { exit }; { print }' CHANGELOG.md )
 
-          gh release create "prerelease" -p -n "$release_notes"
+          gh release create "$TAG" -p -n "$release_notes"
         env:
           GH_TOKEN: ${{ github.token }}
         if: github.event_name == 'push' && github.ref_name == 'main'
@@ -119,7 +120,7 @@ jobs:
           SENTRY_ORG: modengine
           SENTRY_PROJECT: me3
         with:
-          release: "${{ steps.collect-release-info.outputs.release_tag }}"
+          release: "${{ needs.build-installer.outputs.version }}"
           finalize: "${{ steps.collect-release-info.outputs.is_prerelease == 'false' }}"
 
       - name: Upload debug symbols to sentry
@@ -130,6 +131,8 @@ jobs:
   build-installer:
     name: Installer
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version}}
     permissions:
       contents: read
       actions: write
