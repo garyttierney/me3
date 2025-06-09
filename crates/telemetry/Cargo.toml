@@ -16,27 +16,10 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing.workspace = true
 regex = { version = "1.11.1", features = ["unicode-case"] }
 tracing-appender = "0.2.3"
-tracing-opentelemetry = "0.30.0"
-sentry-opentelemetry = "0.38.1"
-opentelemetry = { version = "0.29", features = ["trace", "metrics"] }
-opentelemetry-appender-tracing = { version = "0.29", features = [
-    "tracing-opentelemetry",
-    "experimental_metadata_attributes",
-    "experimental_use_tracing_span_context",
-] }
-opentelemetry_sdk = { version = "0.29", default-features = false, features = [
-    "trace",
-    "rt-tokio",
-    "experimental_trace_batch_span_processor_with_async_runtime",
-    "experimental_logs_batch_log_processor_with_async_runtime",
-] }
-opentelemetry-otlp = { version = "0.29", default-features = false, features = [
-    "trace",
-    "logs",
-    "http-proto",
-    "reqwest-client",
-] }
-tokio = { version = "1.45.1", features = ["rt-multi-thread"] }
+serde = "1"
+eyre = "0.6.12"
+color-eyre = "0.6.5"
+me3-env = { version = "0.5.0", path = "../env" }
 
 [dependencies.sentry]
 version = "0.38"
@@ -49,6 +32,7 @@ features = [
     "panic",
     "reqwest",
     "rustls",
+    "release-health",
 ]
 optional = true
 [lints]

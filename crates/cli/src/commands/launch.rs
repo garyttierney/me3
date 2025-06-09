@@ -14,6 +14,7 @@ use std::{
 use chrono::Local;
 use clap::{ArgAction, Args};
 use color_eyre::eyre::{eyre, OptionExt};
+use me3_env::{LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{
     dependency::sort_dependencies,
@@ -21,7 +22,6 @@ use me3_mod_protocol::{
     package::{Package, WithPackageSource},
     ModProfile,
 };
-use me3_telemetry::OtelExporter;
 use normpath::PathExt;
 use steamlocate::{CompatTool, SteamDir};
 use tempfile::NamedTempFile;
@@ -201,12 +201,11 @@ impl ProfileDetails {
     }
 }
 
-#[tracing::instrument(err, skip(config, paths, bins_dir, otel_exporter, args))]
+#[tracing::instrument(err, skip(config, paths, bins_dir, args))]
 pub fn launch(
     config: Config,
     paths: AppPaths,
     bins_dir: PathBuf,
-    otel_exporter: OtelExporter,
     args: LaunchArgs,
 ) -> color_eyre::Result<()> {
     let mut all_natives = vec![];
@@ -370,31 +369,24 @@ pub fn launch(
 
     info!(path = ?monitor_log_file.path(), "temporary log file created");
 
-    if args.diagnostics {
-        injector_command.env("ME3_FILE_LOG_LEVEL", "trace");
-    }
-
-    let exporter = match otel_exporter {
-        OtelExporter::Sentry => "sentry",
-        OtelExporter::Http => "http",
+    let launcher_vars = LauncherVars {
+        exe: launcher.to_path_buf(),
+        host_dll: dll_path.to_path_buf(),
+        host_config_path: attach_config_file.path().to_path_buf(),
     };
 
-    if let Some(trace_id) = me3_telemetry::trace_id() {
-        injector_command.env("ME3_TRACE_ID", trace_id);
-    }
+    let telemetry_vars = TelemetryVars {
+        enabled: config.crash_reporting,
+        log_file_path: log_file_path.normalize()?.into_path_buf(),
+        monitor_file_path: monitor_log_file.path().normalize()?.into_path_buf(),
+        trace_id: me3_telemetry::trace_id(),
+    };
 
-    injector_command.env("ME3_OTEL", exporter);
-    injector_command.env("ME3_LOG_FILE", log_file_path.normalize()?);
-    injector_command.env("ME3_MONITOR_LOG_FILE", monitor_log_file.path().normalize()?);
-    injector_command.env("ME3_GAME_EXE", launcher);
-    injector_command.env("ME3_HOST_DLL", dll_path);
-    injector_command.env("ME3_HOST_CONFIG_PATH", attach_config_file.path());
+    me3_env::serialize_into_command(launcher_vars, &mut injector_command);
+    me3_env::serialize_into_command(telemetry_vars, &mut injector_command);
+
     injector_command.env("SteamAppId", app_id.to_string());
     injector_command.env("SteamGameId", app_id.to_string());
-
-    if config.crash_reporting {
-        injector_command.env("ME3_TELEMETRY", "true");
-    }
 
     info!(?injector_command, "running injector command");
 

@@ -1,126 +1,164 @@
-use std::{
-    any::Any,
-    collections::HashMap,
-    error::Error,
-    fs::{File, OpenOptions},
-    str::FromStr,
-    sync::OnceLock,
-    time::Duration,
-};
+use std::{fs::OpenOptions, str::FromStr, time::Duration};
 
-use opentelemetry::{
-    global::{self, BoxedTracer},
-    trace::TracerProvider,
-};
-use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
-use opentelemetry_otlp::LogExporter;
-use opentelemetry_sdk::{
-    logs::{log_processor_with_async_runtime::BatchLogProcessor, SdkLoggerProvider},
-    propagation::TraceContextPropagator,
-    resource::EnvResourceDetector,
-    runtime,
-    trace::{
-        span_processor_with_async_runtime::BatchSpanProcessor, RandomIdGenerator, Sampler,
-        SdkTracerProvider,
-    },
-    Resource,
-};
-use sentry_opentelemetry::{SentryPropagator, SentrySpanProcessor};
-use tokio::runtime::Runtime;
-use tracing::{info, Level};
+use me3_env::{deserialize_from_env, TelemetryVars};
+use sentry::{Hub, SentryTrace, TransactionContext, TransactionOrSpan};
+use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_error::ErrorLayer;
-use tracing_opentelemetry::{OpenTelemetryLayer, OpenTelemetrySpanExt};
 use tracing_subscriber::{
     fmt::{self, writer::BoxMakeWriter},
     prelude::*,
     EnvFilter,
 };
 
-pub struct TelemetryGuard {
-    resources_held: Vec<Box<dyn Any + Send + Sync>>,
-    rt: Option<Runtime>,
-    logger_provider: Option<SdkLoggerProvider>,
-    tracer_provider: Option<SdkTracerProvider>,
+pub struct Telemetry {
+    cleanup: Vec<Box<dyn FnOnce() + Send + Sync>>,
+    #[cfg(feature = "sentry")]
+    client: Option<sentry::ClientInitGuard>,
 }
 
-impl Drop for TelemetryGuard {
+pub fn with_root_span<T>(
+    name: &str,
+    op: &str,
+    f: impl FnOnce() -> color_eyre::Result<T>,
+) -> color_eyre::Result<T> {
+    let hub = Hub::main();
+    let trace_id = deserialize_from_env()
+        .ok()
+        .and_then(|vars: TelemetryVars| vars.trace_id);
+
+    let (transaction_is_root, transaction_context) = trace_id
+        .and_then(|v| sentry::parse_headers([("sentry-trace", v.as_str())]))
+        .map(|trace| {
+            (
+                false,
+                TransactionContext::continue_from_sentry_trace(name, op, &trace, None),
+            )
+        })
+        .unwrap_or_else(|| (true, TransactionContext::new(name, op)));
+
+    if transaction_is_root {
+        sentry::start_session();
+    }
+
+    let transaction = sentry::start_transaction(transaction_context);
+    hub.configure_scope(|scope| {
+        scope.set_span(Some(TransactionOrSpan::Transaction(transaction.clone())))
+    });
+
+    let result = f();
+
+    if let Err(e) = result.as_ref() {
+        report_fatal_error(e);
+    }
+
+    transaction.finish();
+
+    if transaction_is_root {
+        sentry::end_session_with_status(match &result {
+            Ok(_) => sentry::protocol::SessionStatus::Ok,
+            Err(_) => sentry::protocol::SessionStatus::Crashed,
+        });
+    }
+
+    result
+}
+
+impl Drop for Telemetry {
     fn drop(&mut self) {
-        if let Some(logger) = self.logger_provider.take() {
-            let _ = logger.force_flush();
-            let _ = logger.shutdown();
+        for cleanup_fn in self.cleanup.drain(..) {
+            cleanup_fn();
         }
 
-        if let Some(tracer) = self.tracer_provider.take() {
-            let _ = tracer.force_flush();
-            let _ = tracer.shutdown();
-        }
-
-        if let Some(rt) = self.rt.take() {
-            rt.shutdown_timeout(Duration::from_secs(5));
+        #[cfg(feature = "sentry")]
+        if let Some(client) = self.client.take() {
+            client.flush(Some(Duration::from_secs(10)));
         }
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum OtelExporter {
-    Sentry,
-    Http,
+impl TryFrom<TelemetryVars> for TelemetryConfig {
+    type Error = color_eyre::Report;
+
+    fn try_from(value: TelemetryVars) -> color_eyre::Result<Self> {
+        let log = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&value.log_file_path)?;
+        let monitor = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&value.monitor_file_path)?;
+
+        Ok(TelemetryConfig::default()
+            .enabled(value.enabled)
+            .with_console_writer(monitor)
+            .with_file_writer(log)
+            .capture_panics(true))
+    }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct TelemetryConfig {
     enabled: bool,
+    capture_panics: bool,
     file_writer: Option<TelemetryWriter>,
     console_writer: Option<TelemetryWriter>,
-    otel_exporter: Option<OtelExporter>,
 }
 
 pub type TelemetryWriter = (BoxMakeWriter, WorkerGuard);
-pub fn get_tracer() -> &'static BoxedTracer {
-    static TRACER: OnceLock<BoxedTracer> = OnceLock::new();
-    TRACER.get_or_init(|| global::tracer("me3"))
-}
 
-fn resource(name: &'static str) -> Resource {
-    Resource::builder()
-        .with_service_name(name)
-        .with_detectors(&[Box::new(EnvResourceDetector::new())])
-        .build()
-}
+pub fn report_fatal_error(error: &color_eyre::Report) {
+    let (_spantrace, backtrace) = error
+        .handler()
+        .downcast_ref::<color_eyre::Context>()
+        .and_then(|ctx| ctx.span_trace().zip(ctx.backtrace()))
+        .unzip();
 
-pub fn inherit_trace_id() {
-    if let Ok(trace_id) = std::env::var("ME3_TRACE_ID") {
-        let current = tracing::Span::current();
-        let mut map: HashMap<String, String> = HashMap::default();
-        map.insert("traceparent".to_string(), trace_id.to_string());
-        map.insert("sentry-trace".to_string(), trace_id.to_string());
-        let cx =
-            opentelemetry::global::get_text_map_propagator(|propagator| propagator.extract(&map));
+    #[cfg(feature = "sentry")]
+    {
+        use sentry::integrations::backtrace::backtrace_to_stacktrace;
 
-        current.set_parent(cx);
+        let mut event = sentry::event_from_error(&**error);
+
+        event.stacktrace = backtrace.and_then(backtrace_to_stacktrace);
+        event.level = sentry::Level::Fatal;
+        event.message = Some(format!("{error:?}"));
+
+        for exc in event.exception.iter_mut() {
+            use sentry::protocol::Mechanism;
+
+            exc.mechanism = Some(Mechanism {
+                ty: "error".into(),
+                handled: Some(false),
+                ..Default::default()
+            })
+        }
+
+        sentry::capture_event(event);
     }
 }
 
 pub fn trace_id() -> Option<String> {
-    let mut map: HashMap<String, String> = HashMap::default();
-    opentelemetry::global::get_text_map_propagator(|propagator| {
-        propagator.inject(&mut map);
-    });
+    #[cfg(feature = "sentry")]
+    {
+        let hub = Hub::current();
 
-    info!(?map, "trace_id map");
+        hub.configure_scope(|scope| {
+            scope.get_span().map(|tx| {
+                let cx = tx.get_trace_context();
+                let trace = SentryTrace::new(cx.trace_id, cx.span_id, Some(tx.is_sampled()));
 
-    map.remove("traceparent").or(map.remove("sentry-trace"))
+                trace.to_string()
+            })
+        })
+    }
+
+    #[cfg(not(feature = "sentry"))]
+    None
 }
 
 impl TelemetryConfig {
-    pub fn with_otel_exporter(self, otel_exporter: OtelExporter) -> Self {
-        Self {
-            otel_exporter: Some(otel_exporter),
-            ..self
-        }
-    }
-
     pub fn with_console_writer<W2>(self, writer: W2) -> Self
     where
         W2: std::io::Write + Send + Sync + 'static,
@@ -143,40 +181,14 @@ impl TelemetryConfig {
         }
     }
 
+    pub fn capture_panics(self, capture_panics: bool) -> Self {
+        Self {
+            capture_panics,
+            ..self
+        }
+    }
     pub fn enabled(self, enabled: bool) -> Self {
         Self { enabled, ..self }
-    }
-}
-
-impl TelemetryConfig {
-    pub fn try_from_env() -> Result<Self, Box<dyn Error>> {
-        fn open_log_file(env_var: &str) -> std::io::Result<File> {
-            let file = std::env::var(env_var).map_err(std::io::Error::other)?;
-
-            OpenOptions::new().create(true).append(true).open(&file)
-        }
-
-        let enabled = std::env::var("ME3_TELEMETRY").is_ok();
-        let log_file = open_log_file("ME3_LOG_FILE")?;
-        let (file_writer, file_guard) = tracing_appender::non_blocking(log_file);
-
-        let console_file = open_log_file("ME3_MONITOR_LOG_FILE")?;
-        let (console_writer, console_guard) = tracing_appender::non_blocking(console_file);
-
-        let otel_exporter = std::env::var("ME3_OTEL")
-            .ok()
-            .and_then(|v| match v.as_str() {
-                "sentry" => Some(OtelExporter::Sentry),
-                "http" => Some(OtelExporter::Http),
-                _ => None,
-            });
-
-        Ok(TelemetryConfig {
-            enabled,
-            file_writer: Some((BoxMakeWriter::new(file_writer), file_guard)),
-            console_writer: Some((BoxMakeWriter::new(console_writer), console_guard)),
-            otel_exporter,
-        })
     }
 }
 
@@ -185,16 +197,18 @@ fn log_filter(env_var: &str, default_directive: Level) -> EnvFilter {
         .with_default_directive(default_directive.into())
         .with_env_var(env_var)
         .from_env_lossy()
-        .add_directive("reqwest=error".parse().unwrap())
-        .add_directive("hyper_util=error".parse().unwrap())
-        .add_directive("opentelemetry-http=error".parse().unwrap())
 }
 
-pub fn install(component: &'static str, config: TelemetryConfig) -> TelemetryGuard {
+pub fn install(config: TelemetryConfig) -> Telemetry {
+    std::env::set_var("RUST_LIB_BACKTRACE", "1");
+    std::env::set_var("RUST_BACKTRACE", "1");
+
+    color_eyre::install().expect("failed to install error handler");
+
     let (file_writer, file_guard) = config.file_writer.unzip();
     let (console_writer, console_guard) = config.console_writer.unzip();
 
-    let mut resources_held: Vec<Box<dyn Any + Send + Sync>> = vec![];
+    let mut cleanup: Vec<Box<dyn FnOnce() + Send + Sync>> = vec![];
 
     let file_layer = file_writer.map(|writer| {
         let filter_layer = log_filter("ME3_FILE_LOG_LEVEL", Level::DEBUG);
@@ -216,105 +230,67 @@ pub fn install(component: &'static str, config: TelemetryConfig) -> TelemetryGua
             .with_filter(filter_layer)
     });
 
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .enable_time()
-        .enable_io()
-        .build()
-        .expect("couldn't create tokio runtime for telemetry");
-
-    let _guard = rt.enter();
-
-    let (tracer_provider, logger_provider) = match config.otel_exporter {
-        Some(OtelExporter::Sentry) => {
-            let tracer_provider = SdkTracerProvider::builder()
-                .with_sampler(Sampler::AlwaysOn)
-                .with_span_processor(SentrySpanProcessor::new())
-                .with_resource(resource(component))
-                .build();
-
-            opentelemetry::global::set_tracer_provider(tracer_provider.clone());
-            opentelemetry::global::set_text_map_propagator(SentryPropagator::new());
-
-            (Some(tracer_provider), None)
-        }
-        Some(OtelExporter::Http) => {
-            let exporter = opentelemetry_otlp::SpanExporter::builder()
-                .with_http()
-                .build()
-                .unwrap();
-
-            let tracer_provider = SdkTracerProvider::builder()
-                .with_sampler(Sampler::AlwaysOn)
-                .with_id_generator(RandomIdGenerator::default())
-                .with_resource(resource(component))
-                .with_span_processor(BatchSpanProcessor::builder(exporter, runtime::Tokio).build())
-                .build();
-
-            opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
-            opentelemetry::global::set_tracer_provider(tracer_provider.clone());
-
-            let log_exporter = LogExporter::builder()
-                .with_http()
-                .build()
-                .expect("Failed to create log exporter");
-
-            let logger_provider = SdkLoggerProvider::builder()
-                .with_log_processor(
-                    BatchLogProcessor::builder(log_exporter, runtime::Tokio).build(),
-                )
-                .build();
-
-            (Some(tracer_provider), Some(logger_provider))
-        }
-        _ => (None, None),
-    };
-
     tracing_subscriber::registry()
-        .with(
-            tracer_provider
-                .as_ref()
-                .map(|provider| OpenTelemetryLayer::new(provider.tracer("me3"))),
-        )
-        .with(
-            logger_provider
-                .as_ref()
-                .map(OpenTelemetryTracingBridge::new),
-        )
+        .with(ErrorLayer::default())
         .with(file_layer)
         .with(console_layer)
-        .with(ErrorLayer::default())
+        .with(sentry::integrations::tracing::layer())
         .init();
 
-    resources_held.push(Box::from(console_guard));
-    resources_held.push(Box::from(file_guard));
+    cleanup.push(Box::from(move || drop(console_guard)));
+    cleanup.push(Box::from(move || drop(file_guard)));
 
     #[cfg(feature = "sentry")]
-    {
+    let client = {
         use sentry::types::Dsn;
-
         let sentry_dsn = option_env!("SENTRY_DSN").and_then(|dsn| Dsn::from_str(dsn).ok());
-        if sentry_dsn.is_none() {
-            eprintln!("No Sentry DSN provided, but crash reporting was enabled");
-        }
 
-        let client = config.enabled.then(|| {
+        let environment = if cfg!(debug_assertions) {
+            "development"
+        } else {
+            "production"
+        };
+
+        config.enabled.then(|| {
+            use std::sync::Arc;
+
+            use sentry::{
+                integrations::{
+                    backtrace::{AttachStacktraceIntegration, ProcessStacktraceIntegration},
+                    contexts::ContextIntegration,
+                    debug_images::DebugImagesIntegration,
+                },
+                Integration,
+            };
+
+            let mut integrations: Vec<Arc<dyn Integration>> = vec![
+                Arc::new(DebugImagesIntegration::new()),
+                Arc::new(ContextIntegration::new()),
+                Arc::new(AttachStacktraceIntegration::new()),
+                Arc::new(ProcessStacktraceIntegration::new()),
+            ];
+
+            if config.capture_panics {
+                use sentry::integrations::panic::PanicIntegration;
+
+                integrations.push(Arc::new(PanicIntegration::default()));
+            }
+
             sentry::init(sentry::ClientOptions {
                 release: Some(env!("CARGO_PKG_VERSION").into()),
                 debug: cfg!(debug_assertions),
                 traces_sample_rate: 1.0,
                 dsn: sentry_dsn,
-
+                environment: Some(environment.into()),
+                default_integrations: false,
+                in_app_include: vec!["me3"],
+                auto_session_tracking: false,
+                session_mode: sentry::SessionMode::Application,
+                integrations,
                 ..Default::default()
             })
-        });
-
-        resources_held.push(Box::from(client));
+        })
     };
 
-    TelemetryGuard {
-        resources_held,
-        tracer_provider,
-        logger_provider,
-        rt: Some(rt),
-    }
+    Telemetry { cleanup, client }
 }

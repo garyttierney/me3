@@ -9,7 +9,7 @@ pub mod profile;
 #[cfg(target_os = "windows")]
 pub mod windows;
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 #[command(flatten_help = true)]
 pub enum Commands {
     /// Launch the selected game a collection of mod profiles.

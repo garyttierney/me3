@@ -6,10 +6,6 @@ use commands::{profile::ProfileCommands, Commands};
 use config::{ConfigError, Environment, File, Map, Source};
 use directories::ProjectDirs;
 use me3_telemetry::TelemetryConfig;
-use opentelemetry::{
-    trace::{SpanKind, TraceContextExt as _, Tracer},
-    Context,
-};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
@@ -37,19 +33,6 @@ struct Cli {
 
     #[command(subcommand)]
     command: Commands,
-}
-
-fn parse_key_val<T, U>(s: &str) -> Result<(T, U), Box<dyn Error + Send + Sync + 'static>>
-where
-    T: std::str::FromStr,
-    T::Err: Error + Send + Sync + 'static,
-    U: std::str::FromStr,
-    U::Err: Error + Send + Sync + 'static,
-{
-    let pos = s
-        .find('=')
-        .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
-    Ok((s[..pos].parse()?, s[pos + 1..].parse()?))
 }
 
 mod settings;
@@ -308,32 +291,17 @@ fn main() {
             .map(|dirs| dirs.config_local_dir().join("profiles"));
     }
 
-    let otel = if cli.enable_opentelemetry {
-        me3_telemetry::OtelExporter::Http
-    } else {
-        me3_telemetry::OtelExporter::Sentry
-    };
+    let bins_path = bins_dir(&config);
 
     let telemetry_config = TelemetryConfig::default()
         .enabled(config.crash_reporting)
-        .with_console_writer(stderr())
-        .with_otel_exporter(otel);
+        .with_console_writer(stderr());
 
-    let _guard = me3_telemetry::install("cli", telemetry_config);
-    let tracer = me3_telemetry::get_tracer();
-    let span = tracer
-        .span_builder(String::from("me3"))
-        .with_kind(SpanKind::Client)
-        .start(tracer);
-    let cx = Context::current_with_span(span);
-    let _cx_guard = cx.attach();
-    let bins_path = bins_dir(&config);
+    let _telemetry = me3_telemetry::install(telemetry_config);
 
-    let result = match cli.command {
+    let result = me3_telemetry::with_root_span("me3", "run command", || match cli.command {
         Commands::Info => commands::info::info(app_install, app_paths, config),
-        Commands::Launch(args) => {
-            commands::launch::launch(config, app_paths, bins_path, otel, args)
-        }
+        Commands::Launch(args) => commands::launch::launch(config, app_paths, bins_path, args),
         Commands::Profile(ProfileCommands::Create(args)) => commands::profile::create(config, args),
         Commands::Profile(ProfileCommands::List) => commands::profile::list(config),
         Commands::Profile(ProfileCommands::Show { name }) => commands::profile::show(config, name),
@@ -341,7 +309,9 @@ fn main() {
         Commands::AddToPath => commands::windows::add_to_path(),
         #[cfg(target_os = "windows")]
         Commands::Update => commands::windows::update(),
-    };
+    });
 
-    result.expect("command failed");
+    if result.is_err() {
+        std::process::exit(1);
+    }
 }

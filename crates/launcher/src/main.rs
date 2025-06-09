@@ -1,10 +1,8 @@
 #![windows_subsystem = "windows"]
 
 use std::{
-    env,
     error::Error,
     fs::File,
-    path::PathBuf,
     sync::{
         atomic::{
             AtomicBool,
@@ -18,15 +16,11 @@ use std::{
 use crash_context::CrashContext;
 use eyre::Context;
 use ipc_channel::ipc::{IpcError, IpcOneShotServer};
+use me3_env::{LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
 use me3_telemetry::TelemetryConfig;
 use minidump_writer::minidump_writer::MinidumpWriter;
-#[cfg(feature = "sentry")]
-use sentry::{
-    protocol::{Attachment, AttachmentType, Event},
-    Level,
-};
-use tracing::{error, info, info_span};
+use tracing::{error, info};
 
 use crate::game::Game;
 
@@ -34,47 +28,14 @@ mod game;
 
 pub type LauncherResult<T> = eyre::Result<T>;
 
-/// Launch a Steam game with the me3 mod loader attached.
-#[derive(Debug)]
-struct LauncherArgs {
-    /// Path to the game EXE that should be launched.
-    exe: PathBuf,
-
-    /// Path to the me3 that should be attached to the game.
-    dll: PathBuf,
-
-    /// Path to the compiled attach configuration.
-    config_path: PathBuf,
-}
-
-impl LauncherArgs {
-    pub fn from_env() -> Result<Self, eyre::Error> {
-        let exe = PathBuf::from(env::var("ME3_GAME_EXE").wrap_err("game exe wasn't set")?);
-        let dll = PathBuf::from(env::var("ME3_HOST_DLL").wrap_err("me3 host dll wasn't set")?);
-        let config_path = PathBuf::from(
-            env::var("ME3_HOST_CONFIG_PATH").wrap_err("me3 host config path wasn't set")?,
-        );
-
-        Ok(LauncherArgs {
-            exe,
-            dll,
-            config_path,
-        })
-    }
-}
-
 fn run() -> LauncherResult<()> {
-    let span = info_span!("run");
-    let span_guard = span.enter();
     info!("Launcher started");
 
-    me3_telemetry::inherit_trace_id();
-
-    let args = LauncherArgs::from_env()?;
+    let args: LauncherVars = me3_env::deserialize_from_env()?;
 
     info!(?args, "Parsed launcher args");
 
-    let attach_config_text = std::fs::read_to_string(args.config_path)?;
+    let attach_config_text = std::fs::read_to_string(args.host_config_path)?;
     let attach_config = toml::from_str(&attach_config_text)?;
 
     let (monitor_server, monitor_name) = IpcOneShotServer::new()?;
@@ -83,7 +44,10 @@ fn run() -> LauncherResult<()> {
         config: attach_config,
     };
 
-    info!("Starting game at {:?} with DLL {:?}", args.exe, args.dll);
+    info!(
+        "Starting game at {:?} with DLL {:?}",
+        args.exe, args.host_dll
+    );
 
     let shutdown_requested = Arc::new(AtomicBool::new(false));
 
@@ -132,29 +96,29 @@ fn run() -> LauncherResult<()> {
                         )
                         .expect("failed to write crash dump to file");
 
-                        #[cfg(feature = "sentry")]
-                        sentry::with_scope(
-                            move |scope| {
-                                // Remove event.process because this event came from the
-                                // main app process
-                                scope.remove_extra("event.process");
+                        // #[cfg(feature = "sentry")]
+                        // sentry::with_scope(
+                        //     move |scope| {
+                        //         // Remove event.process because this event came from the
+                        //         // main app process
+                        //         scope.remove_extra("event.process");
 
-                                if let Ok(buffer) = std::fs::read(&file_path) {
-                                    scope.add_attachment(Attachment {
-                                        buffer,
-                                        filename: "minidump.dmp".to_string(),
-                                        ty: Some(AttachmentType::Minidump),
-                                        ..Default::default()
-                                    });
-                                }
-                            },
-                            || {
-                                sentry::capture_event(Event {
-                                    level: Level::Fatal,
-                                    ..Default::default()
-                                })
-                            },
-                        );
+                        //         if let Ok(buffer) = std::fs::read(&file_path) {
+                        //             scope.add_attachment(Attachment {
+                        //                 buffer,
+                        //                 filename: "minidump.dmp".to_string(),
+                        //                 ty: Some(AttachmentType::Minidump),
+                        //                 ..Default::default()
+                        //             });
+                        //         }
+                        //     },
+                        //     || {
+                        //         sentry::capture_event(Event {
+                        //             level: Level::Fatal,
+                        //             ..Default::default()
+                        //         })
+                        //     },
+                        // );
                     }
                     HostMessage::Attached => info!("Attach completed"),
                 },
@@ -167,24 +131,21 @@ fn run() -> LauncherResult<()> {
         }
     });
 
-    if let Err(e) = game.attach(&args.dll, request) {
-        error!(error = &*e, "Failed to attach to game");
-    }
-
-    drop(span_guard);
+    let result = game.attach(&args.host_dll, request);
 
     game.join();
     shutdown_requested.store(true, SeqCst);
     let _ = monitor_thread.join();
 
-    Ok(())
+    result.map(|_| ())
 }
 
 fn main() {
-    let telemetry_config = TelemetryConfig::try_from_env().expect("unable to get logger config");
-    let _guard = me3_telemetry::install("launcher", telemetry_config);
+    let telemetry_config = me3_env::deserialize_from_env()
+        .wrap_err("couldn't deserialize env vars")
+        .and_then(|vars: TelemetryVars| TelemetryConfig::try_from(vars))
+        .expect("couldn't get telemetry config");
+    let _telemetry = me3_telemetry::install(telemetry_config);
 
-    if let Err(e) = run() {
-        error!(?e, "Failed to run launcher: {e}");
-    }
+    let _ = me3_telemetry::with_root_span("launcher", "run", run);
 }
