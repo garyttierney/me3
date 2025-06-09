@@ -1,8 +1,9 @@
 use std::{
-    ffi::CString,
+    ffi::{CStr, CString},
     fmt::Debug,
     marker::{FnPtr, Tuple},
     path::Path,
+    ptr::NonNull,
     sync::{Arc, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
     time::Duration,
 };
@@ -13,7 +14,10 @@ use retour::Function;
 use tracing::{error, info};
 
 use self::hook::{thunk::ThunkPool, HookInstaller};
-use crate::detour::UntypedDetour;
+use crate::{
+    detour::UntypedDetour,
+    native::{ModEngineConnectorShim, ModEngineExtension, ModEngineInitializer},
+};
 
 pub mod hook;
 
@@ -52,7 +56,7 @@ impl ModHost {
         path: &Path,
         condition: Option<NativeInitializerCondition>,
     ) -> eyre::Result<()> {
-        let module = unsafe { libloading::Library::new(path) }?;
+        let module: Library = unsafe { libloading::Library::new(path) }?;
 
         match condition {
             Some(NativeInitializerCondition::Delay { ms }) => {
@@ -69,7 +73,17 @@ impl ModHost {
                     error!(?path, symbol, "native failed to initialize");
                 }
             },
-            None => {}
+            None => {
+                let me2_initializer: Option<Symbol<ModEngineInitializer>> =
+                    unsafe { module.get(b"modengine_ext_init\0").ok() };
+
+                let mut extension_ptr: *mut ModEngineExtension = std::ptr::null_mut();
+                if let Some(initializer) = me2_initializer {
+                    unsafe { initializer(&ModEngineConnectorShim, &mut extension_ptr) };
+
+                    info!(?path, "loaded native with me2 compatibility shim");
+                }
+            }
         }
 
         self.native_modules.push(module);

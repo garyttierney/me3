@@ -26,6 +26,7 @@ use crate::host::{hook::thunk::ThunkPool, ModHost};
 mod asset_hooks;
 mod detour;
 mod host;
+mod native;
 
 static INSTANCE: OnceLock<usize> = OnceLock::new();
 static mut TELEMETRY_INSTANCE: OnceLock<me3_telemetry::Telemetry> = OnceLock::new();
