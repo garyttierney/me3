@@ -2,37 +2,46 @@
   // See https://go.microsoft.com/fwlink/?LinkId=733558
   // for the documentation about the tasks.json format
   "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "command",
+      "description": "me3:",
+      "type": "promptString"
+    }
+  ],
   "tasks": [
     {
       "label": "Run Launcher (SteamLinuxRuntime)",
-      "type": "process",
-      "command": "${config:steam.path}/steamapps/common/SteamLinuxRuntime_sniper/run",
-      "dependsOn": ["rust: cargo build"],
-      "args": [
-        "--batch",
-        "--",
-        "${config:steam.path}/steamapps/common/Proton - Experimental/proton",
-        "run",
-        "${workspaceFolder}/target/x86_64-pc-windows-msvc/debug/me3-launcher.exe",
-        "--exe",
-        "${config:steam.path}/steamapps/common/ELDEN RING/Game/eldenring.exe",
-        "--dll",
-        "${workspaceFolder}/target/x86_64-pc-windows-msvc/debug/me3_mod_host.dll",
+      "type": "shell",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "dependsOn": [
+        "rust: cargo build all (windows)",
+        "rust: cargo build cli (linux)"
       ],
-      "options": {
-        "env": {
-          "STEAM_COMPAT_DATA_PATH": "${config:steam.path}/steamapps/compatdata/1245620",
-          "STEAM_COMPAT_CLIENT_INSTALL_PATH": "${config:steam.path}",
-          "SteamAppId": "1245620",
-          "SteamGameId": "1245620",
-        }
-      }
+      "command": "${workspaceFolder}/target/x86_64-unknown-linux-gnu/debug/me3 --windows-binaries-dir ${workspaceFolder}/target/x86_64-pc-windows-msvc ${input:command}",
+      "problemMatcher": []
     },
     {
       "type": "process",
       "command": "cargo",
-      "args": ["build", "--all"],
-      "problemMatcher": ["$rustc"],
+      "args": [
+        "build",
+        "--all",
+        "--features=sentry"
+      ],
+      "options": {
+        "env": {
+          "SENTRY_DSN": "${config:me3.sentry.dsn}"
+        }
+      },
+      "problemMatcher": [],
       "presentation": {
         "reveal": "never",
         "panel": "dedicated",
@@ -42,7 +51,35 @@
         "kind": "build",
         "isDefault": true
       },
-      "label": "rust: cargo build"
+      "label": "rust: cargo build all (windows)"
+    },
+    {
+      "type": "process",
+      "command": "cargo",
+      "args": [
+        "build",
+        "-p",
+        "me3-cli",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "--features=sentry"
+      ],
+      "options": {
+        "env": {
+          "SENTRY_DSN": "${config:me3.sentry.dsn}"
+        }
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "label": "rust: cargo build cli (linux)"
     }
   ]
 }

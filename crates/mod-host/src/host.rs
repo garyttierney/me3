@@ -9,7 +9,6 @@ use std::{
 
 use libloading::{Library, Symbol};
 use me3_mod_protocol::{native::NativeInitializerCondition, ModProfile};
-use me3_telemetry::TelemetryGuard;
 use retour::Function;
 use tracing::{error, info};
 
@@ -24,7 +23,6 @@ pub struct ModHost {
     hooks: Vec<Arc<UntypedDetour>>,
     native_modules: Vec<Library>,
     profiles: Vec<ModProfile>,
-    telemetry: TelemetryGuard,
     thunk_pool: ThunkPool,
 }
 
@@ -40,9 +38,8 @@ impl Debug for ModHost {
 
 #[allow(unused)]
 impl ModHost {
-    pub fn new(telemetry: TelemetryGuard, thunk_pool: ThunkPool) -> Self {
+    pub fn new(thunk_pool: ThunkPool) -> Self {
         Self {
-            telemetry,
             hooks: vec![],
             native_modules: vec![],
             profiles: vec![],

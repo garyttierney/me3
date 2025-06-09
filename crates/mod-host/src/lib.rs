@@ -2,6 +2,7 @@
 #![feature(fn_ptr_trait)]
 #![feature(tuple_trait)]
 #![feature(unboxed_closures)]
+#![feature(mapped_lock_guards)]
 
 use std::{
     mem,
@@ -10,13 +11,15 @@ use std::{
 };
 
 use crash_handler::CrashEventResult;
+use eyre::Context;
 use ipc_channel::ipc::IpcSender;
+use me3_env::TelemetryVars;
 use me3_launcher_attach_protocol::{
     AttachConfig, AttachRequest, AttachResult, Attachment, HostMessage,
 };
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use me3_telemetry::TelemetryConfig;
-use tracing::{info, info_span};
+use tracing::info;
 
 use crate::host::{hook::thunk::ThunkPool, ModHost};
 
@@ -25,7 +28,10 @@ mod detour;
 mod host;
 
 static INSTANCE: OnceLock<usize> = OnceLock::new();
+static mut TELEMETRY_INSTANCE: OnceLock<me3_telemetry::Telemetry> = OnceLock::new();
+
 /// https://learn.microsoft.com/en-us/windows/win32/dlls/dllmain#parameters
+const DLL_PROCESS_DETACH: u32 = 0;
 const DLL_PROCESS_ATTACH: u32 = 1;
 
 dll_syringe::payload_procedure! {
@@ -76,26 +82,29 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
     socket.lock().unwrap().send(HostMessage::Attached).unwrap();
 
-    let telemetry_config = TelemetryConfig::try_from_env().expect("unable to get logger config");
-    let telemetry_guard = me3_telemetry::install("mod-host", telemetry_config);
+    let telemetry_config = me3_env::deserialize_from_env()
+        .wrap_err("couldn't deserialize env vars")
+        .and_then(|vars: TelemetryVars| TelemetryConfig::try_from(vars))
+        .expect("couldn't get telemetry config");
 
-    let attach_span = info_span!("attach");
-    attach_span.in_scope(|| {
-        me3_telemetry::inherit_trace_id();
+    let telemetry_guard = me3_telemetry::install(telemetry_config);
 
-        info!("Host monitoring configured");
+    #[allow(static_mut_refs)]
+    let _ = unsafe { TELEMETRY_INSTANCE.set(telemetry_guard) };
 
-        let mut host = ModHost::new(telemetry_guard, ThunkPool::new()?);
+    let result = me3_telemetry::with_root_span("host", "attach", move || {
+        info!("Beginning host attach");
+
+        let mut host = ModHost::new(ThunkPool::new()?);
 
         for native in natives {
             host.load_native(&native.path, native.initializer)?;
         }
 
+        host.attach();
         let mut override_mapping = ArchiveOverrideMapping::new()?;
         override_mapping.scan_directories(packages.iter())?;
         let override_mapping = Arc::new(override_mapping);
-
-        host.attach();
 
         info!("Host successfully attached");
 
@@ -104,13 +113,25 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         info!("Applied asset override hooks");
 
         Ok(Attachment)
-    })
+    })?;
+
+    Ok(result)
 }
 
 #[no_mangle]
 pub extern "stdcall" fn DllMain(instance: usize, reason: u32, _: *mut usize) -> i32 {
-    if reason == DLL_PROCESS_ATTACH {
-        let _ = INSTANCE.set(instance);
+    match reason {
+        DLL_PROCESS_ATTACH => {
+            let _ = INSTANCE.set(instance);
+        }
+        DLL_PROCESS_DETACH => {
+            std::thread::spawn(|| {
+                #[allow(static_mut_refs)]
+                let telemetry = unsafe { TELEMETRY_INSTANCE.take() };
+                drop(telemetry);
+            });
+        }
+        _ => {}
     }
 
     1

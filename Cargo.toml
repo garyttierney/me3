@@ -7,7 +7,7 @@ members = [
   "crates/mod-protocol",
   "crates/mod-host-assets",
   "crates/binary-mapper",
-  "crates/telemetry",
+  "crates/telemetry", "crates/env",
 ]
 resolver = "2"
 

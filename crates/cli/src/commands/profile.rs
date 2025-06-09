@@ -7,7 +7,7 @@ use tracing::{debug, warn};
 
 use crate::{output::OutputBuilder, Config, Game};
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 #[command(flatten_help = true)]
 pub enum ProfileCommands {
     /// Create a new profile with the given name.

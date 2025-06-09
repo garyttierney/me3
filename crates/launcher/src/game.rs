@@ -10,6 +10,7 @@ use dll_syringe::{
     Syringe,
 };
 use eyre::OptionExt;
+use me3_env::{deserialize_from_env, serialize_into_command, TelemetryVars};
 use me3_launcher_attach_protocol::{AttachFunction, AttachRequest, Attachment};
 use tracing::{info, instrument};
 
@@ -21,20 +22,25 @@ pub struct Game {
 }
 
 impl Game {
-    #[instrument]
     pub fn launch(game_binary: &Path, game_directory: Option<&Path>) -> LauncherResult<Self> {
-        let child = Command::new(game_binary)
-            .current_dir(
-                game_directory
-                    .map(Path::to_path_buf)
-                    .or_else(|| std::env::current_dir().ok())
-                    .unwrap_or(PathBuf::from(".")),
-            )
-            // FIXME
-            .stdout(Stdio::inherit())
-            .stdin(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()?;
+        let mut command = Command::new(game_binary);
+        command.current_dir(
+            game_directory
+                .map(Path::to_path_buf)
+                .or_else(|| std::env::current_dir().ok())
+                .unwrap_or(PathBuf::from(".")),
+        );
+
+        let mut telemetry_vars: TelemetryVars = deserialize_from_env()?;
+        telemetry_vars.trace_id = me3_telemetry::trace_id();
+
+        info!(trace_id = telemetry_vars.trace_id, "game trace_id");
+        serialize_into_command(telemetry_vars, &mut command);
+
+        command.stdout(Stdio::inherit());
+        command.stdin(Stdio::inherit());
+        command.stderr(Stdio::inherit());
+        let child = command.spawn()?;
 
         Ok(Self { child })
     }
