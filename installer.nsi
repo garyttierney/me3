@@ -228,7 +228,7 @@ SectionEnd
 
 Section "Uninstall"
     Delete "$INSTDIR\bin\me3-launcher.exe"
-    Delete "$INSTDIR\bin\me3_host.dll"
+    Delete "$INSTDIR\bin\me3_mod_host.dll"
     Delete "$INSTDIR\bin\me3.exe"
     Delete "$INSTDIR\uninstall.exe"
     Delete "$INSTDIR\LICENSE-APACHE"
