@@ -159,6 +159,11 @@ Function nsDialogsPageLeave
 	${NSD_GetState} $Checkbox $TelemetryEnabled
 FunctionEnd
 
+!macro CreateInternetShortcutWithIcon FILEPATH URL ICONPATH
+WriteINIStr "${FILEPATH}" "InternetShortcut" "URL" "${URL}"
+WriteINIStr "${FILEPATH}" "InternetShortcut" "IconFile" "${ICONPATH}"
+!macroend
+
 ; Installer Section
 Section "Main Application" SEC01
     SectionIn RO
@@ -199,6 +204,8 @@ Section "Main Application" SEC01
     CreateShortCut "$SMPROGRAMS\me3\NIGHTREIGN (me3).lnk" "$INSTDIR\bin\me3.exe" \
       "launch --auto-detect -p nightreign-default" "$INSTDIR\assets\me3.ico" "" "" \
       "" "Launch NIGHTREIGN with the nightreign-default mod profile"
+
+    !insertmacro CreateInternetShortcutWithIcon "$SMPROGRAMS\me3\Documentation.URL" "https://me3.readthedocs.io" "$INSTDIR\assets\me3.ico"
 
     ; Generate an uninstaller executable
     WriteUninstaller "$INSTDIR\uninstall.exe"
