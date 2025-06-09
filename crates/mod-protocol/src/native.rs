@@ -37,16 +37,20 @@ pub struct Native {
     #[serde(default = "on")]
     pub enabled: bool,
 
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     #[serde(default)]
     load_before: Vec<Dependent<String>>,
 
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     #[serde(default)]
     load_after: Vec<Dependent<String>>,
 
     /// An optional symbol to be called after this native successfully loads.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub initializer: Option<NativeInitializerCondition>,
 
     /// An optional symbol to be called when this native successfully is queued for unload.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub finalizer: Option<String>,
 }
 

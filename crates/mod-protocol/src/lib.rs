@@ -31,8 +31,8 @@ pub enum Game {
     #[serde(alias = "ac6")]
     ArmoredCore6,
 
-    #[serde(alias = "nightreign")]
-    #[serde(rename = "nightrein")]
+    #[serde(alias = "nightrein")]
+    #[serde(rename = "nightreign")]
     Nightreign,
 }
 
@@ -88,6 +88,18 @@ impl ModProfile {
         }
     }
 
+    pub fn natives_mut(&mut self) -> &mut Vec<Native> {
+        match self {
+            ModProfile::V1(v1) => &mut v1.natives,
+        }
+    }
+
+    pub fn packages_mut(&mut self) -> &mut Vec<Package> {
+        match self {
+            ModProfile::V1(v1) => &mut v1.packages,
+        }
+    }
+
     pub fn supports_mut(&mut self) -> &mut Vec<Supports> {
         match self {
             ModProfile::V1(v1) => &mut v1.supports,
@@ -117,15 +129,18 @@ impl ModProfile {
 pub struct ModProfileV1 {
     /// The games that this profile supports.
     #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     supports: Vec<Supports>,
 
     /// Native modules (DLLs) that will be loaded.
     #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     natives: Vec<Native>,
 
     /// A collection of packages containing assets that should be considered for loading
     /// before the DVDBND.
     #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     packages: Vec<Package>,
 }
 
