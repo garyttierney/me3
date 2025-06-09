@@ -23,7 +23,7 @@ me3-env = { version = "0.5.0", path = "../env" }
 
 [dependencies.sentry]
 version = "0.38"
-default-features = true
+default-features = false
 features = [
     "tracing",
     "backtrace",
@@ -31,6 +31,7 @@ features = [
     "debug-images",
     "panic",
     "reqwest",
+    "rustls",
     "release-health",
 ]
 optional = true
