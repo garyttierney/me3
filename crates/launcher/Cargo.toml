@@ -12,7 +12,9 @@ default = []
 
 [dependencies]
 crash-context.workspace = true
-eyre = "0.6"
+eyre = { version = "0.6", default-features = false, features = [
+    "track-caller",
+] }
 dll-syringe.workspace = true
 ipc-channel.workspace = true
 me3-launcher-attach-protocol.workspace = true
