@@ -22,5 +22,7 @@ $CHANGES
 
 <details>
 <summary>PGP signature</summary>
+```
 $SIGNATURE
+```
 </details>
