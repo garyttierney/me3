@@ -50,7 +50,7 @@ pre_release_replacements = [
   { file = "CHANGELOG.md", search = "...HEAD", replace = "...$TAG_NAME", exactly = 1 },
   { file = "CHANGELOG.md", search = "ReleaseDate", replace = "$DATE" },
   { file = "CHANGELOG.md", search = "<!-- next-header -->", replace = "<!-- next-header -->\n\n## [Unreleased] - ReleaseDate", exactly = 1 },
-  { file = "CHANGELOG.md", search = "<!-- next-url -->", replace = "<!-- next-url -->\n[Unreleased]: https://github.com/assert-rs/predicates-rs/compare/$TAG_NAME...HEAD", exactly = 1 },
+  { file = "CHANGELOG.md", search = "<!-- next-url -->", replace = "<!-- next-url -->[Unreleased]: https://github.com/garyttierney/me3/compare/$TAG_NAME...HEAD", exactly = 1 },
 ]
 
 [patch.crates-io]
