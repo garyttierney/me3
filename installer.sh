@@ -361,10 +361,13 @@ main() {
         ensure mv ./*.dll ./*.exe "$me3_windows_binary_dir"
     }
 
-    local _configpath="${XDG_CONFIG_HOME:-$HOME/.config}/me3/me3.toml"
-    if [ ! -f "$_configpath" ]; then
-        say "creating default me3 configuration at $_configpath"
-        cat >"$_configpath" <<EOF
+    local _config_home_path="${XDG_CONFIG_HOME:-$HOME/.config}/me3"
+    local _config_path="$_config_home_path/me3/me3.toml"
+
+    if [ ! -f "$_config_path" ]; then
+        ensure mkdir -p "$_config_home_path"
+        say "creating default me3 configuration at $_config_path"
+        cat >"$_config_path" <<EOF
 windows_binaries_dir = "$me3_windows_binary_dir"
 EOF
 
@@ -372,7 +375,7 @@ EOF
             read -r -p "Enable crash reporting? " yn
             case $yn in
             [Yy]*)
-                echo "crash_reporting = true" >>"$_configpath"
+                echo "crash_reporting = true" >>"$_config_path"
                 break
                 ;;
             [Nn]*) exit ;;
