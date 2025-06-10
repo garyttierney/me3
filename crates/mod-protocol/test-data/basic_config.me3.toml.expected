@@ -17,7 +17,7 @@ V1(
         packages: [
             Package {
                 id: "my-mod",
-                source: ModFile(
+                path: ModFile(
                     "mod/",
                 ),
                 load_after: [],
