@@ -236,6 +236,11 @@ Section "Uninstall"
     Delete "$INSTDIR\CHANGELOG.md"
     Delete "$INSTDIR\README.txt"
     Delete "$INSTDIR\assets\me3.ico"
+    Delete "$SMPROGRAMS\me3\ELDEN RING (me3).lnk"
+    Delete "$SMPROGRAMS\me3\NIGHTREIGN (me3).lnk"
+    Delete "$SMPROGRAMS\me3\Documentation.URL"
+
+    RMDir "$SMPROGRAMS\me3"
     RMDir "$INSTDIR\assets"
     RMDir "$INSTDIR\bin"
 
