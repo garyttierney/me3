@@ -54,12 +54,10 @@ pub struct Package {
 
     /// A list of package IDs that this package should load after.
     #[serde(default)]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub(crate) load_after: Vec<Dependent<String>>,
 
     /// A list of packages that this package should load before.
     #[serde(default)]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub(crate) load_before: Vec<Dependent<String>>,
 }
 

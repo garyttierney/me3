@@ -130,18 +130,15 @@ impl ModProfile {
 pub struct ModProfileV1 {
     /// The games that this profile supports.
     #[serde(default)]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
     supports: Vec<Supports>,
 
     /// Native modules (DLLs) that will be loaded.
     #[serde(default)]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
     natives: Vec<Native>,
 
     /// A collection of packages containing assets that should be considered for loading
     /// before the DVDBND.
     #[serde(default)]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
     packages: Vec<Package>,
 }
 
