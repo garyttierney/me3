@@ -1742,6 +1742,7 @@ dependencies = [
  "update-informer",
  "ureq 3.0.11",
  "winreg",
+ "winresource",
 ]
 
 [[package]]
@@ -1768,6 +1769,7 @@ dependencies = [
  "sentry",
  "toml",
  "tracing",
+ "windows 0.61.1",
 ]
 
 [[package]]
@@ -4516,6 +4518,16 @@ checksum = "cb5a765337c50e9ec252c2069be9bf91c7df47afb103b642ba3a53bf8101be97"
 dependencies = [
  "cfg-if",
  "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "winresource"
+version = "0.1.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a179ac8923651ff1d15efbee760b4dd3679fd85fa5a8b2bb1109b7248f80e30f"
+dependencies = [
+ "toml",
+ "version_check",
 ]
 
 [[package]]
