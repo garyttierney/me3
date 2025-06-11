@@ -15,6 +15,9 @@ crash-context.workspace = true
 eyre = { version = "0.6", default-features = false, features = [
     "track-caller",
 ] }
+windows = { version = "0.61", features = [
+    "Win32_System_LibraryLoader",
+] }
 dll-syringe.workspace = true
 ipc-channel.workspace = true
 me3-launcher-attach-protocol.workspace = true

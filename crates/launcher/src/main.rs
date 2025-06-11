@@ -22,9 +22,10 @@ use me3_telemetry::TelemetryConfig;
 use minidump_writer::minidump_writer::MinidumpWriter;
 use tracing::{error, info};
 
-use crate::game::Game;
+use crate::{game::Game, steam::require_steam};
 
 mod game;
+mod steam;
 
 pub type LauncherResult<T> = eyre::Result<T>;
 
@@ -48,6 +49,8 @@ fn run() -> LauncherResult<()> {
         "Starting game at {:?} with DLL {:?}",
         args.exe, args.host_dll
     );
+
+    require_steam(&args.exe)?;
 
     let monitor_shutdown_requested = Arc::new(AtomicBool::new(false));
 
