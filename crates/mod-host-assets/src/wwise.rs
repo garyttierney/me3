@@ -1,17 +1,10 @@
-use std::{mem, ptr::NonNull, time};
+use std::mem;
 
+use regex::bytes::Regex;
 use thiserror::Error;
 use tracing::debug;
-use windows::{
-    core::{Error as WinError, PCSTR, PCWSTR},
-    Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress},
-};
 
-use crate::{mapping::ArchiveOverrideMapping, pe, rtti, sleep::with_precise_sleep};
-
-type FileLocationResolver = *const *const u8;
-
-type GetFileLocationResolver = extern "C" fn() -> Option<NonNull<FileLocationResolver>>;
+use crate::{mapping::ArchiveOverrideMapping, pe, rtti};
 
 pub type WwiseOpenFileByName = extern "C" fn(usize, *const u16, u64, usize, usize, usize) -> usize;
 
@@ -120,109 +113,60 @@ mod test {
     }
 }
 
-pub fn poll_wwise_open_file_fn(
-    freq: time::Duration,
-    timeout: time::Duration,
-) -> Result<WwiseOpenFileByName, TimeoutError> {
-    with_precise_sleep(|| {
-        let mut rtti_scan = Some(std::thread::spawn(|| unsafe {
-            find_wwise_open_file_fn_by_rtti().inspect_err(|e| {
-                debug!("DLMOW::FilePackageLowLevelIOBlocking RTTI scan error: {e}")
-            })
-        }));
-
-        let start = time::Instant::now();
-
-        let result = loop {
-            if rtti_scan.as_ref().is_some_and(|t| t.is_finished()) {
-                if let Some(Ok(open_file_fn)) = rtti_scan.take().and_then(|t| t.join().ok()) {
-                    debug!("WwiseOpenFileByName" = ?open_file_fn, source = "RTTI");
-
-                    break Ok(open_file_fn);
-                }
-            }
-
-            let by_export_result = find_wwise_open_file_fn_by_export();
-
-            if let &Ok(open_file_fn) = &by_export_result {
-                debug!("WwiseOpenFileByName" = ?open_file_fn, source = "AK::StreamMgr::GetFileLocationResolver");
-
-                break Ok(open_file_fn);
-            }
-
-            if time::Instant::now().checked_duration_since(start).unwrap() >= timeout {
-                break by_export_result;
-            }
-
-            std::thread::sleep(freq);
-        };
-
-        result.map_err(TimeoutError)
-    })
-}
-
 /// # Safety
 /// [`pelite::pe64::PeView::module`] must be safe to call on `image_base`
-unsafe fn find_wwise_open_file_fn_by_rtti() -> Result<WwiseOpenFileByName, FindError> {
-    let image_base = unsafe { GetModuleHandleW(PCWSTR::null())?.0 as _ };
+pub unsafe fn find_wwise_open_file_fn(
+    image_base: *const u8,
+) -> Result<WwiseOpenFileByName, FindError> {
+    let rtti_result = unsafe {
+        find_wwise_open_file_fn_by_rtti(image_base)
+            .inspect_err(|e| debug!("DLMOW::IOHookBlocking RTTI scan error: {e}"))
+    };
 
-    // SAFETY: must be upheld by caller.
+    if let Ok(result) = rtti_result {
+        return Ok(result);
+    }
+
+    unsafe { find_wwise_open_file_fn_by_scan(image_base) }
+}
+
+unsafe fn find_wwise_open_file_fn_by_rtti(
+    image_base: *const u8,
+) -> Result<WwiseOpenFileByName, FindError> {
     let open_by_name = unsafe {
-        rtti::find_vmt::<FilePackageLowLevelIOBlockingVtable>(
-            image_base,
-            "DLMOW::FilePackageLowLevelIOBlocking",
-        )
-        .map(|vmt| vmt.as_ref().open_by_name)?
+        rtti::find_vmt::<FilePackageLowLevelIOBlockingVtable>(image_base, "DLMOW::IOHookBlocking")
+            .map(|vmt| vmt.as_ref().open_by_name)?
     };
 
     Ok(open_by_name)
 }
 
-fn find_wwise_open_file_fn_by_export() -> Result<WwiseOpenFileByName, FindError> {
-    let module_handle = unsafe { GetModuleHandleW(PCWSTR::null())? };
+unsafe fn find_wwise_open_file_fn_by_scan(
+    image_base: *const u8,
+) -> Result<WwiseOpenFileByName, FindError> {
+    let [text] = unsafe { pe::sections(image_base, [".text"])? };
 
-    let file_location_resolver = unsafe {
-        // IAkFileLocationResolver* AK::StreamMgr::GetFileLocationResolver()
-        const EXPORT_NAME: &str =
-            "?GetFileLocationResolver@StreamMgr@AK@@YAPEAVIAkFileLocationResolver@12@XZ\0";
+    let open_file_re = Regex::new(
+        r"(?s-u)\xe8(.{4})\x83\xf8\x01(?:(?:\x74.)|(?:\x0f\x84.{4}))[\x48-\x4f]\x83[\xc0-\xc7]\x38[\x48-\x4f]\x83(?:(?:\x7d.)|(?:\xbd.{4}))\x08",
+    )
+    .unwrap();
 
-        let far_proc = GetProcAddress(module_handle, PCSTR::from_raw(EXPORT_NAME.as_ptr()))
-            .ok_or(FindError::Export("AK::StreamMgr::GetFileLocationResolver"))?;
+    let call_disp32 = open_file_re
+        .captures(text)
+        .and_then(|c| c.iter().nth(1).flatten())
+        .ok_or(FindError::Pattern)?
+        .as_bytes();
 
-        mem::transmute::<_, GetFileLocationResolver>(far_proc)().ok_or(FindError::Uninit)?
-    };
+    let call_bytes = <[u8; 4]>::try_from(call_disp32).unwrap();
 
-    // SAFETY: image base obtained from GetModuleHandleW that didn't fail.
-    let [text, rdata] = unsafe { pe::sections(module_handle.0 as _, [".text", ".rdata"])? };
-
-    let vtable_ptr = unsafe { file_location_resolver.read() };
-
-    let vtable_end = vtable_ptr.wrapping_add(7);
-
-    if !vtable_ptr.is_aligned()
-        || !rdata.as_ptr_range().contains(&vtable_ptr.cast())
-        || !rdata
-            .as_ptr_range()
-            .contains(&vtable_end.wrapping_byte_sub(1).cast())
-    {
-        return Err(FindError::Vtable);
+    unsafe {
+        Ok(mem::transmute(
+            call_disp32
+                .as_ptr_range()
+                .end
+                .offset(i32::from_le_bytes(call_bytes) as _),
+        ))
     }
-
-    let mut fn_ptr = vtable_ptr;
-
-    while fn_ptr < vtable_end {
-        // SAFETY: pointer is aligned and in ".rdata".
-        if !text.as_ptr_range().contains(unsafe { &*fn_ptr }) {
-            return Err(FindError::Vtable);
-        }
-
-        fn_ptr = fn_ptr.wrapping_add(1);
-    }
-
-    let wwise_open_file =
-        unsafe { (*vtable_ptr.cast::<FilePackageLowLevelIOBlockingVtable>()).open_by_name };
-
-    Ok(wwise_open_file)
 }
 
 #[derive(Error, Debug)]
@@ -231,14 +175,8 @@ pub enum FindError {
     Rtti(rtti::FindError),
     #[error("{0}")]
     PeSection(pe::SectionError),
-    #[error("Low level WINAPI error {0}")]
-    Winapi(WinError),
-    #[error("Export {0} not found")]
-    Export(&'static str),
-    #[error("FileLocationResolver is uninitialized")]
-    Uninit,
-    #[error("Virtual function table layout mismatch")]
-    Vtable,
+    #[error("Pattern scan returned no matches")]
+    Pattern,
 }
 
 #[derive(Error, Debug)]
@@ -254,11 +192,5 @@ impl From<rtti::FindError> for FindError {
 impl From<pe::SectionError> for FindError {
     fn from(value: pe::SectionError) -> Self {
         FindError::PeSection(value)
-    }
-}
-
-impl From<WinError> for FindError {
-    fn from(value: WinError) -> Self {
-        FindError::Winapi(value)
     }
 }
