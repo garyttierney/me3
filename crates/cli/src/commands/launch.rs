@@ -314,6 +314,7 @@ pub fn launch(
         let compat_tools = steam_dir.compat_tool_mapping()?;
         let app_compat_tool = compat_tools
             .get(&app_id)
+            .or_else(|| compat_tools.get(&0))
             .ok_or_eyre("unable to find compat tool for game")?;
 
         info!(?app_compat_tool, "found compat tool for appid");
