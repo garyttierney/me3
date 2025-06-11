@@ -16,7 +16,7 @@ use me3_mod_host_assets::{
     mapping::ArchiveOverrideMapping,
     singleton,
     string::DlUtf16String,
-    wwise::{self, poll_wwise_open_file_fn, AkOpenMode},
+    wwise::{self, find_wwise_open_file_fn, AkOpenMode},
 };
 use me3_mod_protocol::Game;
 use tracing::{debug, error, info, info_span, instrument, warn};
@@ -28,7 +28,7 @@ static VFS: Mutex<VfsMounts> = Mutex::new(VfsMounts::new());
 
 #[instrument(name = "assets", skip_all)]
 pub fn attach_override(
-    game: Game,
+    _game: Game,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     let image_base = image_base();
@@ -42,11 +42,11 @@ pub fn attach_override(
 
     // TODO: might want to freeze all threads here?
 
-    hook_file_init(game, image_base, mapping.clone())?;
+    hook_file_init(image_base, mapping.clone())?;
 
     hook_device_manager(image_base, mapping.clone())?;
 
-    if let Err(e) = try_hook_wwise(game, mapping.clone()) {
+    if let Err(e) = try_hook_wwise(image_base, mapping.clone()) {
         debug!("err" = &*e, "skipping Wwise hook");
     }
 
@@ -55,7 +55,6 @@ pub fn attach_override(
 
 #[instrument(name = "file_step", skip_all)]
 fn hook_file_init(
-    game: Game,
     image_base: *const u8,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
@@ -88,7 +87,7 @@ fn hook_file_init(
 
                     *vfs = new;
 
-                    if let Err(e) = hook_ebl_utility(game, image_base, mapping.clone()) {
+                    if let Err(e) = hook_ebl_utility(image_base, mapping.clone()) {
                         error!("err" = &*e, "failed to apply EBL hooks");
 
                         let vfs = mem::take(&mut *vfs);
@@ -108,7 +107,6 @@ fn hook_file_init(
 
 #[instrument(name = "ebl", skip_all)]
 fn hook_ebl_utility(
-    game: Game,
     image_base: *const u8,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
@@ -153,9 +151,7 @@ fn hook_ebl_utility(
 
             let snap = device_manager.snapshot();
 
-            // Mount EBL but report failure, rationale below.
-            // TODO: only "fail" EBLs from a list of wwise EBLs per game.
-            let _result = (ctx.trampoline)(p1, p2, p3, p4, p5, p6, p7);
+            let result = (ctx.trampoline)(p1, p2, p3, p4, p5, p6, p7);
 
             match snap {
                 Ok(snap) => {
@@ -170,11 +166,7 @@ fn hook_ebl_utility(
                 Err(e) => error!("BND4 snapshot error: {e}"),
             }
 
-            // There is a bug in ELDEN RING MagicOrchestra code where any absolute path not
-            // starting with "sd:" causes an infinite loop trying to resolve the
-            // root. Reporting the EBL as having failed to mount prevents it from
-            // being added to the lookup list, leaving it empty so that branch not taken.
-            game < Game::EldenRing || game >= Game::Nightreign
+            result
         })
         .install()?;
 
@@ -303,9 +295,11 @@ fn hook_set_path(
 }
 
 #[instrument(name = "wwise", skip_all)]
-fn try_hook_wwise(game: Game, mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Error> {
-    let wwise_open_file =
-        poll_wwise_open_file_fn(Duration::from_millis(1), Duration::from_secs(5))?;
+fn try_hook_wwise(
+    image_base: *const u8,
+    mapping: Arc<ArchiveOverrideMapping>,
+) -> Result<(), eyre::Error> {
+    let wwise_open_file = unsafe { find_wwise_open_file_fn(image_base)? };
 
     let hook_span = info_span!("hook");
 
@@ -320,17 +314,6 @@ fn try_hook_wwise(game: Game, mapping: Arc<ArchiveOverrideMapping>) -> Result<()
             if let Some((mapped_path, mapped_override)) =
                 wwise::find_override(&mapping, &path_string)
             {
-                // FIXME: work backwards to support NR after fixing infinite looping in ER without
-                // reporting "sd:/" as having failed to mount.
-                if game >= Game::Nightreign {
-                    warn!(
-                        "override" = mapped_path,
-                        "not presently supported for {game:?}"
-                    );
-
-                    return (ctx.trampoline)(p1, path, open_mode, p4, p5, p6);
-                }
-
                 info!("override" = mapped_path);
 
                 // Force lookup to wwise's ordinary read (from disk) mode instead of the EBL read.
