@@ -153,7 +153,7 @@ unsafe fn find_wwise_open_file_fn_by_scan(
 
     let call_disp32 = open_file_re
         .captures(text)
-        .and_then(|c| c.iter().skip(1).next().flatten())
+        .and_then(|c| c.iter().nth(1).flatten())
         .ok_or(FindError::Pattern)?
         .as_bytes();
 
