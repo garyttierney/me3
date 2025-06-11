@@ -49,8 +49,8 @@ pub struct Package {
     pub(crate) id: String,
 
     /// A path to the source of this package.
-    #[serde(alias = "path")]
-    pub(crate) source: ModFile,
+    #[serde(alias = "source")]
+    pub(crate) path: ModFile,
 
     /// A list of package IDs that this package should load after.
     #[serde(default)]
@@ -69,7 +69,7 @@ impl Package {
                 .expect("no name for this package")
                 .to_string_lossy()
                 .into(),
-            source: ModFile(path),
+            path: ModFile(path),
             load_after: vec![],
             load_before: vec![],
         }
@@ -78,17 +78,17 @@ impl Package {
     /// Makes the package's source absolute using a given base directory (this is usually the mod
     /// profile's parent path).
     pub fn make_absolute(&mut self, base: &Path) {
-        self.source = ModFile(base.join(&self.source.0));
+        self.path = ModFile(base.join(&self.path.0));
     }
 }
 
 impl WithPackageSource for Package {
     fn source(&self) -> &ModFile {
-        &self.source
+        &self.path
     }
 
     fn source_mut(&mut self) -> &mut ModFile {
-        &mut self.source
+        &mut self.path
     }
 }
 
@@ -114,6 +114,6 @@ pub trait AssetOverrideSource {
 
 impl AssetOverrideSource for &Package {
     fn asset_path(&self) -> &Path {
-        self.source.0.as_path()
+        self.path.0.as_path()
     }
 }

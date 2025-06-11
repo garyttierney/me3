@@ -159,6 +159,11 @@ Function nsDialogsPageLeave
 	${NSD_GetState} $Checkbox $TelemetryEnabled
 FunctionEnd
 
+!macro CreateInternetShortcutWithIcon FILEPATH URL ICONPATH
+WriteINIStr "${FILEPATH}" "InternetShortcut" "URL" "${URL}"
+WriteINIStr "${FILEPATH}" "InternetShortcut" "IconFile" "${ICONPATH}"
+!macroend
+
 ; Installer Section
 Section "Main Application" SEC01
     SectionIn RO
@@ -188,8 +193,20 @@ Section "Main Application" SEC01
 
     WriteRegStr HKCU "Software\${PRODUCT}" "Install_Dir" $INSTDIR
     nsExec::Exec '"$INSTDIR\bin\me3.exe" add-to-path'
-    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er eldenring-default'
-    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr nightreign-default'
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr nightreign-default --package nightreign-mods'
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er eldenring-default --package eldenring-mods'
+
+    CreateDirectory "$SMPROGRAMS\me3"
+    CreateShortCut "$SMPROGRAMS\me3\ELDEN RING (me3).lnk" "$INSTDIR\bin\me3.exe" \
+      "launch --auto-detect -p eldenring-default" "$INSTDIR\assets\me3.ico" "" "" \
+      "" "Launch ELDEN RING with the eldenring-default mod profile"
+
+    CreateShortCut "$SMPROGRAMS\me3\NIGHTREIGN (me3).lnk" "$INSTDIR\bin\me3.exe" \
+      "launch --auto-detect -p nightreign-default" "$INSTDIR\assets\me3.ico" "" "" \
+      "" "Launch NIGHTREIGN with the nightreign-default mod profile"
+
+    !insertmacro CreateInternetShortcutWithIcon "$SMPROGRAMS\me3\Documentation.URL" "https://me3.readthedocs.io" "$INSTDIR\assets\me3.ico"
+
     ; Generate an uninstaller executable
     WriteUninstaller "$INSTDIR\uninstall.exe"
 
@@ -211,7 +228,7 @@ SectionEnd
 
 Section "Uninstall"
     Delete "$INSTDIR\bin\me3-launcher.exe"
-    Delete "$INSTDIR\bin\me3_host.dll"
+    Delete "$INSTDIR\bin\me3_mod_host.dll"
     Delete "$INSTDIR\bin\me3.exe"
     Delete "$INSTDIR\uninstall.exe"
     Delete "$INSTDIR\LICENSE-APACHE"
@@ -219,6 +236,11 @@ Section "Uninstall"
     Delete "$INSTDIR\CHANGELOG.md"
     Delete "$INSTDIR\README.txt"
     Delete "$INSTDIR\assets\me3.ico"
+    Delete "$SMPROGRAMS\me3\ELDEN RING (me3).lnk"
+    Delete "$SMPROGRAMS\me3\NIGHTREIGN (me3).lnk"
+    Delete "$SMPROGRAMS\me3\Documentation.URL"
+
+    RMDir "$SMPROGRAMS\me3"
     RMDir "$INSTDIR\assets"
     RMDir "$INSTDIR\bin"
 

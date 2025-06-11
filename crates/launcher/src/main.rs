@@ -10,12 +10,12 @@ use std::{
         },
         Arc,
     },
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use crash_context::CrashContext;
 use eyre::Context;
-use ipc_channel::ipc::{IpcError, IpcOneShotServer};
+use ipc_channel::ipc::{IpcError, IpcOneShotServer, TryRecvError};
 use me3_env::{LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
 use me3_telemetry::TelemetryConfig;
@@ -49,19 +49,20 @@ fn run() -> LauncherResult<()> {
         args.exe, args.host_dll
     );
 
-    let shutdown_requested = Arc::new(AtomicBool::new(false));
+    let monitor_shutdown_requested = Arc::new(AtomicBool::new(false));
 
     let game_path = args.exe.parent();
     let mut game = Game::launch(&args.exe, game_path)?;
 
-    let monitor_thread_shutdown = shutdown_requested.clone();
+    let monitor_thread_shutdown = monitor_shutdown_requested.clone();
     let monitor_thread = std::thread::spawn(move || {
         info!("Starting monitor thread");
+
         let (receiver, client) = monitor_server.accept().unwrap();
         info!("Host connected to monitor with message {:?}", client);
 
         while monitor_thread_shutdown.load(Ordering::SeqCst) {
-            match receiver.recv() {
+            match receiver.try_recv_timeout(Duration::from_secs(1)) {
                 Ok(msg) => match msg {
                     HostMessage::CrashDumpRequest {
                         exception_pointers,
@@ -122,8 +123,9 @@ fn run() -> LauncherResult<()> {
                     }
                     HostMessage::Attached => info!("Attach completed"),
                 },
-                Err(IpcError::Disconnected) => break,
-                Err(e) => {
+                Err(TryRecvError::Empty) => continue,
+                Err(TryRecvError::IpcError(IpcError::Disconnected)) => break,
+                Err(TryRecvError::IpcError(e)) => {
                     error!(error = &e as &dyn Error, "Error from monitor channel");
                     break;
                 }
@@ -133,8 +135,18 @@ fn run() -> LauncherResult<()> {
 
     let result = game.attach(&args.host_dll, request);
 
+    if let Err(error) = result.as_ref() {
+        error!(
+            error = &**error,
+            "an error occurred while loading me3, modded content will not be available"
+        );
+
+        monitor_shutdown_requested.store(true, SeqCst);
+    }
+
     game.join();
-    shutdown_requested.store(true, SeqCst);
+    monitor_shutdown_requested.store(true, SeqCst);
+
     let _ = monitor_thread.join();
 
     result.map(|_| ())

@@ -22,7 +22,7 @@ pub struct AttachConfig {
     pub packages: Vec<Package>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Attachment;
 
 pub type AttachResult = Result<Attachment, AttachError>;

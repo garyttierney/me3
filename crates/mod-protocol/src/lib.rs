@@ -31,8 +31,8 @@ pub enum Game {
     #[serde(alias = "ac6")]
     ArmoredCore6,
 
-    #[serde(alias = "nightreign")]
-    #[serde(rename = "nightrein")]
+    #[serde(alias = "nightrein")]
+    #[serde(rename = "nightreign")]
     Nightreign,
 }
 
@@ -44,6 +44,7 @@ impl Display for InvalidGame {
         write!(f, "{} is not a supported game", self.0)
     }
 }
+
 impl FromStr for Game {
     type Err = InvalidGame;
 
@@ -85,6 +86,18 @@ impl ModProfile {
             }
             Some("json") => serde_json::from_reader(file).map_err(std::io::Error::other),
             Some(format) => Err(std::io::Error::other(format!("{format} is unsupported"))),
+        }
+    }
+
+    pub fn natives_mut(&mut self) -> &mut Vec<Native> {
+        match self {
+            ModProfile::V1(v1) => &mut v1.natives,
+        }
+    }
+
+    pub fn packages_mut(&mut self) -> &mut Vec<Package> {
+        match self {
+            ModProfile::V1(v1) => &mut v1.packages,
         }
     }
 
