@@ -20,6 +20,9 @@ pub struct AttachConfig {
 
     /// An ordered list of packages to be loaded on attach.
     pub packages: Vec<Package>,
+
+    /// Suspend the game until a debugger is attached?
+    pub suspend: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

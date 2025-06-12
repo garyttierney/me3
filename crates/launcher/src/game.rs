@@ -118,6 +118,10 @@ impl Game {
                 .ok_or_eyre("No symbol named `me_attach` found")?
         };
 
+        if request.config.suspend {
+            info!("Process will be suspended until a debugger is attached...");
+        }
+
         let response = payload.call(&request)?.map_err(|e| eyre::eyre!(e.0))?;
 
         unsafe {

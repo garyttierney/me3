@@ -20,6 +20,7 @@ use me3_launcher_attach_protocol::{
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use me3_telemetry::TelemetryConfig;
 use tracing::{error, info, Span};
+use windows::Win32::System::Diagnostics::Debug::IsDebuggerPresent;
 
 use crate::{
     deferred::defer_until_init,
@@ -41,6 +42,10 @@ const DLL_PROCESS_ATTACH: u32 = 1;
 
 dll_syringe::payload_procedure! {
     fn me_attach(request: AttachRequest) -> AttachResult {
+        if request.config.suspend {
+            suspend_for_debugger();
+        }
+
         on_attach(request)
     }
 }
@@ -55,6 +60,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
                 game,
                 natives,
                 packages,
+                ..
             },
     } = request;
 
@@ -137,6 +143,16 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     })?;
 
     Ok(result)
+}
+
+fn suspend_for_debugger() {
+    loop {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        if unsafe { IsDebuggerPresent().as_bool() } {
+            break;
+        }
+    }
 }
 
 #[no_mangle]
