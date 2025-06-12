@@ -20,14 +20,15 @@ use me3_launcher_attach_protocol::{
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use me3_telemetry::TelemetryConfig;
 use tracing::{error, info, Span};
-use windows::Win32::System::Diagnostics::Debug::IsDebuggerPresent;
 
 use crate::{
+    debugger::suspend_for_debugger,
     deferred::defer_until_init,
     host::{hook::thunk::ThunkPool, ModHost},
 };
 
 mod asset_hooks;
+mod debugger;
 mod deferred;
 mod detour;
 mod host;
@@ -143,16 +144,6 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     })?;
 
     Ok(result)
-}
-
-fn suspend_for_debugger() {
-    loop {
-        std::thread::sleep(std::time::Duration::from_secs(1));
-
-        if unsafe { IsDebuggerPresent().as_bool() } {
-            break;
-        }
-    }
 }
 
 #[no_mangle]
