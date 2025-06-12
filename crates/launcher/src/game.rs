@@ -63,7 +63,7 @@ impl Game {
         Ok(Self { child })
     }
 
-    #[instrument]
+    #[instrument(skip_all, err)]
     pub fn attach(&self, dll_path: &Path, request: AttachRequest) -> LauncherResult<Attachment> {
         let pid = self.child.id();
 
