@@ -19,11 +19,15 @@ use me3_launcher_attach_protocol::{
 };
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use me3_telemetry::TelemetryConfig;
-use tracing::info;
+use tracing::{error, info, Span};
 
-use crate::host::{hook::thunk::ThunkPool, ModHost};
+use crate::{
+    deferred::defer_until_init,
+    host::{hook::thunk::ThunkPool, ModHost},
+};
 
 mod asset_hooks;
+mod deferred;
 mod detour;
 mod host;
 mod native;
@@ -111,9 +115,23 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         info!("Host successfully attached");
 
-        asset_hooks::attach_override(game, override_mapping.clone())?;
+        defer_until_init({
+            let current_span = Span::current();
+            let override_mapping = override_mapping.clone();
 
-        info!("Applied asset override hooks");
+            move || {
+                let _span_guard = current_span.enter();
+
+                if let Err(e) = asset_hooks::attach_override(game, override_mapping) {
+                    error!(
+                        "error" = &*e,
+                        "failed to attach asset override hooks; no files will be overriden"
+                    )
+                }
+            }
+        })?;
+
+        info!("Deferred asset override hooks");
 
         Ok(Attachment)
     })?;
