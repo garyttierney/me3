@@ -20,7 +20,7 @@ use me3_env::{LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
 use me3_telemetry::TelemetryConfig;
 use minidump_writer::minidump_writer::MinidumpWriter;
-use tracing::{error, info};
+use tracing::{error, info, instrument};
 
 use crate::{game::Game, steam::require_steam};
 
@@ -29,6 +29,7 @@ mod steam;
 
 pub type LauncherResult<T> = eyre::Result<T>;
 
+#[instrument]
 fn run() -> LauncherResult<()> {
     info!("Launcher started");
 
