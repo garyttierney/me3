@@ -132,7 +132,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
                 if let Err(e) = asset_hooks::attach_override(game, override_mapping) {
                     error!(
                         "error" = &*e,
-                        "failed to attach asset override hooks; no files will be overriden"
+                        "failed to attach asset override hooks; no files will be overridden"
                     )
                 }
             }
