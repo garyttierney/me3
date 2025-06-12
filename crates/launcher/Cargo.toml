@@ -16,7 +16,9 @@ eyre = { version = "0.6", default-features = false, features = [
     "track-caller",
 ] }
 windows = { version = "0.61", features = [
+    "Win32_System_Diagnostics_Debug",
     "Win32_System_LibraryLoader",
+    "Win32_System_Threading",
 ] }
 dll-syringe.workspace = true
 ipc-channel.workspace = true
