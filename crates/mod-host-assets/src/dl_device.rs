@@ -273,7 +273,7 @@ impl DlDeviceManagerGuard {
         }
     }
 
-    pub fn push_vfs(&mut self, vfs: &VfsMounts) -> VfsPushGuard {
+    pub fn push_vfs(&mut self, vfs: &VfsMounts) -> VfsPushGuard<'_> {
         let device_manager = unsafe { self.inner.as_mut() };
 
         let old_len = device_manager.bnd4_mounts.len();
