@@ -4,8 +4,6 @@ pub mod ebl;
 pub mod file_step;
 pub mod mapping;
 pub mod rtti;
-pub mod singleton;
-pub mod sleep;
 pub mod string;
 pub mod wwise;
 
