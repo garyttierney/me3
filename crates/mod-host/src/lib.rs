@@ -122,7 +122,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 }
 
 #[no_mangle]
-pub extern "stdcall" fn DllMain(instance: usize, reason: u32, _: *mut usize) -> i32 {
+pub extern "system" fn DllMain(instance: usize, reason: u32, _: *mut usize) -> i32 {
     match reason {
         DLL_PROCESS_ATTACH => {
             let _ = INSTANCE.set(instance);

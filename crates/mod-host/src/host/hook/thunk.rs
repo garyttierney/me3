@@ -75,6 +75,7 @@ pub struct ThunkInfo {
 }
 
 impl ThunkInfo {
+    #[allow(unused)]
     pub fn trampoline(&self) -> *const () {
         self.trampoline
     }
