@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Address some file overrides not being loaded in Nightreign by @Dasaav-dsv in <https://github.com/garyttierney/me3/pull/111>
 - Fix Wwise soundbank and loose wem overrides in ER/AC6/NR by @Dasaav-dsv in <https://github.com/garyttierney/me3/pull/128>
 - Convey that Steam is required and fix launcher panic when Steam isn't open by @Dasaav-dsv
-- Fix error reporting when game fails to launch when "Run as Administrator" compatability setting is enabled by @Dasaav-dsv
+- Fix error reporting when game fails to launch when "Run as Administrator" compatibility setting is enabled by @Dasaav-dsv
 
 ## [v0.4.0] - 2025-06-07
 
