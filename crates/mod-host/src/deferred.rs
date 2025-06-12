@@ -4,7 +4,7 @@ use std::{
 };
 
 use eyre::{eyre, OptionExt};
-use tracing::instrument;
+use tracing::{instrument, Level};
 use windows::{
     core::{s, w},
     Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW},
@@ -59,7 +59,7 @@ fn hook_steam_init() -> Result<(), eyre::Error> {
     Ok(())
 }
 
-#[instrument(ret)]
+#[instrument(ret(level = Level::DEBUG))]
 fn steam_init_fn() -> Result<extern "C" fn() -> bool, eyre::Error> {
     unsafe {
         let steam_dll = LoadLibraryW(w!("steam_api64.dll"))?;
