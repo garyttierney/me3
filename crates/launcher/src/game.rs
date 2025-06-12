@@ -55,7 +55,7 @@ impl Game {
 
         let child = command.spawn().map_err(|e| match e.raw_os_error().map(|i| WIN32_ERROR(i as u32)) {
             Some(ERROR_ELEVATION_REQUIRED) => eyre!(
-                "Elevation is required to launch the game. Disable \"Run this program as an administrator\" for \"{}\" and try again.", game_binary.display()
+                "Elevation is required to launch the game. Disable \"Run this program as an administrator\" and try again."
             ),
             _ => e.into()
         })?;
