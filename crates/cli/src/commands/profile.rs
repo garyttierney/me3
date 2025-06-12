@@ -12,7 +12,8 @@ use me3_mod_protocol::{
     package::{Package, WithPackageSource},
     ModProfile, Supports,
 };
-use tracing::{debug, error, warn};
+use native_dialog::DialogBuilder;
+use tracing::{debug, error, info, warn};
 
 use crate::{output::OutputBuilder, Config, Game};
 
@@ -34,6 +35,9 @@ pub enum ProfileCommands {
 pub struct ProfileCreateArgs {
     /// Name of the profile.
     name: String,
+
+    #[clap(short('i'), long("interactive"), action = ArgAction::SetTrue)]
+    interactive: bool,
 
     /// An optional game to associate with this profile for one-click launches.
     #[clap(
@@ -92,7 +96,7 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         config.resolve_profile(&args.name)?
     };
 
-    if std::fs::exists(&profile_path).is_ok_and(|exists| exists) && args.overwrite {
+    if std::fs::exists(&profile_path).is_ok_and(|exists| exists) && !args.overwrite {
         error!("profile already exists, use --overwrite to ignore this error");
         return Ok(());
     }
@@ -133,10 +137,47 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         natives.push(Native::new(pkg));
     }
 
+    let mut status = String::from("Do you want to add mods to the new profile?");
+    if args.interactive {
+        while let Ok(true) = DialogBuilder::message()
+            .set_title("Configure profile")
+            .set_text(&status)
+            .confirm()
+            .show()
+        {
+            let Some(mod_folder) = DialogBuilder::file()
+                .set_title("Select a folder containing modded files or DLLs")
+                .open_single_dir()
+                .show()?
+            else {
+                status = "No mods were selected. Continue adding mods?".into();
+                continue;
+            };
+
+            let natives: Vec<PathBuf> = fs::read_dir(&mod_folder)?
+                .filter_map(|path| {
+                    let entry = path.ok()?;
+                    let path = entry.path();
+                    let is_dll = path.extension()? == "dll";
+
+                    is_dll.then_some(path)
+                })
+                .collect();
+
+            let natives_description = natives
+                .iter()
+                .filter_map(|native| native.file_name()?.to_str())
+                .collect::<Vec<&str>>()
+                .join(", ");
+
+            status = textwrap::fill(&format!("Added package {mod_folder:?} and native mods {natives_description}. Continue adding more mods?"), 80);
+        }
+    }
+
     let contents = toml::to_string_pretty(&profile)?;
-
-    std::fs::write(profile_path, contents)?;
-
+    let editor = std::env::var("VISUAL").ok().unwrap_or("edit".into());
+    std::fs::write(&profile_path, contents)?;
+    open::with_detached(&profile_path, editor)?;
     Ok(())
 }
 
