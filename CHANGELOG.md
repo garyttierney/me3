@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Basic support for Seamless Coop and other ModEngine2 compatible mods by @garyttierney in <https://github.com/garyttierney/me3/pull/116>
+- New suspended me3_mod_host.dll attach system for supported games by @Dasaav-dsv
+- CLI `me3 launch` flag `--suspend` for suspending the game until a debugger is attached by @Dasaav-dsv
 
 ### Fixes
 
