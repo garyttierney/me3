@@ -7,7 +7,7 @@ license.workspace = true
 
 [features]
 sentry = ["dep:sentry"]
-default = ["sentry"]
+default = []
 
 [dependencies]
 
