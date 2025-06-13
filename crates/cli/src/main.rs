@@ -1,3 +1,5 @@
+slint::include_modules!();
+
 use std::{error::Error, io::stderr, path::PathBuf, str::FromStr};
 
 use clap::{builder::PossibleValue, ArgAction, Parser, ValueEnum};
@@ -74,6 +76,7 @@ impl Game {
 
     pub fn launcher(&self) -> PathBuf {
         use me3_mod_protocol::Game as G;
+
 
         PathBuf::from(match self.0 {
             G::EldenRing => "Game/eldenring.exe",

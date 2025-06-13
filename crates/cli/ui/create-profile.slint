@@ -1,0 +1,89 @@
+import { StandardButton, GridBox, LineEdit, Button, ListView, HorizontalBox, StandardListView, VerticalBox } from "std-widgets.slint";
+import { Palette, StyleMetrics, ComboBox } from "std-widgets.slint";
+export struct ModItem  {
+    path: string,
+    is_dll: bool,
+}
+
+export component CreateProfileDialog inherits Dialog {
+    in-out property <[ModItem]> mods;
+
+    callback add_new_mod;
+
+    preferred-width: 350px;
+    preferred-height: 300px;
+
+    VerticalBox {
+        HorizontalLayout {
+            alignment: stretch;
+            spacing: 10px;
+            game_label := Text {
+                text: "Game:";
+
+                vertical-alignment: center;
+                horizontal-alignment: left;
+            }
+
+            ComboBox {
+                model: ["ELDEN RING", "ELDEN RING: NIGHTREIGN", "Armored Core VI"];
+                current-index: -1;
+                horizontal-stretch: 1;
+                max-height: game_label.preferred-height;
+            }
+        }
+
+        Rectangle {
+            padding: 5px;
+            border-width: 1px;
+            border-color: grey;
+            ListView {
+                padding: 5px;
+                vertical-scrollbar-policy: always-on;
+                for dep in root.mods: HorizontalBox {
+                    alignment: stretch;
+                    padding-bottom: 0;
+                    label := HorizontalBox {
+                        alignment: start;
+                        horizontal-stretch: 1;
+
+                        crate_name := Text {
+                            text: dep.path;
+                        }
+
+                        if (dep.is_dll): Text {
+                            text: " (DLL)";
+                            color: gray;
+                        }
+                    }
+
+                    Button {
+                        clicked => {
+                        }
+
+                        min-height: label.preferred_height;
+                        text: "🗑️ Remove";
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            alignment: end;
+            Button {
+                clicked => {
+                    root.add_new_mod()
+                }
+
+                text: "Add new mod";
+            }
+
+            StandardButton {
+                kind: ok;
+            }
+
+            StandardButton {
+                kind: cancel;
+            }
+        }
+    }
+}

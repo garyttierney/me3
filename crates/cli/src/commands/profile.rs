@@ -13,9 +13,10 @@ use me3_mod_protocol::{
     ModProfile, Supports,
 };
 use native_dialog::DialogBuilder;
+use slint::{ComponentHandle, Model, ModelRc, VecModel};
 use tracing::{debug, error, info, warn};
 
-use crate::{output::OutputBuilder, Config, Game};
+use crate::{output::OutputBuilder, Config, CreateProfileDialog, Game, ModItem};
 
 #[derive(Subcommand, Debug)]
 #[command(flatten_help = true)]
@@ -137,24 +138,32 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         natives.push(Native::new(pkg));
     }
 
-    let mut status = String::from("Do you want to add mods to the new profile?");
     if args.interactive {
-        while let Ok(true) = DialogBuilder::message()
-            .set_title("Configure profile")
-            .set_text(&status)
-            .confirm()
-            .show()
-        {
-            let Some(mod_folder) = DialogBuilder::file()
+        let mut dialog = CreateProfileDialog::new()?;
+        let mut mods = slint::VecModel::default();
+
+        for native in natives {
+            mods.push(ModItem {
+                is_dll: true,
+                path: native.path.to_str().unwrap().into(),
+            });
+        }
+
+        let model = ModelRc::new(mods);
+        dialog.set_mods(model);
+        let dialog_handle = dialog.as_weak();
+
+        dialog.on_add_new_mod(move || {
+            let Ok(Some(mod_folder)) = DialogBuilder::file()
                 .set_title("Select a folder containing modded files or DLLs")
                 .open_single_dir()
-                .show()?
+                .show()
             else {
-                status = "No mods were selected. Continue adding mods?".into();
-                continue;
+                return;
             };
 
-            let natives: Vec<PathBuf> = fs::read_dir(&mod_folder)?
+            let natives: Vec<PathBuf> = fs::read_dir(&mod_folder)
+                .unwrap()
                 .filter_map(|path| {
                     let entry = path.ok()?;
                     let path = entry.path();
@@ -164,14 +173,28 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
                 })
                 .collect();
 
-            let natives_description = natives
-                .iter()
-                .filter_map(|native| native.file_name()?.to_str())
-                .collect::<Vec<&str>>()
-                .join(", ");
+            if let Some(model) = dialog_handle
+                .upgrade()
+                .unwrap()
+                .get_mods()
+                .as_any()
+                .downcast_ref::<VecModel<ModItem>>()
+            {
+                for native in natives {
+                    model.push(ModItem {
+                        path: native.to_str().unwrap().into(),
+                        is_dll: true,
+                    });
+                }
 
-            status = textwrap::fill(&format!("Added package {mod_folder:?} and native mods {natives_description}. Continue adding more mods?"), 80);
-        }
+                model.push(ModItem {
+                    path: mod_folder.to_str().unwrap().into(),
+                    is_dll: false,
+                });
+            }
+        });
+
+        let _ = dialog.run()?;
     }
 
     let contents = toml::to_string_pretty(&profile)?;
