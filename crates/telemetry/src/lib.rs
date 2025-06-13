@@ -1,12 +1,11 @@
 use std::{fs::OpenOptions, str::FromStr, time::Duration};
 
 use me3_env::{deserialize_from_env, TelemetryVars};
-use sentry::{Hub, SentryTrace, TransactionContext, TransactionOrSpan};
 use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{
-    fmt::{self, writer::BoxMakeWriter},
+    fmt::{self, writer::BoxMakeWriter, Layer},
     prelude::*,
     EnvFilter,
 };
@@ -22,29 +21,36 @@ pub fn with_root_span<T>(
     op: &str,
     f: impl FnOnce() -> color_eyre::Result<T>,
 ) -> color_eyre::Result<T> {
-    let hub = Hub::main();
-    let trace_id = deserialize_from_env()
-        .ok()
-        .and_then(|vars: TelemetryVars| vars.trace_id);
+    #[cfg(feature = "sentry")]
+    let (transaction_is_root, transaction) = {
+        use sentry::{Hub, SentryTrace, TransactionContext, TransactionOrSpan};
 
-    let (transaction_is_root, transaction_context) = trace_id
-        .and_then(|v| sentry::parse_headers([("sentry-trace", v.as_str())]))
-        .map(|trace| {
-            (
-                false,
-                TransactionContext::continue_from_sentry_trace(name, op, &trace, None),
-            )
-        })
-        .unwrap_or_else(|| (true, TransactionContext::new(name, op)));
+        let hub = Hub::main();
+        let trace_id = deserialize_from_env()
+            .ok()
+            .and_then(|vars: TelemetryVars| vars.trace_id);
 
-    if transaction_is_root {
-        sentry::start_session();
-    }
+        let (transaction_is_root, transaction_context) = trace_id
+            .and_then(|v| sentry::parse_headers([("sentry-trace", v.as_str())]))
+            .map(|trace| {
+                (
+                    false,
+                    TransactionContext::continue_from_sentry_trace(name, op, &trace, None),
+                )
+            })
+            .unwrap_or_else(|| (true, TransactionContext::new(name, op)));
 
-    let transaction = sentry::start_transaction(transaction_context);
-    hub.configure_scope(|scope| {
-        scope.set_span(Some(TransactionOrSpan::Transaction(transaction.clone())))
-    });
+        if transaction_is_root {
+            sentry::start_session();
+        }
+
+        let transaction = sentry::start_transaction(transaction_context);
+        hub.configure_scope(|scope| {
+            scope.set_span(Some(TransactionOrSpan::Transaction(transaction.clone())))
+        });
+
+        (transaction_is_root, transaction)
+    };
 
     let result = f();
 
@@ -52,13 +58,16 @@ pub fn with_root_span<T>(
         report_fatal_error(e);
     }
 
-    transaction.finish();
+    #[cfg(feature = "sentry")]
+    {
+        transaction.finish();
 
-    if transaction_is_root {
-        sentry::end_session_with_status(match &result {
-            Ok(_) => sentry::protocol::SessionStatus::Ok,
-            Err(_) => sentry::protocol::SessionStatus::Crashed,
-        });
+        if transaction_is_root {
+            sentry::end_session_with_status(match &result {
+                Ok(_) => sentry::protocol::SessionStatus::Ok,
+                Err(_) => sentry::protocol::SessionStatus::Crashed,
+            });
+        }
     }
 
     result
@@ -142,12 +151,13 @@ pub fn report_fatal_error(error: &color_eyre::Report) {
 pub fn trace_id() -> Option<String> {
     #[cfg(feature = "sentry")]
     {
-        let hub = Hub::current();
+        let hub = sentry::Hub::current();
 
         hub.configure_scope(|scope| {
             scope.get_span().map(|tx| {
                 let cx = tx.get_trace_context();
-                let trace = SentryTrace::new(cx.trace_id, cx.span_id, Some(tx.is_sampled()));
+                let trace =
+                    sentry::SentryTrace::new(cx.trace_id, cx.span_id, Some(tx.is_sampled()));
 
                 trace.to_string()
             })
@@ -232,11 +242,17 @@ pub fn install(config: TelemetryConfig) -> Telemetry {
             .with_filter(filter_layer)
     });
 
+    #[cfg(not(feature = "sentry"))]
+    let layer = tracing_subscriber::layer::Identity::new();
+
+    #[cfg(feature = "sentry")]
+    let layer = sentry::integrations::tracing::layer();
+
     tracing_subscriber::registry()
         .with(ErrorLayer::default())
         .with(file_layer)
-        .with(console_layer)
-        .with(sentry::integrations::tracing::layer())
+        .with(console_layer.boxed())
+        .with(layer)
         .init();
 
     cleanup.push(Box::from(move || drop(console_guard)));
@@ -294,5 +310,9 @@ pub fn install(config: TelemetryConfig) -> Telemetry {
         })
     };
 
-    Telemetry { cleanup, client }
+    Telemetry {
+        cleanup,
+        #[cfg(feature = "sentry")]
+        client,
+    }
 }
