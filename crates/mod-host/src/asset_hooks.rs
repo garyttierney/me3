@@ -170,6 +170,8 @@ fn hook_ebl_utility(
         })
         .install()?;
 
+    info!("type" = "ebl", "applied asset override hook");
+
     Ok(())
 }
 
@@ -243,6 +245,8 @@ fn hook_device_manager(
             VFS.lock().unwrap().try_open_file(path, p3, p4, p5, p6)
         })
         .install()?;
+
+    info!("type" = "file", "applied asset override hook");
 
     Ok(())
 }
@@ -328,6 +332,8 @@ fn try_hook_wwise(
             }
         })
         .install()?;
+
+    info!("type" = "wwise", "applied asset override hook");
 
     Ok(())
 }
