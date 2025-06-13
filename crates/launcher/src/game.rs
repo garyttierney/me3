@@ -1,7 +1,7 @@
 use std::{
+    os::windows::{io::AsHandle, process::CommandExt},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
-    time::Duration,
+    process::Command,
 };
 
 use dll_syringe::{
@@ -13,7 +13,19 @@ use eyre::{eyre, OptionExt};
 use me3_env::{deserialize_from_env, serialize_into_command, TelemetryVars};
 use me3_launcher_attach_protocol::{AttachFunction, AttachRequest, Attachment};
 use tracing::{info, instrument};
-use windows::Win32::Foundation::{ERROR_ELEVATION_REQUIRED, WIN32_ERROR};
+use windows::Win32::{
+    Foundation::{
+        CloseHandle, DuplicateHandle, DBG_CONTINUE, DUPLICATE_SAME_ACCESS,
+        ERROR_ELEVATION_REQUIRED, WIN32_ERROR,
+    },
+    System::{
+        Diagnostics::Debug::{
+            ContinueDebugEvent, DebugActiveProcessStop, WaitForDebugEvent,
+            CREATE_PROCESS_DEBUG_EVENT, DEBUG_EVENT,
+        },
+        Threading::{GetCurrentProcess, ResumeThread, SuspendThread, DEBUG_PROCESS, INFINITE},
+    },
+};
 
 use crate::LauncherResult;
 
@@ -39,13 +51,11 @@ impl Game {
         info!(trace_id = telemetry_vars.trace_id, "game trace_id");
         serialize_into_command(telemetry_vars, &mut command);
 
-        command.stdout(Stdio::inherit());
-        command.stdin(Stdio::inherit());
-        command.stderr(Stdio::inherit());
+        command.creation_flags(DEBUG_PROCESS.0);
 
         let child = command.spawn().map_err(|e| match e.raw_os_error().map(|i| WIN32_ERROR(i as u32)) {
             Some(ERROR_ELEVATION_REQUIRED) => eyre!(
-                "Elevation is required to launch the game. Disable \"Run this program as an administrator\" for \"{}\" and try again.", game_binary.display()
+                "Elevation is required to launch the game. Disable \"Run this program as an administrator\" and try again."
             ),
             _ => e.into()
         })?;
@@ -53,20 +63,53 @@ impl Game {
         Ok(Self { child })
     }
 
-    #[instrument]
-    pub fn attach(
-        &mut self,
-        dll_path: &Path,
-        request: AttachRequest,
-    ) -> LauncherResult<Attachment> {
+    #[instrument(skip_all, err)]
+    pub fn attach(&self, dll_path: &Path, request: AttachRequest) -> LauncherResult<Attachment> {
         let pid = self.child.id();
 
-        info!("Attaching to process {pid}");
+        info!(pid, "attaching to process");
 
-        let process = OwnedProcess::from_pid(pid)?;
+        let thread_handle = unsafe {
+            let mut debug_event = DEBUG_EVENT::default();
 
-        // TODO: no hardcoded timeout.
-        let _ = process.wait_for_module_by_name("kernel32", Duration::from_secs(5));
+            WaitForDebugEvent(&mut debug_event, INFINITE)?;
+
+            assert_eq!(debug_event.dwDebugEventCode, CREATE_PROCESS_DEBUG_EVENT);
+
+            // SAFETY: debug event code asserted above
+            let event_info = &debug_event.u.CreateProcessInfo;
+
+            // https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-waitfordebugevent
+            CloseHandle(event_info.hFile)?;
+
+            let current_process_handle = GetCurrentProcess();
+            let mut thread_handle = Default::default();
+
+            DuplicateHandle(
+                current_process_handle,
+                event_info.hThread,
+                current_process_handle,
+                &mut thread_handle,
+                0,
+                false,
+                DUPLICATE_SAME_ACCESS,
+            )?;
+
+            // Increment the thread's suspend counter
+            SuspendThread(event_info.hThread);
+
+            ContinueDebugEvent(pid, debug_event.dwThreadId, DBG_CONTINUE)?;
+
+            DebugActiveProcessStop(pid)?;
+
+            thread_handle
+        };
+
+        let process_handle = self.child.as_handle().try_clone_to_owned()?;
+
+        // SAFETY: `process_handle` is a process handle that is exclusively owned.
+        let process = unsafe { OwnedProcess::from_handle_unchecked(process_handle) };
+
         let injector = Syringe::for_process(process);
         let module = injector.inject(dll_path)?;
         let payload: RemotePayloadProcedure<AttachFunction> = unsafe {
@@ -75,7 +118,15 @@ impl Game {
                 .ok_or_eyre("No symbol named `me_attach` found")?
         };
 
+        if request.config.suspend {
+            info!("Process will be suspended until a debugger is attached...");
+        }
+
         let response = payload.call(&request)?.map_err(|e| eyre::eyre!(e.0))?;
+
+        unsafe {
+            ResumeThread(thread_handle);
+        }
 
         info!("Successfully attached");
 

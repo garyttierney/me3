@@ -63,6 +63,10 @@ pub struct LaunchArgs {
     #[clap(short('d'), long("diagnostics"), action = ArgAction::SetTrue)]
     diagnostics: bool,
 
+    /// Suspend the game until a debugger is attached?
+    #[clap(long("suspend"), action = ArgAction::SetTrue)]
+    suspend: bool,
+
     /// An optional path to the game executable to launch with mod support. Uses the default
     /// launcher if not present.
     #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
@@ -302,6 +306,7 @@ pub fn launch(
         game: game.into(),
         packages: ordered_packages,
         natives: ordered_natives,
+        suspend: args.suspend,
     };
 
     std::fs::write(&attach_config_file, toml::to_string_pretty(&attach_config)?)?;

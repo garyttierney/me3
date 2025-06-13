@@ -56,7 +56,7 @@ fn run() -> LauncherResult<()> {
     let monitor_shutdown_requested = Arc::new(AtomicBool::new(false));
 
     let game_path = args.exe.parent();
-    let mut game = Game::launch(&args.exe, game_path)?;
+    let game = Game::launch(&args.exe, game_path)?;
 
     let monitor_thread_shutdown = monitor_shutdown_requested.clone();
     let monitor_thread = std::thread::spawn(move || {

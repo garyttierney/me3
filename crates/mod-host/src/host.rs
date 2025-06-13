@@ -1,9 +1,8 @@
 use std::{
-    ffi::{CStr, CString},
+    ffi::CString,
     fmt::Debug,
     marker::{FnPtr, Tuple},
     path::Path,
-    ptr::NonNull,
     sync::{Arc, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
     time::Duration,
 };
@@ -115,7 +114,7 @@ impl ModHost {
             .expect("already attached");
     }
 
-    pub fn hook<F>(&mut self, target: F) -> HookInstaller<F>
+    pub fn hook<F>(&mut self, target: F) -> HookInstaller<'_, F>
     where
         F: Function + FnPtr,
         F::Arguments: Tuple,

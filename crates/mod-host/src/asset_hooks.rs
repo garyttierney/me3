@@ -1,20 +1,17 @@
 use std::{
-    collections::HashMap,
     ffi::OsString,
     mem,
     os::windows::ffi::OsStringExt,
     ptr::NonNull,
     sync::{Arc, Mutex, OnceLock},
-    time::Duration,
 };
 
-use eyre::OptionExt;
+use eyre::eyre;
 use me3_mod_host_assets::{
     dl_device::{self, DlDeviceManager, DlFileOperator, VfsMounts},
     ebl::EblFileManager,
     file_step,
     mapping::ArchiveOverrideMapping,
-    singleton,
     string::DlUtf16String,
     wwise::{self, find_wwise_open_file_fn, AkOpenMode},
 };
@@ -33,21 +30,10 @@ pub fn attach_override(
 ) -> Result<(), eyre::Error> {
     let image_base = image_base();
 
-    let singletons = poll_singletons()?;
-
-    debug!(
-        "total_singletons" = singletons.len(),
-        "singleton initialization passed"
-    );
-
-    // TODO: might want to freeze all threads here?
-
     hook_file_init(image_base, mapping.clone())?;
 
-    hook_device_manager(image_base, mapping.clone())?;
-
     if let Err(e) = try_hook_wwise(image_base, mapping.clone()) {
-        debug!("err" = &*e, "skipping Wwise hook");
+        debug!("error" = &*e, "skipping Wwise hook");
     }
 
     Ok(())
@@ -58,8 +44,6 @@ fn hook_file_init(
     image_base: *const u8,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
-    let device_manager = locate_device_manager(image_base)?;
-
     let init_fn = unsafe { file_step::find_init_fn(image_base)? };
 
     debug!("FileStep::STEP_Init" = ?init_fn);
@@ -71,7 +55,23 @@ fn hook_file_init(
         .with_closure(move |ctx, p1| {
             let _span_guard = hook_span.enter();
 
-            let mut device_manager = DlDeviceManager::lock(device_manager);
+            let mut device_manager = match locate_device_manager(image_base) {
+                Ok(device_manager) => DlDeviceManager::lock(device_manager),
+                Err(e) => {
+                    error!("error" = &*eyre!(e), "failed to locate device manager");
+
+                    (ctx.trampoline)(p1);
+                    return;
+                }
+            };
+
+            if let Err(e) = hook_device_manager(image_base, mapping.clone()) {
+                error!("error" = &*eyre!(e), "failed to hook device manager");
+
+                (ctx.trampoline)(p1);
+
+                return;
+            }
 
             let snap = device_manager.snapshot();
 
@@ -88,7 +88,7 @@ fn hook_file_init(
                     *vfs = new;
 
                     if let Err(e) = hook_ebl_utility(image_base, mapping.clone()) {
-                        error!("err" = &*e, "failed to apply EBL hooks");
+                        error!("error" = &*e, "failed to apply EBL hooks");
 
                         let vfs = mem::take(&mut *vfs);
 
@@ -170,6 +170,8 @@ fn hook_ebl_utility(
         })
         .install()?;
 
+    info!("type" = "ebl", "applied asset override hook");
+
     Ok(())
 }
 
@@ -179,8 +181,6 @@ fn hook_device_manager(
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     let device_manager = locate_device_manager(image_base)?;
-
-    debug!("DLDeviceManager" = ?device_manager);
 
     let open_disk_file = DlDeviceManager::lock(device_manager).open_disk_file_fn();
 
@@ -245,6 +245,8 @@ fn hook_device_manager(
             VFS.lock().unwrap().try_open_file(path, p3, p4, p5, p6)
         })
         .install()?;
+
+    info!("type" = "file", "applied asset override hook");
 
     Ok(())
 }
@@ -331,6 +333,8 @@ fn try_hook_wwise(
         })
         .install()?;
 
+    info!("type" = "wwise", "applied asset override hook");
+
     Ok(())
 }
 
@@ -338,11 +342,6 @@ fn image_base() -> *const u8 {
     unsafe { GetModuleHandleW(PCWSTR::null()) }
         .expect("GetModuleHandleW failed")
         .0 as *const u8
-}
-
-fn poll_singletons() -> Result<&'static HashMap<String, NonNull<*mut u8>>, eyre::Error> {
-    singleton::poll_map(Duration::from_millis(1), Duration::from_secs(5))
-        .ok_or_eyre("singleton mapping timed out; no singletons found")
 }
 
 fn locate_device_manager(

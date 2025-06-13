@@ -19,11 +19,17 @@ use me3_launcher_attach_protocol::{
 };
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use me3_telemetry::TelemetryConfig;
-use tracing::info;
+use tracing::{error, info, Span};
 
-use crate::host::{hook::thunk::ThunkPool, ModHost};
+use crate::{
+    debugger::suspend_for_debugger,
+    deferred::defer_until_init,
+    host::{hook::thunk::ThunkPool, ModHost},
+};
 
 mod asset_hooks;
+mod debugger;
+mod deferred;
 mod detour;
 mod host;
 mod native;
@@ -37,6 +43,10 @@ const DLL_PROCESS_ATTACH: u32 = 1;
 
 dll_syringe::payload_procedure! {
     fn me_attach(request: AttachRequest) -> AttachResult {
+        if request.config.suspend {
+            suspend_for_debugger();
+        }
+
         on_attach(request)
     }
 }
@@ -51,6 +61,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
                 game,
                 natives,
                 packages,
+                ..
             },
     } = request;
 
@@ -111,9 +122,23 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         info!("Host successfully attached");
 
-        asset_hooks::attach_override(game, override_mapping.clone())?;
+        defer_until_init({
+            let current_span = Span::current();
+            let override_mapping = override_mapping.clone();
 
-        info!("Applied asset override hooks");
+            move || {
+                let _span_guard = current_span.enter();
+
+                if let Err(e) = asset_hooks::attach_override(game, override_mapping) {
+                    error!(
+                        "error" = &*e,
+                        "failed to attach asset override hooks; no files will be overridden"
+                    )
+                }
+            }
+        })?;
+
+        info!("Deferred asset override hooks");
 
         Ok(Attachment)
     })?;
@@ -122,7 +147,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 }
 
 #[no_mangle]
-pub extern "stdcall" fn DllMain(instance: usize, reason: u32, _: *mut usize) -> i32 {
+pub extern "system" fn DllMain(instance: usize, reason: u32, _: *mut usize) -> i32 {
     match reason {
         DLL_PROCESS_ATTACH => {
             let _ = INSTANCE.set(instance);
