@@ -70,9 +70,11 @@ jobs:
         with:
           subject-path: "target/x86_64-unknown-linux-musl/release/me3"
           sbom-path: "crates/cli/me3-cli_x86_64-unknown-linux-musl.cdx.json"
-
+      - uses: taiki-e/install-action@7b20dfd705618832f20d29066e34aa2f2f6194c2 # v2.52.8
+        with:
+          tool: git-cliff
       - run: |
-          set +e
+          set -euxo pipefail
           version="${{ needs.build-installer.outputs.version }}"
           version=${version%"-prerelease"}
           v=(${version//./ })

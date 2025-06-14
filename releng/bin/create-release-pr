@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+set -euxo pipefail
 
 version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
 version=${version%"-prerelease"}
@@ -28,6 +28,7 @@ sed -i "
 
 tag_sha=$(git rev-parse --verify HEAD)
 read -r -d '' tag_command_template <<'EOF'
+
 
 ### Create and publish the tag:
 
