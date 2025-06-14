@@ -19,7 +19,7 @@ body = """
 {%- if not version %}
 ## [unreleased]
 {% else -%}
-## me3 - [{{ version }}]({{ release_link }}) - {{ timestamp | date(format="%Y-%m-%d") }}
+## me3 - [{{ version }}](https://github.com/garyttierney/me3/releases/{{version}}) - {{ timestamp | date(format="%Y-%m-%d") }}
 {% endif -%}
 
 {% macro commit(commit) -%}
@@ -55,14 +55,6 @@ body = """
 {%- endif -%}
 {%- endfor -%}
 {%- endfor %}
-
-{% if version %}
-{% if previous.version %}
-**Full Changelog**: {{ release_link }}
-{% endif %}
-{% else -%}
-  {% raw %}\n{% endraw %}
-{% endif %}
 
 {%- macro remote_url() -%}
 https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}\
