@@ -85,7 +85,7 @@ jobs:
           export CHANGES=$(git cliff --unreleased --strip all)
           release_notes=$(./releng/bin/release-notes)
 
-          gh release create "$TAG" -p -n "$release_notes"
+          gh release create "$TAG" -p -n "$release_notes" --target main
         env:
           GH_TOKEN: ${{ github.token }}
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
