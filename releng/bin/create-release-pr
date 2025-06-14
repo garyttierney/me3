@@ -29,6 +29,7 @@ sed -i "
 tag_sha=$(git rev-parse --verify HEAD)
 read -r -d '' tag_command_template <<'EOF'
 
+
 ### Create and publish the tag:
 
 ```
