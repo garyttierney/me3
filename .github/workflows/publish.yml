@@ -63,10 +63,12 @@ jobs:
           subject-path: "target/x86_64-unknown-linux-musl/release/me3"
           sbom-path: "crates/cli/me3-cli_x86_64-unknown-linux-musl.cdx.json"
 
+      - uses: taiki-e/install-action@2ee2c006bbe55b0c2924d63f440aa76ecdd09aea # v2.52.3
+        with:
+          tool: cargo-set-version,git-cliff
+
       - run: |
           set +e
-          cargo install cargo-set-version --locked
-          cargo install git-cliff --locked
           # git-cliff uses GITHUB_TOKEN
           GITHUB_TOKEN="$GH_TOKEN" ./releng/bin/create-release-pr
 
