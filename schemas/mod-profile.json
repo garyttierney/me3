@@ -38,7 +38,7 @@
       "enum": [
         "elden-ring",
         "armoredcore6",
-        "nightrein"
+        "nightreign"
       ]
     },
     "ModFile": {
@@ -190,14 +190,14 @@
             "$ref": "#/$defs/Dependent_for_string"
           }
         },
-        "source": {
+        "path": {
           "description": "A path to the source of this package.",
           "$ref": "#/$defs/ModFile"
         }
       },
       "required": [
         "id",
-        "source"
+        "path"
       ]
     },
     "Supports": {
