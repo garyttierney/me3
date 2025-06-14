@@ -62,6 +62,10 @@ jobs:
 
       - run: |
           set +e
+          cargo install set-version --locked
+          cargo install git-cliff --locked
+          # git-cliff uses GITHUB_TOKEN
+          GITHUB_TOKEN="$GH_TOKEN" ./releng/bin/create-release-pr
 
           TAG="${{ needs.build-installer.outputs.version }}"
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"

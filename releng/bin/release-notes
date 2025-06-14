@@ -7,7 +7,5 @@ SUMMARY=$(git tag -l --format='%(contents:subject)' "$VERSION")
 BODY=$(git tag -l --format='%(contents:body)' "$VERSION")
 SIGNATURE=$(git tag -l --format='%(contents:signature)' "$VERSION")
 
-CHANGES=$(awk "NR == 1, /^## \[$VERSION\]/ { next }; /^## / { exit }; { print }" CHANGELOG.md)
-
-export CHANGES VERSION SUMMARY SIGNATURE BODY
+export VERSION SUMMARY SIGNATURE BODY
 envsubst <"$script_dir/../RELEASE_NOTES.md"
