@@ -5,6 +5,7 @@ version.workspace = true
 repository.workspace = true
 license.workspace = true
 description = "Schema definition for me3 mod profiles"
+publish = false
 
 [dependencies]
 schemars.workspace = true

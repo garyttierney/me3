@@ -10,7 +10,7 @@ git worktree add -B "release-prep" mkrelease origin/main
     pushd mkrelease || exit 1
 
     git fetch origin --tags
-    release_notes=$(awk 'NR == 1, /^## / { next }; /^## / { exit }; { print }' CHANGELOG.md)
+    release_notes=$(git cliff --unreleased --strip all)
     version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
     version=${version%"-prerelease"}
     tag_name="v$version"
@@ -21,19 +21,7 @@ git worktree add -B "release-prep" mkrelease origin/main
     fi
 
     git branch -m "release-$tag_name" -f
-
-    readarray -t replacements < <(cargo metadata --format-version 1 | jq --compact-output '.metadata.release.pre_release_replacements[]')
-
-    for replacement_json in "${replacements[@]}"; do
-        search=$(echo "$replacement_json" | jq -r .search)
-        template=$(echo "$replacement_json" | jq -r .replace)
-        replacement=$(TAG_NAME="$tag_name" DATE=$(date +"%Y-%m-%d") envsubst <<<"$template")
-        changelog=$(<CHANGELOG.md)
-
-        set +x
-        echo "${changelog//"$search"/"$replacement"}" >CHANGELOG.md
-        set -x
-    done
+    git cliff --tag "$tag_name" --unreleased -o CHANGELOG.md
 
     sed -i "
 / (Latest)/{
@@ -60,7 +48,7 @@ EOF
     tag_command=$(TAG_NAME="$tag_name" TAG_SHA="$tag_sha" envsubst <<<"$tag_command_template")
 
     new_version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
-    v=(${version//./ })
+    v=("${version//./ }")
     ((v[1]++))
 
     cargo set-version "${v[0]}.${v[1]}.${v[2]}-prerelease"
@@ -71,9 +59,9 @@ EOF
         git push origin "HEAD:release-$tag_name" --force
 
         if ! gh pr view; then
-            gh pr create -B main -b "$release_notes\n$tag_command" --title "Release: $version"
+            gh pr create -B main -b "$release_notes\n$tag_command" --title "chore(release): $version"
         else
-            gh pr edit -B main -b "$release_notes\n$tag_command" --title "Release: $version"
+            gh pr edit -B main -b "$release_notes\n$tag_command" --title "chore(release): $version"
         fi
     fi
 )

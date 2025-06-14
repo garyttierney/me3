@@ -5,6 +5,7 @@ edition.workspace = true
 repository.workspace = true
 license.workspace = true
 description = "Create a mapping of symbols for a game binary"
+publish = false
 
 [dependencies]
 pelite = "0.10"

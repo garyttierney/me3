@@ -5,6 +5,7 @@ edition.workspace = true
 repository.workspace = true
 license.workspace = true
 description = "Override game assets with local versions"
+publish = false
 
 [dependencies]
 cxx-stl = { version = "3", features = ["msvc2012"] }

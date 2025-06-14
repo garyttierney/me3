@@ -27,6 +27,7 @@ jobs:
       attestations: write
       contents: write
       actions: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -62,8 +63,12 @@ jobs:
 
       - run: |
           set +e
+          cargo install set-version --locked
+          cargo install git-cliff --locked
+          # git-cliff uses GITHUB_TOKEN
+          GITHUB_TOKEN="$GH_TOKEN" ./releng/bin/create-release-pr
 
-          TAG="${{ needs.build-installer.outputs.version }}"
+          TAG="v${{ needs.build-installer.outputs.version }}"
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
           echo "RELEASE_IS_PRERELEASE=true" >> "$GITHUB_ENV"
 
@@ -72,7 +77,8 @@ jobs:
               sleep 15s
           fi
 
-          release_notes=$(awk 'NR == 1, /^## / { next }; /^## / { exit }; { print }' CHANGELOG.md )
+          export CHANGES=$(git cliff --unreleased --strip all)
+          release_notes=$(./releng/bin/release-notes)
 
           gh release create "$TAG" -p -n "$release_notes"
         env:
