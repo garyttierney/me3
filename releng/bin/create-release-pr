@@ -13,10 +13,10 @@ if git rev-parse "$tag_name" >/dev/null 2>&1; then
     git tag -d "$tag_name"
 fi
 
-release_notes=$(git cliff --unreleased --strip all "$prev_tag_name..HEAD")
+release_notes=$(git cliff --strip all "$prev_tag_name..HEAD")
 
 git branch -m "release-$tag_name" -f
-git cliff --tag "$tag_name" --unreleased -o CHANGELOG.md
+git cliff --tag "$tag_name" -o CHANGELOG.md "$prev_tag_name..HEAD"
 
 sed -i "
 / (Latest)/{

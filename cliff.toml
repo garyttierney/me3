@@ -158,6 +158,7 @@ use_branch_tags = false
 topo_order = false
 # sort the commits inside sections by oldest/newest order
 sort_commits = "newest"
+ignore_tags = '^\d+\.\d+\.\d+$'
 # Process submodules commits
 recurse_submodules = false
 skip_tags = "prerelease"
