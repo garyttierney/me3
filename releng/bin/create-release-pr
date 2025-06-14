@@ -37,6 +37,7 @@ read -r -d '' tag_command_template <<'EOF'
 EOF
 
 cargo set-version "$version"
+cargo update
 git commit -am "release: $version"
 
 echo "$tag_command_template"
@@ -47,7 +48,7 @@ v=(${version//./ })
 new_version="${v[0]}.${v[1]}.${v[2]}"
 
 cargo set-version "${v[0]}.${v[1]}.${v[2]}-prerelease"
-
+cargo update
 git commit -am "chore: start $new_version development"
 
 if [ -n "$RELEASE_PUSH" ]; then
