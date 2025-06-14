@@ -194,7 +194,7 @@ jobs:
       - name: Build installer
         run: makensis -DTARGET_DIR="${{ github.workspace }}/target/x86_64-pc-windows-msvc/release/" -DVERSION=${{ steps.get_version.outputs.version }} installer.nsi "-XOutFile me3_installer.exe"
 
-      - uses: taiki-e/install-action@2ee2c006bbe55b0c2924d63f440aa76ecdd09aea # v2.52.3
+      - uses: taiki-e/install-action@7b20dfd705618832f20d29066e34aa2f2f6194c2 # v2.52.8
         with:
           tool: cargo-cyclonedx
 
