@@ -7,7 +7,7 @@ version=${version%"-prerelease"}
 v=(${version//./ })
 ((v[1]++))
 tag_name="v$version"
-prev_tag_name="$v{v[0]}.${v[1]}.${v[2]}"
+prev_tag_name="v${v[0]}.${v[1]}.${v[2]}"
 
 if git rev-parse "$tag_name" >/dev/null 2>&1; then
     git tag -d "$tag_name"
@@ -37,18 +37,18 @@ read -r -d '' tag_command_template <<'EOF'
 EOF
 
 cargo set-version "$version"
-git add .github Cargo.toml Cargo.lock CHANGELOG.md && git commit -m "release: $version"
+git commit -am "release: $version"
 
 echo "$tag_command_template"
 tag_command=$(TAG_NAME="$tag_name" TAG_SHA="$tag_sha" envsubst <<<"$tag_command_template")
 
-new_version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
 v=(${version//./ })
 ((v[1]++))
+new_version="${v[0]}.${v[1]}.${v[2]}"
 
 cargo set-version "${v[0]}.${v[1]}.${v[2]}-prerelease"
 
-git add Cargo.* && git commit -m "chore: start $new_version development"
+git commit -am "chore: start $new_version development"
 
 if [ -n "$RELEASE_PUSH" ]; then
     git push origin "HEAD:release-$tag_name" --force
