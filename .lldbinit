@@ -1,0 +1,2 @@
+settings set target.process.follow-fork-mode child
+command script import support/lldb/me3.py
