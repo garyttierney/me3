@@ -39,6 +39,7 @@ jobs:
         run: ls -R
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@db473fddc028af60658334401dc6fa3ffd8669fd # v2.3.0
+        id: attest-installer
         with:
           subject-path: |
             me3_installer.exe
@@ -103,15 +104,22 @@ jobs:
         run: |
           sed -i "s/INSTALLER_VERSION=.*/INSTALLER_VERSION=${{ steps.collect-release-info.outputs.release_tag }}/" installer.sh
 
+      - name: Copy SLSA provenance for release upload
+        run: |
+          mv "$BUNDLE_PATH" attestations.intoto.jsonl
+        env:
+          BUNDLE_PATH: ${{ steps.attest-installer.outputs.bundle-path }}
+
       - name: Upload installer to release
         run: >-
           gh release upload --clobber -R garyttierney/me3 "${{ steps.collect-release-info.outputs.release_tag }}"
-          me3_installer.exe
+          me3_installer.exe # Installer for Windows
           target/x86_64-pc-windows-msvc/release/me3_mod_host.dll
           target/x86_64-pc-windows-msvc/release/me3-launcher.exe
           target/x86_64-pc-windows-msvc/release/me3.exe
           target/x86_64-unknown-linux-musl/release/me3
-          installer.sh
+          installer.sh # Installer for Linux
+          attestations.intoto.jsonl
         env:
           GH_TOKEN: ${{ github.token }}
 
