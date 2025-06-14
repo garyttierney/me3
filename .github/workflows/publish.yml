@@ -65,7 +65,7 @@ jobs:
 
       - run: |
           set +e
-          cargo install set-version --locked
+          cargo install cargo-set-version --locked
           cargo install git-cliff --locked
           # git-cliff uses GITHUB_TOKEN
           GITHUB_TOKEN="$GH_TOKEN" ./releng/bin/create-release-pr
