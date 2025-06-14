@@ -25,7 +25,7 @@ config = "0.15.11"
 ctrlc = "3.4.7"
 directories = "6.0.0"
 is-terminal = "0.4.16"
-me3-env = { version = "0.5.0", path = "../env" }
+me3-env = { path = "../env" }
 me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
 me3_telemetry = { path = "../telemetry" }

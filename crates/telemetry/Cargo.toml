@@ -22,7 +22,7 @@ eyre = { version = "0.6", default-features = false, features = [
     "track-caller",
 ] }
 color-eyre = "0.6.5"
-me3-env = { version = "0.5.0", path = "../env" }
+me3-env = { path = "../env" }
 
 [dependencies.sentry]
 version = "0.38"
