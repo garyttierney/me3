@@ -51,6 +51,17 @@ dll_syringe::payload_procedure! {
     }
 }
 
+#[cfg(coverage)]
+#[no_mangle]
+#[allow(non_upper_case_globals)]
+static __lvm_profile_runtime: i32 = 1;
+
+#[cfg(coverage)]
+extern "C" {
+    fn __llvm_profile_write_file() -> i32;
+    fn __llvm_profile_initialize_file();
+}
+
 fn on_attach(request: AttachRequest) -> AttachResult {
     me3_telemetry::install_error_handler();
 
@@ -150,9 +161,19 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 pub extern "system" fn DllMain(instance: usize, reason: u32, _: *mut usize) -> i32 {
     match reason {
         DLL_PROCESS_ATTACH => {
+            #[cfg(coverage)]
+            unsafe {
+                __llvm_profile_initialize_file()
+            };
+
             let _ = INSTANCE.set(instance);
         }
         DLL_PROCESS_DETACH => {
+            #[cfg(coverage)]
+            unsafe {
+                __llvm_profile_write_file()
+            };
+
             std::thread::spawn(|| {
                 #[allow(static_mut_refs)]
                 let telemetry = unsafe { TELEMETRY_INSTANCE.take() };
