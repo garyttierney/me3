@@ -73,7 +73,11 @@ jobs:
 
       - run: |
           set +e
-
+          version="${{ needs.build-installer.outputs.version }}"
+          version=${version%"-prerelease"}
+          v=(${version//./ })
+          ((v[1]--))
+          prev_tag_name="v${v[0]}.${v[1]}.${v[2]}"
           TAG="v${{ needs.build-installer.outputs.version }}"
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
           echo "RELEASE_IS_PRERELEASE=true" >> "$GITHUB_ENV"
@@ -83,10 +87,11 @@ jobs:
               sleep 15s
           fi
 
-          export CHANGES=$(git cliff --unreleased --strip all)
+          export CHANGES=$(git cliff --unreleased --strip all "$prev_tag_name..HEAD")
           release_notes=$(./releng/bin/release-notes "$TAG")
 
           gh release create "$TAG" -p -n "$release_notes" --target main
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'

@@ -5,7 +5,7 @@ set -x
 version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
 version=${version%"-prerelease"}
 v=(${version//./ })
-((v[1]++))
+((v[1]--))
 tag_name="v$version"
 prev_tag_name="v${v[0]}.${v[1]}.${v[2]}"
 
