@@ -20,8 +20,8 @@ git worktree add -B "release-prep" mkrelease "$SHA"
     tag_name="v$version"
 
     git tag --sign -a "$tag_name" "$SHA"
-
-    notes=$("$script_dir/release-notes" "$tag_name")
+    changes=$(git cliff --current)
+    notes=$(CHANGES="$changes" "$script_dir/release-notes" "$tag_name")
     echo "$notes"
 
     if [ -n "$RELEASE_PUSH" ]; then
