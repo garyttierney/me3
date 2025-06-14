@@ -10,7 +10,6 @@ git worktree add -B "release-prep" mkrelease origin/main
     pushd mkrelease || exit 1
 
     git fetch origin --tags
-    release_notes=$(git cliff --unreleased --strip all)
     version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
     version=${version%"-prerelease"}
     tag_name="v$version"
@@ -18,6 +17,8 @@ git worktree add -B "release-prep" mkrelease origin/main
     if git rev-parse "$tag_name" >/dev/null 2>&1; then
         git tag -d "$tag_name"
     fi
+
+    release_notes=$(git cliff --unreleased --strip all)
 
     git branch -m "release-$tag_name" -f
     git cliff --tag "$tag_name" --unreleased -o CHANGELOG.md
