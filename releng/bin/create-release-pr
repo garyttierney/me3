@@ -2,23 +2,23 @@
 
 set -x
 
-trap "git worktree remove mkrelease || true" EXIT
+version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
+version=${version%"-prerelease"}
+v=(${version//./ })
+((v[1]++))
+tag_name="v$version"
+prev_tag_name="$v{v[0]}.${v[1]}.${v[2]}"
 
-git fetch origin main
-git worktree add -B "release-prep" mkrelease origin/main
-(
-    pushd mkrelease || exit 1
+if git rev-parse "$tag_name" >/dev/null 2>&1; then
+    git tag -d "$tag_name"
+fi
 
-    git fetch origin --tags
-    release_notes=$(git cliff --unreleased --strip all)
-    version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
-    version=${version%"-prerelease"}
-    tag_name="v$version"
+release_notes=$(git cliff --unreleased --strip all "$prev_tag_name..HEAD")
 
-    git branch -m "release-$tag_name" -f
-    git cliff --tag "$tag_name" --unreleased -o CHANGELOG.md
+git branch -m "release-$tag_name" -f
+git cliff --tag "$tag_name" --unreleased -o CHANGELOG.md
 
-    sed -i "
+sed -i "
 / (Latest)/{
   i\\
         - ${tag_name} (Latest)
@@ -26,9 +26,9 @@ git worktree add -B "release-prep" mkrelease origin/main
 }
 " .github/ISSUE_TEMPLATE/bug-report.yml
 
-    tag_sha=$(git rev-parse --verify HEAD)
-    read -r -d '' tag_command_template <<'EOF'
----
+tag_sha=$(git rev-parse --verify HEAD)
+read -r -d '' tag_command_template <<'EOF'
+
 ### Create and publish the tag:
 
 ```
@@ -36,27 +36,26 @@ git worktree add -B "release-prep" mkrelease origin/main
 ```
 EOF
 
-    cargo set-version "$version"
-    git add .github Cargo.toml Cargo.lock CHANGELOG.md && git commit -S -s -m "release: $version"
+cargo set-version "$version"
+git add .github Cargo.toml Cargo.lock CHANGELOG.md && git commit -m "release: $version"
 
-    echo "$tag_command_template"
-    tag_command=$(TAG_NAME="$tag_name" TAG_SHA="$tag_sha" envsubst <<<"$tag_command_template")
+echo "$tag_command_template"
+tag_command=$(TAG_NAME="$tag_name" TAG_SHA="$tag_sha" envsubst <<<"$tag_command_template")
 
-    new_version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
-    v=("${version//./ }")
-    ((v[1]++))
+new_version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
+v=(${version//./ })
+((v[1]++))
 
-    cargo set-version "${v[0]}.${v[1]}.${v[2]}-prerelease"
+cargo set-version "${v[0]}.${v[1]}.${v[2]}-prerelease"
 
-    git add Cargo.* && git commit -S -s -m "chore: start $new_version development"
+git add Cargo.* && git commit -m "chore: start $new_version development"
 
-    if [ -n "$RELEASE_PUSH" ]; then
-        git push origin "HEAD:release-$tag_name" --force
+if [ -n "$RELEASE_PUSH" ]; then
+    git push origin "HEAD:release-$tag_name" --force
 
-        if ! gh pr view; then
-            gh pr create -B main -b "$release_notes\n$tag_command" --title "chore(release): $version"
-        else
-            gh pr edit -B main -b "$release_notes\n$tag_command" --title "chore(release): $version"
-        fi
+    if ! gh pr view; then
+        gh pr create -B main -b "$release_notes $tag_command" --title "chore(release): $version"
+    else
+        gh pr edit -B main -b "$release_notes $tag_command" --title "chore(release): $version"
     fi
-)
+fi

@@ -5,14 +5,14 @@ on:
       - main
 name: Create release PR
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.release.name || github.ref }}
+  group: ${{ github.workflow }}
   cancel-in-progress: true
 
 jobs:
   create-release-pr:
     name: Prerelease
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
@@ -29,3 +29,5 @@ jobs:
           set +e
           # git-cliff uses GITHUB_TOKEN
           RELEASE_PUSH=1 GITHUB_TOKEN="$GH_TOKEN" ./releng/bin/create-release-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
