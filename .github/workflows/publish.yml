@@ -30,7 +30,6 @@ jobs:
       attestations: write
       contents: write
       actions: read
-      pull-requests: write
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
@@ -72,14 +71,8 @@ jobs:
           subject-path: "target/x86_64-unknown-linux-musl/release/me3"
           sbom-path: "crates/cli/me3-cli_x86_64-unknown-linux-musl.cdx.json"
 
-      - uses: taiki-e/install-action@2ee2c006bbe55b0c2924d63f440aa76ecdd09aea # v2.52.3
-        with:
-          tool: cargo-set-version,git-cliff
-
       - run: |
           set +e
-          # git-cliff uses GITHUB_TOKEN
-          RELEASE_PUSH=1 GITHUB_TOKEN="$GH_TOKEN" ./releng/bin/create-release-pr
 
           TAG="v${{ needs.build-installer.outputs.version }}"
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
@@ -121,12 +114,12 @@ jobs:
       - name: Upload installer to release
         run: >-
           gh release upload --clobber -R garyttierney/me3 "${{ steps.collect-release-info.outputs.release_tag }}"
-          me3_installer.exe # Installer for Windows
+          'me3_installer.exe#Installer for Windows'
           target/x86_64-pc-windows-msvc/release/me3_mod_host.dll
           target/x86_64-pc-windows-msvc/release/me3-launcher.exe
           target/x86_64-pc-windows-msvc/release/me3.exe
           target/x86_64-unknown-linux-musl/release/me3
-          installer.sh # Installer for Linux
+          'installer.sh#Installer for Linux'
           attestations.intoto.jsonl
         env:
           GH_TOKEN: ${{ github.token }}

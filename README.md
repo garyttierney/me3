@@ -1,15 +1,15 @@
+<!-- markdownlint-disable no-inline-html first-line-h1 -->
 <a name="readme-top"></a>
 
 <br />
 <div align="center">
-
-
   <p align="center">
-    <img src="distribution/assets/me3.png" />
+    <img src="distribution/assets/me3.png" alt="me3 icon />
   </p>
   <h2 align="center">me<sup>3</sup></h2>
 
   <p align="center">
+    <strong>
     A framework for modifying and instrumenting games.
     <br />
     <a href="https://me3.readthedocs.io/"><strong>Explore the docs »</strong></a>
@@ -18,6 +18,7 @@
     <a href="https://github.com/garyttierney/me3/discussions/categories/bug-reports">Report Bug</a>
     ·
     <a href="https://github.com/garyttierney/me3/discussions/categories/ideas">Request Feature</a>
+    </strong>
   </p>
 
 [![Discussions][discussions-shield]][discussions-url]
