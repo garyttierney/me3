@@ -83,7 +83,7 @@ jobs:
           fi
 
           export CHANGES=$(git cliff --unreleased --strip all)
-          release_notes=$(./releng/bin/release-notes)
+          release_notes=$(./releng/bin/release-notes "$TAG")
 
           gh release create "$TAG" -p -n "$release_notes" --target main
         env:
