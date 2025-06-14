@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euxo pipefail
+set -x
 
 version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
 version=${version%"-prerelease"}
