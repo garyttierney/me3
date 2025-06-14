@@ -1,6 +1,6 @@
 [package]
 name = "me3-launcher"
-version = "0.5.0"
+version = "0.6.0-prerelease"
 repository.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -29,8 +29,8 @@ minidump-writer = "0.10"
 tracing.workspace = true
 sentry = { version = "0.39.0", optional = true }
 toml.workspace = true
-me3_telemetry = { path = "../telemetry" , version = "0.5.0" }
-me3-env = { path = "../env" , version = "0.5.0" }
+me3_telemetry = { path = "../telemetry" , version = "0.6.0-prerelease" }
+me3-env = { path = "../env" , version = "0.6.0-prerelease" }
 
 [lints]
 workspace = true
