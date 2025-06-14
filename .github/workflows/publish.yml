@@ -63,12 +63,14 @@ jobs:
           subject-path: "target/x86_64-unknown-linux-musl/release/me3"
           sbom-path: "crates/cli/me3-cli_x86_64-unknown-linux-musl.cdx.json"
 
+      - uses: taiki-e/install-action@2ee2c006bbe55b0c2924d63f440aa76ecdd09aea # v2.52.3
+        with:
+          tool: cargo-set-version,git-cliff
+
       - run: |
           set +e
-          cargo install set-version --locked
-          cargo install git-cliff --locked
           # git-cliff uses GITHUB_TOKEN
-          GITHUB_TOKEN="$GH_TOKEN" ./releng/bin/create-release-pr
+          RELEASE_PUSH=1 GITHUB_TOKEN="$GH_TOKEN" ./releng/bin/create-release-pr
 
           TAG="v${{ needs.build-installer.outputs.version }}"
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
@@ -85,7 +87,7 @@ jobs:
           gh release create "$TAG" -p -n "$release_notes"
         env:
           GH_TOKEN: ${{ github.token }}
-        if: github.event_name == 'push' && github.ref_name == 'main'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
       - run: |
           echo "RELEASE_TAG=${{ github.event.release.tag_name }}" >> "$GITHUB_ENV"
