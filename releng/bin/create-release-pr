@@ -37,7 +37,7 @@ git worktree add -B "release-prep" mkrelease origin/main
 EOF
 
     cargo set-version "$version"
-    git add .github Cargo.toml Cargo.lock CHANGELOG.md && git commit -S -s -m "release: $version"
+    git add .github Cargo.toml Cargo.lock CHANGELOG.md && git commit-m "release: $version"
 
     echo "$tag_command_template"
     tag_command=$(TAG_NAME="$tag_name" TAG_SHA="$tag_sha" envsubst <<<"$tag_command_template")
@@ -48,7 +48,7 @@ EOF
 
     cargo set-version "${v[0]}.${v[1]}.${v[2]}-prerelease"
 
-    git add Cargo.* && git commit -S -s -m "chore: start $new_version development"
+    git add Cargo.* && git commit -m "chore: start $new_version development"
 
     if [ -n "$RELEASE_PUSH" ]; then
         git push origin "HEAD:release-$tag_name" --force
