@@ -22,15 +22,24 @@ body = """
 ## me3 - [{{ version }}](https://github.com/garyttierney/me3/releases/{{version}}) - {{ timestamp | date(format="%Y-%m-%d") }}
 {% endif -%}
 
+{% macro body(commit) -%}
+{% if commit.body %}\
+{{commit.body|trim}}\
+{% elif "\n" in commit.message -%}\
+{{ commit.message | trim | split(pat="\n") | slice(start=1) | join(sep="\n") | trim }}\
+{% endif -%}\
+{% endmacro -%}
+
 {% macro commit(commit) -%}
 - [{{ commit.id | truncate(length=7, end="") }}]({{ "https://github.com/garyttierney/me3/commit/" ~ commit.id }}) \
   {% if commit.scope %} \
   *({{commit.scope | default(value = "uncategorized") | lower }})* \
   {% endif %}\
-  {{ commit.message | upper_first | trim }}\
+  {{ commit.message | upper_first | trim | split(pat="\n") | first }}\
   {% if commit.remote.pr_number %} in [#{{ commit.remote.pr_number }}]({{ self::remote_url() }}/pull/{{ commit.remote.pr_number }}){%- endif %}\
 {%- if commit.breaking %} [**breaking**]{% endif %}
-{%- if commit.body %}\n\n{{ commit.body | indent(prefix="  > ", first=true, blank=false) }}
+{% set body = self::body(commit=commit) %}\
+{%- if body %}{{ body | indent(prefix="  > ", first=true, blank=false) }}\
 {%- endif %}
 {% if commit.footers %}
 {%- for footer in commit.footers %}\n
@@ -121,7 +130,7 @@ commit_parsers = [
   { message = "^refactor", group = "<!-- 2 -->🚜 Refactor" },
   { message = "^style", group = "<!-- 5 -->🎨 Styling" },
   { message = "^test", group = "<!-- 6 -->🧪 Testing" },
-  { message = "^[rR]elease", skip = true }, # spellchecker:disable-line
+  { message = "^[rR]elease", skip = true },                                                    # spellchecker:disable-line
   { message = "^chore", skip = true },
   { message = "^[sS]pelling", skip = true },
   { message = "^Update CHANGELOG", skip = true },
