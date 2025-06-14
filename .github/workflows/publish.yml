@@ -89,7 +89,7 @@ jobs:
               sleep 15s
           fi
 
-          export CHANGES=$(git cliff --unreleased --strip all "$prev_tag_name..HEAD")
+          export CHANGES=$(git cliff --strip all "$prev_tag_name..HEAD")
           release_notes=$(./releng/bin/release-notes "$TAG")
 
           gh release create "$TAG" -p -n "$release_notes" --target main
