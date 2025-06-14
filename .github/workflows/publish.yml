@@ -70,7 +70,7 @@ jobs:
       - run: |
           set +e
           # git-cliff uses GITHUB_TOKEN
-          GITHUB_TOKEN="$GH_TOKEN" ./releng/bin/create-release-pr
+          RELEASE_PUSH=1 GITHUB_TOKEN="$GH_TOKEN" ./releng/bin/create-release-pr
 
           TAG="v${{ needs.build-installer.outputs.version }}"
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
