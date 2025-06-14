@@ -132,7 +132,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Setup Sentry CLI
-        uses: matbour/setup-sentry-cli@4cb3adf3ade6f5776a298102a9fb9e29e41bf89d # v1.3.0
+        uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b # v2.0.0
         with:
           version: latest
           token: ${{ secrets.SENTRY_AUTH_TOKEN }} # from GitHub secrets
