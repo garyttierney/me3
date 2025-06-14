@@ -5,7 +5,7 @@ on:
       - main
 name: Create release PR
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.release.name || github.ref }}
+  group: ${{ github.workflow }}
   cancel-in-progress: true
 
 jobs:
