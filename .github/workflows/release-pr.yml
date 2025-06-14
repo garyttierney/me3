@@ -29,3 +29,5 @@ jobs:
           set +e
           # git-cliff uses GITHUB_TOKEN
           RELEASE_PUSH=1 GITHUB_TOKEN="$GH_TOKEN" ./releng/bin/create-release-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
