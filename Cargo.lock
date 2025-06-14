@@ -1814,6 +1814,7 @@ dependencies = [
  "cxx-stl",
  "from-singleton",
  "me3-mod-protocol",
+ "normpath",
  "pelite",
  "regex",
  "thiserror 2.0.12",
