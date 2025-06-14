@@ -61,7 +61,13 @@ impl ArchiveOverrideMapping {
         &mut self,
         base_directory: P,
     ) -> Result<(), ArchiveOverrideMappingError> {
-        let base_directory = base_directory.as_ref().to_path_buf();
+        let base_directory = base_directory
+            .as_ref()
+            .to_path_buf()
+            .normalize()
+            .map_err(ArchiveOverrideMappingError::ReadDir)?
+            .into_path_buf();
+
         if !base_directory.is_dir() {
             return Err(ArchiveOverrideMappingError::InvalidDirectory(
                 base_directory.to_path_buf(),
