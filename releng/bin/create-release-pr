@@ -41,7 +41,7 @@ git worktree add -B "release-prep" mkrelease origin/main
 EOF
 
     cargo set-version "$version"
-    git add .github Cargo.toml Cargo.lock CHANGELOG.md && git commit-m "release: $version"
+    git add .github Cargo.toml Cargo.lock CHANGELOG.md && git commit -m "release: $version"
 
     echo "$tag_command_template"
     tag_command=$(TAG_NAME="$tag_name" TAG_SHA="$tag_sha" envsubst <<<"$tag_command_template")
