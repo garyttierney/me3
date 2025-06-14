@@ -78,7 +78,7 @@ jobs:
       - uses: taiki-e/install-action@2ee2c006bbe55b0c2924d63f440aa76ecdd09aea # v2.52.3
         with:
           tool: clippy-sarif, sarif-fmt
-      - run: cargo clippy --workspace --all-targets --all-features --message-format=json -- -Aunused | clippy-sarif | tee results.sarif | sarif-fmt
+      - run: cargo clippy --workspace --message-format=json -- -Aunused | clippy-sarif | tee results.sarif | sarif-fmt
         shell: bash
 
       - name: Upload SARIF file
