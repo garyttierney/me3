@@ -110,7 +110,7 @@ commit_preprocessors = [
   { pattern = '[\s]*\(#[0-9]+\)', replace = "" },
   { pattern = "^Fix ", replace = "fix: " },
   # { pattern = "\n", replace = "\n\n" },
-] # An array of regex based parsers to modify commit messages prior to further processing.
+]
 commit_parsers = [
   { message = "^fix: spelling", skip = true },
   { message = "^^ci|^fix\\(ci\\)|^feat\\(ci\\)", group = "<!-- 7 -->⚙️ Miscellaneous Tasks" },
@@ -121,7 +121,7 @@ commit_parsers = [
   { message = "^refactor", group = "<!-- 2 -->🚜 Refactor" },
   { message = "^style", group = "<!-- 5 -->🎨 Styling" },
   { message = "^test", group = "<!-- 6 -->🧪 Testing" },
-  { message = "^[rR]elease", skip = true },
+  { message = "^[rR]elease", skip = true }, # spellchecker:disable-line
   { message = "^chore", skip = true },
   { message = "^[sS]pelling", skip = true },
   { message = "^Update CHANGELOG", skip = true },
