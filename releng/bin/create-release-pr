@@ -15,6 +15,10 @@ git worktree add -B "release-prep" mkrelease origin/main
     version=${version%"-prerelease"}
     tag_name="v$version"
 
+    if git rev-parse "$tag_name" >/dev/null 2>&1; then
+        git tag -d "$tag_name"
+    fi
+
     git branch -m "release-$tag_name" -f
     git cliff --tag "$tag_name" --unreleased -o CHANGELOG.md
 
