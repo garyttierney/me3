@@ -27,7 +27,7 @@ me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
 minidump-writer = "0.10"
 tracing.workspace = true
-sentry = { version = "0.38.1", optional = true }
+sentry = { version = "0.39.0", optional = true }
 toml.workspace = true
 me3_telemetry = { path = "../telemetry" }
 me3-env = { version = "0.5.0", path = "../env" }
