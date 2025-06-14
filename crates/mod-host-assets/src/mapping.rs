@@ -10,10 +10,11 @@ use std::{
 };
 
 use me3_mod_protocol::package::AssetOverrideSource;
+use normpath::PathExt;
 use thiserror::Error;
 
 pub struct ArchiveOverrideMapping {
-    map: HashMap<String, (String, Vec<u16>)>,
+    map: HashMap<PathBuf, (String, Vec<u16>)>,
     current_dir: PathBuf,
 }
 
@@ -55,7 +56,7 @@ impl ArchiveOverrideMapping {
         Ok(())
     }
 
-    ///  Traverses a folder structure, mapping discovered assets into itself.
+    /// Traverses a folder structure, mapping discovered assets into itself.
     pub fn scan_directory<P: AsRef<Path>>(
         &mut self,
         base_directory: P,
@@ -77,11 +78,17 @@ impl ArchiveOverrideMapping {
                 if dir_entry.is_dir() {
                     paths_to_scan.push_back(dir_entry);
                 } else {
-                    let override_path = normalize_path(&dir_entry);
+                    let override_path = dir_entry
+                        .normalize_virtually()
+                        .map_err(ArchiveOverrideMappingError::DirEntryAcquire)?;
+
                     let vfs_path = path_to_asset_lookup_key(&base_directory, &override_path)?;
                     let as_wide = override_path.encode_wide_with_nul().collect();
 
-                    self.map.insert(vfs_path, (override_path, as_wide));
+                    self.map.insert(
+                        vfs_path,
+                        (override_path.as_os_str().display().to_string(), as_wide),
+                    );
                 }
             }
         }
@@ -89,32 +96,40 @@ impl ArchiveOverrideMapping {
         Ok(())
     }
 
-    pub fn get_override<T: AsRef<str>>(&self, path: T) -> Option<(&str, &[u16])> {
-        let path = path.as_ref();
+    pub fn get_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<(&str, &[u16])> {
+        let from_map = |k: &Path| self.map.get(k).map(|(p, w)| (&**p, &**w));
 
-        let val = if let Ok(key) = Path::new(path).strip_prefix(&self.current_dir) {
-            self.map.get(&*key.as_os_str().to_string_lossy())
-        } else {
-            self.map.get(path.split_once(":/").map_or(path, |r| r.1))
-        };
+        if let Ok(norm) = Path::new(&path_str).normalize() {
+            if let Ok(key) = norm.as_path().strip_prefix(&self.current_dir) {
+                return from_map(key);
+            }
+        }
 
-        val.map(|(path, wide)| (&**path, &**wide))
+        from_map(Path::new(split_virtual_root(&path_str)))
     }
 }
 
-/// Normalizes paths to use / as a path separator.
-fn normalize_path<P: AsRef<Path>>(path: P) -> String {
-    path.as_ref().to_string_lossy().replace('\\', "/")
-}
-
-/// Turns an asset path into an asset lookup key using the mods base path.
+/// Turns an asset path into an asset lookup key using the mod's base path.
 fn path_to_asset_lookup_key<P1: AsRef<Path>, P2: AsRef<Path>>(
     base: P1,
     path: P2,
-) -> Result<String, StripPrefixError> {
+) -> Result<PathBuf, StripPrefixError> {
     path.as_ref()
         .strip_prefix(base)
-        .map(|p| p.to_string_lossy().to_lowercase())
+        .map(|p| p.as_os_str().to_string_lossy().to_lowercase().into())
+}
+
+/// Returns the path without its virtual root.
+fn split_virtual_root<S: AsRef<OsStr>>(s: &S) -> &OsStr {
+    let bytes = s.as_ref().as_encoded_bytes();
+
+    // SAFETY: splitting after a valid ASCII character.
+    bytes
+        .windows(2)
+        .position(|w| w[0] == b':' && (w[1] == b'/' || w[1] == b'\\'))
+        .map_or(s.as_ref(), |i| unsafe {
+            OsStr::from_encoded_bytes_unchecked(&bytes[i + 2..])
+        })
 }
 
 impl fmt::Debug for ArchiveOverrideMapping {
@@ -154,7 +169,7 @@ mod test {
                 )),
             )
             .unwrap(),
-            "parts/aet/aet007/aet007_071.tpf.dcx",
+            Path::new("parts/aet/aet007/aet007_071.tpf.dcx"),
         );
 
         assert_eq!(
@@ -165,7 +180,7 @@ mod test {
                 )),
             )
             .unwrap(),
-            "hkxbnd/m60_42_36_00/h60_42_36_00_423601.hkx.dcx",
+            Path::new("hkxbnd/m60_42_36_00/h60_42_36_00_423601.hkx.dcx"),
         );
 
         assert_eq!(
@@ -174,7 +189,7 @@ mod test {
                 PathBuf::from(format!("{FAKE_MOD_BASE}/regulation.bin")),
             )
             .unwrap(),
-            "regulation.bin",
+            Path::new("regulation.bin"),
         );
     }
 

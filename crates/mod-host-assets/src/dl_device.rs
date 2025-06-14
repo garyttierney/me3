@@ -286,7 +286,7 @@ impl DlDeviceManagerGuard {
         }
     }
 
-    pub fn expand_path<'a>(&self, path: &'a [u16]) -> Option<Cow<'a, [u16]>> {
+    pub fn expand_path<'a>(&self, path: &'a [u16]) -> Cow<'a, [u16]> {
         let device_manager = unsafe { self.inner.as_ref() };
 
         let mut expanded = Cow::Borrowed(path);
@@ -312,7 +312,7 @@ impl DlDeviceManagerGuard {
             }
         }
 
-        Some(expanded)
+        expanded
     }
 
     pub fn open_disk_file_fn(&self) -> DlDeviceOpen {

@@ -126,12 +126,11 @@ fn hook_ebl_utility(
             let path_cstr = PCWSTR::from_raw(path);
             let expanded = unsafe { device_manager.expand_path(path_cstr.as_wide()) };
 
-            if let Some(expanded) = expanded.map(|ex| OsString::from_wide(&ex)) {
-                let expanded = expanded.to_string_lossy();
-
-                if mapping.get_override(&expanded).is_some() {
-                    return None;
-                }
+            if mapping
+                .get_override(OsString::from_wide(&expanded))
+                .is_some()
+            {
+                return None;
             }
 
             let _guard = device_manager.push_vfs(&VFS.lock().unwrap());
@@ -170,7 +169,7 @@ fn hook_ebl_utility(
         })
         .install()?;
 
-    info!("type" = "ebl", "applied asset override hook");
+    info!("applied asset override hook");
 
     Ok(())
 }
@@ -197,12 +196,9 @@ fn hook_device_manager(
 
             let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
 
-            let expanded = expanded
-                .map(|ex| OsString::from_wide(&ex))?
-                .to_string_lossy()
-                .to_string();
+            let (mapped_path, mapped_override) =
+                mapping.get_override(OsString::from_wide(&expanded))?;
 
-            let (mapped_path, mapped_override) = mapping.get_override(&expanded)?;
             info!("override" = mapped_path);
 
             let mut path = path.clone();
@@ -246,7 +242,7 @@ fn hook_device_manager(
         })
         .install()?;
 
-    info!("type" = "file", "applied asset override hook");
+    info!("applied asset override hook");
 
     Ok(())
 }
@@ -265,12 +261,7 @@ fn hook_set_path(
 
         let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
 
-        let expanded = expanded
-            .map(|ex| OsString::from_wide(&ex))?
-            .to_string_lossy()
-            .to_string();
-
-        let (_, mapped_override) = mapping.get_override(&expanded)?;
+        let (_, mapped_override) = mapping.get_override(OsString::from_wide(&expanded))?;
 
         let mut path = path.clone();
         path.replace(mapped_override);
@@ -333,7 +324,7 @@ fn try_hook_wwise(
         })
         .install()?;
 
-    info!("type" = "wwise", "applied asset override hook");
+    info!("applied asset override hook");
 
     Ok(())
 }
