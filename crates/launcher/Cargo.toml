@@ -5,6 +5,7 @@ repository.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "Launcher for me3"
+publish = false
 
 [features]
 sentry = ["me3_telemetry/sentry", "dep:sentry"]

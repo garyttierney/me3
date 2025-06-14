@@ -5,6 +5,7 @@ edition.workspace = true
 repository.workspace = true
 license.workspace = true
 description = "Host DLL providing game extension functionality"
+publish = false
 
 [features]
 default = []
