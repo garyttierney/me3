@@ -57,6 +57,7 @@ jobs:
         with:
           tool_name: me3-mod-protocol schema
           filter_mode: nofilter
+          fail_level: any
 
   clippy:
     name: Clippy
