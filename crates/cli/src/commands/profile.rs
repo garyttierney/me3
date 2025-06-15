@@ -1,8 +1,4 @@
-use std::{
-    error::{self, Error},
-    fs,
-    path::PathBuf,
-};
+use std::{error::Error, fs, path::PathBuf};
 
 use clap::{ArgAction, Args, Subcommand};
 use color_eyre::eyre::{eyre, OptionExt};

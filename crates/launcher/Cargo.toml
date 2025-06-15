@@ -8,7 +8,7 @@ description = "Launcher for me3"
 publish = false
 
 [features]
-sentry = ["me3_telemetry/sentry", "dep:sentry"]
+sentry = ["me3-telemetry/sentry", "dep:sentry"]
 default = []
 
 [dependencies]
@@ -22,15 +22,14 @@ windows = { version = "0.61", features = [
     "Win32_System_Threading",
 ] }
 dll-syringe.workspace = true
-ipc-channel.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
 minidump-writer = "0.10"
 tracing.workspace = true
 sentry = { version = "0.39.0", optional = true }
 toml.workspace = true
-me3_telemetry = { path = "../telemetry" }
-me3-env = { path = "../env" }
+me3-telemetry.workspace = true
+me3-env.workspace = true
 
 [lints]
 workspace = true

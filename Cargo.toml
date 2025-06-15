@@ -28,12 +28,13 @@ missing_transmute_annotations = "allow"
 crash-context = "0.6.3"
 dll-syringe = "0.15"
 expect-test = "1.5.0"
-ipc-channel = "0.19"
 minidumper = "0.8"
 me3-launcher-attach-protocol = { path = "crates/launcher-attach-protocol" }
 me3-mod-host = { path = "crates/mod-host" }
 me3-mod-protocol = { path = "crates/mod-protocol" }
 me3-mod-host-assets = { path = "crates/mod-host-assets" }
+me3-env = { path = "crates/env" }
+me3-telemetry = { package = "me3_telemetry", path = "crates/telemetry" }
 normpath = "1.3.0"
 schemars = "0.9"
 serde = "1"

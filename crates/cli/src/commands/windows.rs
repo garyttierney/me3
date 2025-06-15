@@ -1,7 +1,4 @@
-use std::{
-    io::{BufRead, BufReader},
-    time::Duration,
-};
+use std::{io::BufReader, time::Duration};
 
 use color_eyre::eyre::{Context, OptionExt};
 use tracing::info;

@@ -1,11 +1,15 @@
-use std::fmt::Debug;
+use std::{
+    fmt::Debug,
+    io::{Read, Write},
+};
 
+use bincode::{error::DecodeError, Decode, Encode};
 use me3_mod_protocol::{native::Native, package::Package, Game};
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AttachRequest {
-    pub monitor_name: String,
+    pub monitor_handle: usize,
 
     pub config: AttachConfig,
 }
@@ -42,7 +46,7 @@ impl<E: Into<eyre::Report>> From<E> for AttachError {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Decode, Encode)]
 pub enum HostMessage {
     Attached,
     CrashDumpRequest {
@@ -58,25 +62,18 @@ pub enum HostMessage {
     },
 }
 
-pub enum MonitorMessageKind {
-    TraceEvent,
-}
+impl HostMessage {
+    pub fn read_from(reader: &mut impl Read) -> std::io::Result<Self> {
+        bincode::decode_from_std_read(reader, bincode::config::standard()).map_err(
+            |err| match err {
+                DecodeError::Io { inner, .. } => inner,
+                err => std::io::Error::other(err),
+            },
+        )
+    }
 
-pub trait MonitorClient: Send + Sync {
-    fn send_message(&self, kind: HostMessage);
-}
-
-pub trait MonitorServer {
-    fn handle_message(&self, kind: HostMessage);
-}
-
-impl TryFrom<u32> for MonitorMessageKind {
-    type Error = ();
-
-    fn try_from(value: u32) -> Result<Self, Self::Error> {
-        match value {
-            1 => Ok(MonitorMessageKind::TraceEvent),
-            _ => Err(()),
-        }
+    pub fn write_to(self, writer: &mut impl Write) -> std::io::Result<usize> {
+        bincode::encode_into_std_write(&self, writer, bincode::config::standard())
+            .map_err(std::io::Error::other)
     }
 }

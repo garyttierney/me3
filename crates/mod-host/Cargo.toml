@@ -9,7 +9,7 @@ publish = false
 
 [features]
 default = []
-sentry = ["me3_telemetry/sentry"]
+sentry = ["me3-telemetry/sentry"]
 
 [lib]
 crate-type = ["cdylib"]
@@ -21,7 +21,6 @@ eyre = { version = "0.6", default-features = false, features = [
     "track-caller",
 ] }
 iced-x86 = "1.21.0"
-ipc-channel.workspace = true
 me3-mod-protocol.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-host-assets.workspace = true
@@ -41,9 +40,9 @@ windows = { version = "0.61", features = [
     "Win32_System_LibraryLoader",
 ] }
 seq-macro = "0.3.6"
-me3_telemetry = { path = "../telemetry" }
+me3-telemetry.workspace = true
 libloading = "0.8.8"
-me3-env = { path = "../env" }
+me3-env.workspace = true
 color-eyre = "0.6.5"
 microseh = "1.1.2"
 

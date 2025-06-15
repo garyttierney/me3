@@ -31,7 +31,7 @@ use crate::LauncherResult;
 
 #[derive(Debug)]
 pub struct Game {
-    child: std::process::Child,
+    pub(crate) child: std::process::Child,
 }
 
 impl Game {

@@ -12,7 +12,7 @@ path = "src/main.rs"
 
 [features]
 default = []
-sentry = ["me3_telemetry/sentry"]
+sentry = ["me3-telemetry/sentry"]
 
 [dependencies]
 chrono = "0.4.41"
@@ -25,10 +25,10 @@ config = "0.15.11"
 ctrlc = "3.4.7"
 directories = "6.0.0"
 is-terminal = "0.4.16"
-me3-env = { path = "../env" }
+me3-env.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
-me3_telemetry = { path = "../telemetry" }
+me3-telemetry.workspace = true
 open = { version = "5.3.2" }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
