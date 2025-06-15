@@ -202,6 +202,10 @@ jobs:
       - name: Build installer
         run: makensis -DTARGET_DIR="${{ github.workspace }}/target/x86_64-pc-windows-msvc/release/" -DVERSION=${{ steps.get_version.outputs.version }} installer.nsi "-XOutFile me3_installer.exe"
 
+      - name: Create distributions
+        run: |
+          make me3-windows-amd64.zip me3-linux-amd64.tar.gz
+
       - uses: taiki-e/install-action@7b20dfd705618832f20d29066e34aa2f2f6194c2 # v2.52.8
         with:
           tool: cargo-cyclonedx
@@ -224,6 +228,8 @@ jobs:
             target/x86_64-pc-windows-msvc/release/me3.exe
             target/x86_64-pc-windows-msvc/release/me3.pdb
             target/x86_64-unknown-linux-musl/release/me3
+            me3-windows-amd64.zip
+            me3-linux-amd64.tar.gz
             crates/**/*.cdx.json
             installer.sh
 

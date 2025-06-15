@@ -1,8 +1,9 @@
 .PHONY: build
 
 CARGO = cargo
-CARGO_FLAGS = --features=sentry
-CARGO_PROFILE=debug
+
+CARGO_PROFILE ?= release
+CARGO_FLAGS ?= --features=sentry --release
 
 ME3_WINDOWS_BINARIES=target/x86_64-pc-windows-msvc/$(CARGO_PROFILE)/me3.exe \
 	target/x86_64-pc-windows-msvc/$(CARGO_PROFILE)/me3_mod_host.dll \
