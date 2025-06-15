@@ -55,7 +55,6 @@ jobs:
       - name: Component detection
         uses: advanced-security/component-detection-dependency-submission-action@e0dcc856679a6d915a881da808c8844d836688d8
         with:
-          detectorsFilter: RustSbom
           detectorsCategories: Rust
           detectorArgs: RustSbom=EnableIfDefaultOff
   dependency-review:
