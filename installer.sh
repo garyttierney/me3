@@ -362,26 +362,27 @@ main() {
     }
 
     local _config_home_path="${XDG_CONFIG_HOME:-$HOME/.config}/me3"
-    local _config_path="$_config_home_path/me3/me3.toml"
+    local _config_path="$_config_home_path/me3.toml"
 
     if [ ! -f "$_config_path" ]; then
         ensure mkdir -p "$_config_home_path"
         say "creating default me3 configuration at $_config_path"
-        cat >"$_config_path" <<EOF
+        ensure cat >"$_config_path" <<EOF
 windows_binaries_dir = "$me3_windows_binary_dir"
 EOF
-
-        while true; do
-            read -r -p "Enable crash reporting? " yn
-            case $yn in
-            [Yy]*)
-                echo "crash_reporting = true" >>"$_config_path"
-                break
-                ;;
-            [Nn]*) exit ;;
-            *) echo "Please answer yes or no." ;;
-            esac
-        done
+        if [ -t 0 ]; then
+            while true; do
+                read -r -p "Enable crash reporting? " yn
+                case $yn in
+                [Yy]*)
+                    echo "crash_reporting = true" >>"$_config_path"
+                    break
+                    ;;
+                [Nn]*) exit ;;
+                *) echo "Please answer yes or no." ;;
+                esac
+            done
+        fi
     else
         warn "configuration file already exists, ensure windows_binaries_dir is set to $me3_windows_binary_dir"
     fi
