@@ -20,31 +20,52 @@ license = "MIT OR Apache-2.0"
 
 [workspace.lints.rust]
 unused = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
 
 [workspace.lints.clippy]
 missing_transmute_annotations = "allow"
 
 [workspace.dependencies]
-crash-context = "0.6.3"
+bincode = "2"
+chrono = "0.4"
+clap = "4"
+color-eyre = { version = "0.6", default-features = false }
+crash-context = "0.6"
+crash-handler = "0.6"
+ctrlc = "3"
+directories = "6"
 dll-syringe = "0.16"
-expect-test = "1.0.1"
-minidumper = "0.8"
+expect-test = "1"
+eyre = { version = "0.6", default-features = false }
+iced-x86 = "1"
+is-terminal = "0.4"
+me3-env = { path = "crates/env" }
 me3-launcher-attach-protocol = { path = "crates/launcher-attach-protocol" }
 me3-mod-host = { path = "crates/mod-host" }
-me3-mod-protocol = { path = "crates/mod-protocol" }
 me3-mod-host-assets = { path = "crates/mod-host-assets" }
-me3-env = { path = "crates/env" }
+me3-mod-protocol = { path = "crates/mod-protocol" }
 me3-telemetry = { package = "me3_telemetry", path = "crates/telemetry" }
-normpath = "1.3.0"
+memmap = "0.7"
+minidump-writer = "0.10"
+minidumper = "0.8"
+normpath = "1"
+pelite = "0.10"
+rayon = "1"
+regex = "1"
 schemars = "0.9"
+sentry = { version = "0.39", default-features = false }
 serde = "1"
 serde_derive = "1"
 serde_json = "1"
-toml = "0.8"
+steamlocate = "2"
+tempfile = "3"
 thiserror = "2"
-tracing-error = "0.2.0"
-tracing-subscriber = { version = "0.3.0" }
-tracing = "0.1.13"
+toml = "0.8"
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-error = "0.2"
+tracing-subscriber = { version = "0.3", default-features = false }
+windows = "0.61"
 
 [workspace.metadata.release]
 pre_release_replacements = [

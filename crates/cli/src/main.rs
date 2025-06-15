@@ -191,12 +191,6 @@ impl AppInstallInfo {
     }
 }
 
-pub struct AppContext {
-    config: Config,
-    installation: Option<AppInstallInfo>,
-    paths: AppPaths,
-}
-
 #[cfg(target_os = "linux")]
 fn bins_dir(config: &Config) -> PathBuf {
     const DEBUG_TARGET_DIR: &str = "x86_64-unknown-linux-gnu/debug";

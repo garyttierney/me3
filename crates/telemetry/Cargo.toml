@@ -11,6 +11,13 @@ sentry = ["dep:sentry"]
 default = []
 
 [dependencies]
+color-eyre.workspace = true
+eyre = { version = "0.6", default-features = false, features = ["track-caller"] }
+me3-env.workspace = true
+regex = { workspace = true, features = ["unicode-case"] }
+serde.workspace = true
+tracing.workspace = true
+tracing-appender.workspace = true
 tracing-error.workspace = true
 tracing-subscriber = { workspace = true, default-features = false, features = [
     "env-filter",
@@ -19,18 +26,8 @@ tracing-subscriber = { workspace = true, default-features = false, features = [
     "tracing-log",
     "std",
 ] }
-tracing.workspace = true
-regex = { version = "1.11.1", features = ["unicode-case"] }
-tracing-appender = "0.2.3"
-serde = "1"
-eyre = { version = "0.6", default-features = false, features = [
-    "track-caller",
-] }
-color-eyre = "0.6.5"
-me3-env.workspace = true
 
 [dependencies.sentry]
-version = "0.39"
 default-features = false
 features = [
     "tracing",
@@ -43,5 +40,6 @@ features = [
     "release-health",
 ]
 optional = true
+workspace = true
 [lints]
 workspace = true

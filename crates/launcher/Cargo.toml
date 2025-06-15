@@ -13,10 +13,10 @@ default = []
 
 [dependencies]
 crash-context.workspace = true
-eyre = { version = "0.6", default-features = false, features = [
+eyre = { workspace = true, default-features = false, features = [
     "track-caller",
 ] }
-windows = { version = "0.61", features = [
+windows = { workspace = true, features = [
     "Win32_System_Diagnostics_Debug",
     "Win32_System_LibraryLoader",
     "Win32_System_Threading",
@@ -24,9 +24,9 @@ windows = { version = "0.61", features = [
 dll-syringe.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
-minidump-writer = "0.10"
+minidump-writer.workspace = true
 tracing.workspace = true
-sentry = { version = "0.39.0", optional = true }
+sentry = { workspace = true, optional = true }
 toml.workspace = true
 me3-telemetry.workspace = true
 me3-env.workspace = true

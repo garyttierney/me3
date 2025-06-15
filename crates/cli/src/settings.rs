@@ -1,10 +1,9 @@
 use std::{
-    error::Error,
     fs,
     path::{Path, PathBuf},
 };
 
-use color_eyre::{eyre::Context, Result};
+use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 use steamlocate::SteamDir;
 use tracing::error;

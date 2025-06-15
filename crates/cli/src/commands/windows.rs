@@ -1,4 +1,4 @@
-use std::{io::BufReader, str::FromStr, time::Duration};
+use std::{io::BufReader, str::FromStr};
 
 use color_eyre::eyre::{Context, OptionExt};
 use semver::Version;
