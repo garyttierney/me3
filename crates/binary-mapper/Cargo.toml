@@ -1,6 +1,6 @@
 [package]
 name = "me3-binary-mapper"
-version = "0.6.0-prerelease"
+version.workspace = true
 edition.workspace = true
 repository.workspace = true
 license.workspace = true

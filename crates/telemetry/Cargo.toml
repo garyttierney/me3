@@ -1,6 +1,6 @@
 [package]
 name = "me3_telemetry"
-version = "0.6.0-prerelease"
+version.workspace = true
 edition.workspace = true
 repository.workspace = true
 license.workspace = true
@@ -22,7 +22,7 @@ eyre = { version = "0.6", default-features = false, features = [
     "track-caller",
 ] }
 color-eyre = "0.6.5"
-me3-env = { path = "../env" , version = "0.6.0-prerelease" }
+me3-env = { path = "../env" }
 
 [dependencies.sentry]
 version = "0.39"
