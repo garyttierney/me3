@@ -26,8 +26,8 @@ missing_transmute_annotations = "allow"
 
 [workspace.dependencies]
 crash-context = "0.6.3"
-dll-syringe = "0.15"
-expect-test = "1.5.0"
+dll-syringe = "0.16"
+expect-test = "1.0.1"
 minidumper = "0.8"
 me3-launcher-attach-protocol = { path = "crates/launcher-attach-protocol" }
 me3-mod-host = { path = "crates/mod-host" }
@@ -40,11 +40,10 @@ schemars = "0.9"
 serde = "1"
 serde_derive = "1"
 serde_json = "1"
-serde_yaml = "0.9"
 toml = "0.8"
 thiserror = "2"
 tracing-error = "0.2.0"
-tracing-subscriber = { version = "0.3.0", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.0" }
 tracing = "0.1.13"
 
 [workspace.metadata.release]
@@ -55,8 +54,3 @@ pre_release_replacements = [
   { file = "CHANGELOG.md", search = "<!-- next-header -->", replace = "<!-- next-header -->\n\n## [Unreleased] - ReleaseDate", exactly = 1 },
   { file = "CHANGELOG.md", search = "<!-- next-url -->", replace = "<!-- next-url -->[Unreleased]: https://github.com/garyttierney/me3/compare/$TAG_NAME...HEAD", exactly = 1 },
 ]
-
-[patch.crates-io]
-# MaybeUninit::uninit_array was removed in recent nightly. dll-syringe is yet to fix their usages.
-# PR with fix: https://github.com/OpenByteDev/dll-syringe/pull/35
-dll-syringe = { git = 'https://github.com/fry/dll-syringe.git', rev = "0a8b18efccbfd5b31553d7be8e8e48ecb1991ff4" }

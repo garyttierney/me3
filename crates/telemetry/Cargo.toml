@@ -11,9 +11,14 @@ sentry = ["dep:sentry"]
 default = []
 
 [dependencies]
-
 tracing-error.workspace = true
-tracing-subscriber = { workspace = true, features = ["env-filter"] }
+tracing-subscriber = { workspace = true, default-features = false, features = [
+    "env-filter",
+    "fmt",
+    "ansi",
+    "tracing-log",
+    "std",
+] }
 tracing.workspace = true
 regex = { version = "1.11.1", features = ["unicode-case"] }
 tracing-appender = "0.2.3"

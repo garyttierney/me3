@@ -29,7 +29,6 @@ retour = { git = "https://github.com/Hpmason/retour-rs", features = [
 ] }
 serde_json = "1"
 tracing.workspace = true
-tracing-subscriber = { workspace = true, features = ["json"] }
 thiserror.workspace = true
 windows = { version = "0.61", features = [
     "Wdk_System_Threading",

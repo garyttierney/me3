@@ -21,7 +21,6 @@ color-eyre = { version = "0.6", default-features = false, features = [
     "track-caller",
     "capture-spantrace",
 ] }
-config = "0.15.11"
 ctrlc = "3.4.7"
 directories = "6.0.0"
 is-terminal = "0.4.16"
@@ -37,8 +36,6 @@ tempfile = "3.20.0"
 normpath.workspace = true
 toml.workspace = true
 tracing.workspace = true
-tracing-error.workspace = true
-tracing-subscriber = { workspace = true, features = ["env-filter"] }
 ureq = "3.0.11"
 
 [target.'cfg(windows)'.dependencies]
