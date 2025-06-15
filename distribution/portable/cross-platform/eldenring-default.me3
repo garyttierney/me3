@@ -1,0 +1,6 @@
+[[supports]]
+game = "eldenring"
+
+[[package]]
+id = "default-mods"
+path = "eldenring-mods"

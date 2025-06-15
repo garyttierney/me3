@@ -1,0 +1,6 @@
+[[supports]]
+game = "nightreign"
+
+[[package]]
+id = "default-mods"
+path = "nightreign-mods"
