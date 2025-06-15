@@ -370,18 +370,19 @@ main() {
         ensure cat >"$_config_path" <<EOF
 windows_binaries_dir = "$me3_windows_binary_dir"
 EOF
-
-        while true; do
-            read -r -p "Enable crash reporting? " yn
-            case $yn in
-            [Yy]*)
-                echo "crash_reporting = true" >>"$_config_path"
-                break
-                ;;
-            [Nn]*) exit ;;
-            *) echo "Please answer yes or no." ;;
-            esac
-        done
+        if [ -t 0 ]; then
+            while true; do
+                read -r -p "Enable crash reporting? " yn
+                case $yn in
+                [Yy]*)
+                    echo "crash_reporting = true" >>"$_config_path"
+                    break
+                    ;;
+                [Nn]*) exit ;;
+                *) echo "Please answer yes or no." ;;
+                esac
+            done
+        fi
     else
         warn "configuration file already exists, ensure windows_binaries_dir is set to $me3_windows_binary_dir"
     fi
