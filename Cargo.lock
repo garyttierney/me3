@@ -1518,7 +1518,7 @@ dependencies = [
 
 [[package]]
 name = "me3-binary-mapper"
-version = "0.6.0-prerelease"
+version = "0.6.0"
 dependencies = [
  "clap",
  "memmap",
@@ -1531,7 +1531,7 @@ dependencies = [
 
 [[package]]
 name = "me3-cli"
-version = "0.6.0-prerelease"
+version = "0.6.0"
 dependencies = [
  "chrono",
  "clap",
@@ -1559,7 +1559,7 @@ dependencies = [
 
 [[package]]
 name = "me3-env"
-version = "0.6.0-prerelease"
+version = "0.6.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1567,7 +1567,7 @@ dependencies = [
 
 [[package]]
 name = "me3-launcher"
-version = "0.6.0-prerelease"
+version = "0.6.0"
 dependencies = [
  "crash-context",
  "dll-syringe",
@@ -1585,7 +1585,7 @@ dependencies = [
 
 [[package]]
 name = "me3-launcher-attach-protocol"
-version = "0.6.0-prerelease"
+version = "0.6.0"
 dependencies = [
  "bincode",
  "eyre",
@@ -1596,7 +1596,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-host"
-version = "0.6.0-prerelease"
+version = "0.6.0"
 dependencies = [
  "color-eyre",
  "crash-handler",
@@ -1620,7 +1620,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-host-assets"
-version = "0.6.0-prerelease"
+version = "0.6.0"
 dependencies = [
  "cxx-stl",
  "from-singleton",
@@ -1636,7 +1636,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-protocol"
-version = "0.6.0-prerelease"
+version = "0.6.0"
 dependencies = [
  "expect-test",
  "schemars",
@@ -1649,7 +1649,7 @@ dependencies = [
 
 [[package]]
 name = "me3_telemetry"
-version = "0.6.0-prerelease"
+version = "0.6.0"
 dependencies = [
  "color-eyre",
  "eyre",
@@ -2904,12 +2904,9 @@ dependencies = [
 
 [[package]]
 name = "slab"
-version = "0.4.9"
+version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f92a496fb766b417c996b9c5e57daf2f7ad3b0bebe1ccfca4856390e3d3bb67"
-dependencies = [
- "autocfg",
-]
+checksum = "04dc19736151f35336d325007ac991178d504a119863a2fcb3758cdb5e52c50d"
 
 [[package]]
 name = "slice-pool2"
