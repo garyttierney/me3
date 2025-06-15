@@ -55,7 +55,9 @@ jobs:
       - name: Component detection
         uses: advanced-security/component-detection-dependency-submission-action@e0dcc856679a6d915a881da808c8844d836688d8
         with:
-          detectorsCategories: Rust
+          # We enable any random detector in the filter to restrict the Rust detectors that are used,
+          # since EnableIfDefaultOff is additive to detectorsFilters.
+          detectorsFilter: Npm
           detectorArgs: RustSbom=EnableIfDefaultOff
   dependency-review:
     needs:
