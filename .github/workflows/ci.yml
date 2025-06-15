@@ -40,13 +40,9 @@ jobs:
       - uses: ./.github/actions/setup-windows-toolchain
         if: matrix.os == 'ubuntu-latest'
       - uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6 # v2.7.8
-        env:
-          CL_FLAGS: >-
-            -Wno-unused-command-line-argument -fuse-ld=lld-link 
-            /imsvc${{ github.workspace }}/xwin/crt/include 
-            /imsvc${{ github.workspace }}/xwin/sdk/include/ucrt 
-            /imsvc${{ github.workspace }}/xwin/sdk/include/um 
-            /imsvc${{ github.workspace }}/xwin/sdk/include/shared"
+        with:
+          shared-key: me3-build
+          save-if: false
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@7b20dfd705618832f20d29066e34aa2f2f6194c2 # v2.52.8
         with:

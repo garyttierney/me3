@@ -12,43 +12,35 @@ path = "src/main.rs"
 
 [features]
 default = []
-sentry = ["me3_telemetry/sentry"]
+sentry = ["me3-telemetry/sentry"]
 
 [dependencies]
-chrono = "0.4.41"
-clap = { version = "4.5.38", features = ["derive"] }
-color-eyre = { version = "0.6", default-features = false, features = [
+clap = { workspace = true, features = ["derive"] }
+chrono.workspace = true
+color-eyre = { workspace = true, default-features = false, features = [
     "track-caller",
     "capture-spantrace",
 ] }
-config = "0.15.11"
-ctrlc = "3.4.7"
-directories = "6.0.0"
-is-terminal = "0.4.16"
-me3-env = { path = "../env" }
+ctrlc.workspace = true
+directories.workspace = true
+is-terminal.workspace = true
+me3-env.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
-me3_telemetry = { path = "../telemetry" }
-open = { version = "5.3.2" }
+me3-telemetry.workspace = true
+open = { version = "5" }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-steamlocate = "2.0.1"
-tempfile = "3.20.0"
+steamlocate.workspace = true
+tempfile.workspace = true
 normpath.workspace = true
 toml.workspace = true
 tracing.workspace = true
-tracing-error.workspace = true
-tracing-subscriber = { workspace = true, features = ["env-filter"] }
-ureq = "3.0.11"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.55.0"
-update-informer = { version = "1.2.0", default-features = false, features = [
-    "github",
-    "ureq",
-    "rustls-tls",
-] }
-
+ureq = "3.0.11"
+semver = "1.0.26"
 
 [build-dependencies]
 winresource = "0.1"

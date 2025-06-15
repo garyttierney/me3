@@ -1,11 +1,8 @@
-use std::{
-    io::{BufRead, BufReader},
-    time::Duration,
-};
+use std::{io::BufReader, str::FromStr};
 
 use color_eyre::eyre::{Context, OptionExt};
-use tracing::info;
-use update_informer::{registry, Check};
+use semver::Version;
+use tracing::{error, info};
 use winreg::{
     enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE},
     RegKey,
@@ -43,19 +40,36 @@ pub fn add_to_path() -> color_eyre::Result<()> {
 }
 
 pub fn update() -> color_eyre::Result<()> {
-    let informer = update_informer::new(
-        registry::GitHub,
-        "garyttierney/me3",
-        env!("CARGO_PKG_VERSION"),
-    )
-    .interval(Duration::ZERO);
+    const RELEASE_URI: &str = "https://api.github.com/repos/garyttierney/me3/releases/latest";
+    let response = ureq::get(RELEASE_URI)
+        .header("Accept", "application/vnd.github.v3+json")
+        .header("User-Agent", "me3")
+        .call()?;
 
-    if let Some(version) = informer.check_version().ok().flatten() {
-        println!("New version is available: {version}");
+    if !response.status().is_success() {
+        error!("unable to check latest version, check https://github.com/garyttierney/me3/releases/latest");
+        return Ok(());
+    }
+
+    let body = response.into_body().into_reader();
+    let release: serde_json::Value = serde_json::from_reader(body)?;
+
+    let current_version =
+        Version::from_str(env!("CARGO_PKG_VERSION")).expect("cargo version is incorrect");
+
+    let latest_version = release
+        .get("tag_name")
+        .and_then(|v| v.as_str())
+        .and_then(|tag_name| Version::from_str(tag_name.strip_prefix('v').unwrap_or(tag_name)).ok())
+        .ok_or_eyre("no tag_name in latest GitHub release")?;
+
+    if latest_version > current_version {
+        println!("New version is available: {latest_version}");
 
         let installer_url = format!(
-            "https://github.com/garyttierney/me3/releases/download/{version}/me3_installer.exe"
+            "https://github.com/garyttierney/me3/releases/download/v{latest_version}/me3_installer.exe"
         );
+
         info!(installer_url, "Downloading installer");
 
         let mut response = ureq::get(installer_url)

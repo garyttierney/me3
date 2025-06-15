@@ -9,30 +9,30 @@ publish = false
 
 [features]
 default = []
-sentry = ["me3_telemetry/sentry"]
+sentry = ["me3-telemetry/sentry"]
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-crash-handler = "0.6"
+color-eyre.workspace = true
+crash-handler.workspace = true
 dll-syringe = { workspace = true, features = ["payload-utils"] }
-eyre = { version = "0.6", default-features = false, features = [
-    "track-caller",
-] }
-iced-x86 = "1.21.0"
-ipc-channel.workspace = true
-me3-mod-protocol.workspace = true
+eyre = { workspace = true, default-features = false, features = ["track-caller"] }
+iced-x86.workspace = true
+libloading = "0.8.8"
+me3-env.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-host-assets.workspace = true
-retour = { git = "https://github.com/Hpmason/retour-rs", features = [
-    "static-detour",
-] }
-serde_json = "1"
-tracing.workspace = true
-tracing-subscriber = { workspace = true, features = ["json"] }
+me3-mod-protocol.workspace = true
+me3-telemetry.workspace = true
+microseh = "1.1.2"
+retour = { git = "https://github.com/Hpmason/retour-rs" }
+seq-macro = "0.3.6"
+serde_json.workspace = true
 thiserror.workspace = true
-windows = { version = "0.61", features = [
+tracing.workspace = true
+windows = { workspace = true, features = [
     "Wdk_System_Threading",
     "Win32_System_Memory",
     "Win32_System_Diagnostics_Debug",
@@ -40,12 +40,6 @@ windows = { version = "0.61", features = [
     "Win32_System_SystemInformation",
     "Win32_System_LibraryLoader",
 ] }
-seq-macro = "0.3.6"
-me3_telemetry = { path = "../telemetry" }
-libloading = "0.8.8"
-me3-env = { path = "../env" }
-color-eyre = "0.6.5"
-microseh = "1.1.2"
 
 [lints]
 workspace = true

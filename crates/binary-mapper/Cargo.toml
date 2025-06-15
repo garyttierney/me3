@@ -8,13 +8,13 @@ description = "Create a mapping of symbols for a game binary"
 publish = false
 
 [dependencies]
-pelite = "0.10"
-clap = { version = "4.5.4", features = ["derive", "env"] }
+pelite.workspace = true
+clap = { workspace = true, features = ["derive", "env"] }
 serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true
-memmap = "0.7"
-rayon = "1"
+memmap.workspace = true
+rayon.workspace = true
 
 [lints]
 workspace = true
