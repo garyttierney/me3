@@ -45,6 +45,7 @@ me3_telemetry = { path = "../telemetry" , version = "0.6.0-prerelease" }
 libloading = "0.8.8"
 me3-env = { path = "../env" , version = "0.6.0-prerelease" }
 color-eyre = "0.6.5"
+microseh = "1.1.2"
 
 [lints]
 workspace = true
