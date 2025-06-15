@@ -26,7 +26,7 @@ body = """
 {% if commit.body %}\
 {{commit.body|trim}}\
 {% elif "\n" in commit.message -%}\
-{{ commit.message | trim | split(pat="\n") | slice(start=1) | join(sep="\n") | trim }}\
+\n{{ commit.message | trim | split(pat="\n") | slice(start=1) | join(sep="\n") | trim }}
 {% endif -%}\
 {% endmacro -%}
 
@@ -39,7 +39,7 @@ body = """
   {% if commit.remote.pr_number %} in [#{{ commit.remote.pr_number }}]({{ self::remote_url() }}/pull/{{ commit.remote.pr_number }}){%- endif %}\
 {%- if commit.breaking %} [**breaking**]{% endif %}
 {% set body = self::body(commit=commit) %}\
-{%- if body %}{{ body | indent(prefix="  > ", first=true, blank=false) }}\
+{%- if body %}\n\n{{ body | indent(prefix="  > ", first=true, blank=false) }}\
 {%- endif %}
 {% if commit.footers %}
 {%- for footer in commit.footers %}\n
@@ -94,7 +94,7 @@ trim = true
 render_always = true
 # An array of regex based postprocessors to modify the changelog.
 postprocessors = [
-  { pattern = '>\n', replace = "" },
+  { pattern = '>\n  >', replace = "  >" },
   # Replace the placeholder <REPO> with a URL.
   #{ pattern = '<REPO>', replace = "https://github.com/orhun/git-cliff" },
 ]
