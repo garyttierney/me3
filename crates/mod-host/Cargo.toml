@@ -24,9 +24,7 @@ iced-x86 = "1.21.0"
 me3-mod-protocol.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-host-assets.workspace = true
-retour = { git = "https://github.com/Hpmason/retour-rs", features = [
-    "static-detour",
-] }
+retour = { git = "https://github.com/Hpmason/retour-rs" }
 serde_json = "1"
 tracing.workspace = true
 thiserror.workspace = true
