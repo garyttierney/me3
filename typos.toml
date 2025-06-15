@@ -1,4 +1,8 @@
 [files]
 extend-exclude = ["CHANGELOG.md"]
+
 [default]
+extend-ignore-words-re = [
+    "seh", # structured exception handling
+]
 extend-ignore-re = ["(?Rm)^.*(#|//)\\s*spellchecker:disable-line$"]
