@@ -14,7 +14,6 @@ default = []
 color-eyre.workspace = true
 eyre = { version = "0.6", default-features = false, features = ["track-caller"] }
 me3-env.workspace = true
-regex = { workspace = true, features = ["unicode-case"] }
 serde.workspace = true
 tracing.workspace = true
 tracing-appender.workspace = true

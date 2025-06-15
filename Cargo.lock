@@ -1654,7 +1654,6 @@ dependencies = [
  "color-eyre",
  "eyre",
  "me3-env",
- "regex",
  "sentry",
  "serde",
  "tracing",
