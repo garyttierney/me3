@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
+## me3 - [v0.6.0](https://github.com/garyttierney/me3/releases/v0.6.0) - 2025-06-15
+
+### 🚀 Features
+
+- [fdf35c9](https://github.com/garyttierney/me3/commit/fdf35c92f9c34e86153f6e741c8b4b58e70e6209) Create portable distributions in [#186](https://github.com/garyttierney/me3/pull/186)
+
+
+  > Adds a packaging process for portable distributions on both Windows and
+  > Linux
+
 ## me3 - [v0.5.0](https://github.com/garyttierney/me3/releases/v0.5.0) - 2025-06-14
 
 ### 🚀 Features
@@ -1697,7 +1707,12 @@ All notable changes to this project will be documented in this file.
 - [bb187f6](https://github.com/garyttierney/me3/commit/bb187f6c4931a2b91189bba14e2460e4c78e72dd) Add README and CONTRIBUTING
 
 
-[0.5.0]: https://github.com/garyttierney/me3/compare/v0.4.0..v0.5.0
+
+- [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
+
+
+[0.6.0]: https://github.com/garyttierney/me3/compare/v0.5.0..v0.6.0
+[0.4.0]: https://github.com/garyttierney/me3/compare/v0.3.0..v0.4.0
 [0.3.0]: https://github.com/garyttierney/me3/compare/v0.2.0..v0.3.0
 [0.2.0]: https://github.com/garyttierney/me3/compare/v0.1.0..v0.2.0
 
