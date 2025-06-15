@@ -1,6 +1,6 @@
 [package]
 name = "me3-mod-host"
-version = "0.6.0-prerelease"
+version.workspace = true
 edition.workspace = true
 repository.workspace = true
 license.workspace = true
@@ -41,9 +41,9 @@ windows = { version = "0.61", features = [
     "Win32_System_LibraryLoader",
 ] }
 seq-macro = "0.3.6"
-me3_telemetry = { path = "../telemetry" , version = "0.6.0-prerelease" }
+me3_telemetry = { path = "../telemetry" }
 libloading = "0.8.8"
-me3-env = { path = "../env" , version = "0.6.0-prerelease" }
+me3-env = { path = "../env" }
 color-eyre = "0.6.5"
 microseh = "1.1.2"
 
