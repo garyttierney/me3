@@ -23,10 +23,10 @@ pub fn with_root_span<T>(
 ) -> color_eyre::Result<T> {
     #[cfg(feature = "sentry")]
     let (transaction_is_root, transaction) = {
-        use sentry::{Hub, SentryTrace, TransactionContext, TransactionOrSpan};
+        use sentry::{Hub, TransactionContext, TransactionOrSpan};
 
         let hub = Hub::main();
-        let trace_id = deserialize_from_env()
+        let trace_id = me3_env::deserialize_from_env()
             .ok()
             .and_then(|vars: TelemetryVars| vars.trace_id);
 
@@ -81,7 +81,7 @@ impl Drop for Telemetry {
 
         #[cfg(feature = "sentry")]
         if let Some(client) = self.client.take() {
-            client.flush(Some(Duration::from_secs(10)));
+            client.flush(Some(std::time::Duration::from_secs(10)));
         }
     }
 }
@@ -260,6 +260,8 @@ pub fn install(config: TelemetryConfig) -> Telemetry {
 
     #[cfg(feature = "sentry")]
     let client = {
+        use std::str::FromStr;
+
         use sentry::types::Dsn;
         let sentry_dsn = option_env!("SENTRY_DSN").and_then(|dsn| Dsn::from_str(dsn).ok());
 
