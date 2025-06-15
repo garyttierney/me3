@@ -50,6 +50,8 @@ jobs:
         with:
           subject-path: |
             me3_installer.exe
+            me3-windows-amd64.zip
+            me3-linux-amd64.tar.gz
 
       - uses: actions/attest-sbom@115c3be05ff3974bcbd596578934b3f9ce39bf68 # v2.2.0
         with:
@@ -121,12 +123,10 @@ jobs:
       - name: Upload installer to release
         run: >-
           gh release upload --clobber -R garyttierney/me3 "${{ steps.collect-release-info.outputs.release_tag }}"
-          'me3_installer.exe#Installer for Windows'
-          target/x86_64-pc-windows-msvc/release/me3_mod_host.dll
-          target/x86_64-pc-windows-msvc/release/me3-launcher.exe
-          target/x86_64-pc-windows-msvc/release/me3.exe
-          target/x86_64-unknown-linux-musl/release/me3
-          'installer.sh#Installer for Linux'
+          'me3_installer.exe#me3_installer.exe (Installer for Windows)'
+          'installer.sh#installer.sh (Installer for Linux)'
+          'me3-windows-amd64.zip#me3-windows-amd64.zip (Portable distribution for Windows)'
+          'me3-linux-amd64.tar.gz#me3-linux-amd64.tar.gz (Portable distribution for LInux)'
           attestations.intoto.jsonl
         env:
           GH_TOKEN: ${{ github.token }}
@@ -202,6 +202,10 @@ jobs:
       - name: Build installer
         run: makensis -DTARGET_DIR="${{ github.workspace }}/target/x86_64-pc-windows-msvc/release/" -DVERSION=${{ steps.get_version.outputs.version }} installer.nsi "-XOutFile me3_installer.exe"
 
+      - name: Create distributions
+        run: |
+          make me3-windows-amd64.zip me3-linux-amd64.tar.gz
+
       - uses: taiki-e/install-action@7b20dfd705618832f20d29066e34aa2f2f6194c2 # v2.52.8
         with:
           tool: cargo-cyclonedx
@@ -224,6 +228,8 @@ jobs:
             target/x86_64-pc-windows-msvc/release/me3.exe
             target/x86_64-pc-windows-msvc/release/me3.pdb
             target/x86_64-unknown-linux-musl/release/me3
+            me3-windows-amd64.zip
+            me3-linux-amd64.tar.gz
             crates/**/*.cdx.json
             installer.sh
 
