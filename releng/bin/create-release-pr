@@ -4,7 +4,7 @@ set -x
 
 version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
 version=${version%"-prerelease"}
-v=(${version//./ })
+IFS="." read -r -a v <<<"$version"
 ((v[1]--))
 tag_name="v$version"
 prev_tag_name="v${v[0]}.${v[1]}.${v[2]}"
@@ -16,7 +16,7 @@ fi
 release_notes=$(git cliff --strip all "$prev_tag_name..HEAD")
 
 git branch -m "release-$tag_name" -f
-git cliff --tag "$tag_name" -o CHANGELOG.md "$prev_tag_name..HEAD"
+git cliff --tag "$tag_name" -o CHANGELOG.md
 
 sed -i "
 / (Latest)/{
@@ -44,7 +44,7 @@ git commit -am "release: $version"
 echo "$tag_command_template"
 tag_command=$(TAG_NAME="$tag_name" TAG_SHA="$tag_sha" envsubst <<<"$tag_command_template")
 
-v=(${version//./ })
+IFS="." read -r -a v <<<"$version"
 ((v[1]++))
 new_version="${v[0]}.${v[1]}.${v[2]}"
 
