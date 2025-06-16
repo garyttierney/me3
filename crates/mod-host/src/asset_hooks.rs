@@ -112,14 +112,14 @@ fn hook_ebl_utility(
 ) -> Result<(), eyre::Error> {
     let device_manager = locate_device_manager(image_base)?;
 
-    let ebl_utility_vtable = unsafe { EblFileManager::ebl_utility_vtable(image_base)? };
+    let make_ebl_object = unsafe { EblFileManager::make_ebl_object(image_base)? };
 
-    debug!(?ebl_utility_vtable);
+    debug!(?make_ebl_object);
 
     let mut mod_host = ModHost::get_attached_mut();
 
     mod_host
-        .hook(ebl_utility_vtable.make_ebl_object)
+        .hook(make_ebl_object)
         .with_closure(move |ctx, p1, path, p3| {
             let mut device_manager = DlDeviceManager::lock(device_manager);
 
@@ -136,36 +136,6 @@ fn hook_ebl_utility(
             let _guard = device_manager.push_vfs(&VFS.lock().unwrap());
 
             (ctx.trampoline)(p1, path, p3)
-        })
-        .install()?;
-
-    let hook_span = info_span!("hook");
-
-    mod_host
-        .hook(ebl_utility_vtable.mount_ebl)
-        .with_closure(move |ctx, p1, p2, p3, p4, p5, p6, p7| {
-            let _span_guard = hook_span.enter();
-
-            let mut device_manager = DlDeviceManager::lock(device_manager);
-
-            let snap = device_manager.snapshot();
-
-            let result = (ctx.trampoline)(p1, p2, p3, p4, p5, p6, p7);
-
-            match snap {
-                Ok(snap) => {
-                    let new = device_manager.extract_new(snap);
-
-                    debug!("extracted_mounts" = ?new);
-
-                    let mut vfs = VFS.lock().unwrap();
-
-                    vfs.append(new);
-                }
-                Err(e) => error!("BND4 snapshot error: {e}"),
-            }
-
-            result
         })
         .install()?;
 
