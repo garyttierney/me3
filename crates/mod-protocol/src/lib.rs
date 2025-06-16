@@ -24,6 +24,7 @@ pub enum ModProfile {
 )]
 pub enum Game {
     #[serde(rename = "sekiro")]
+    #[serde(alias = "sdt")]
     Sekiro,
 
     #[serde(rename = "elden-ring")]
