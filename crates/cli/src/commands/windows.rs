@@ -3,6 +3,10 @@ use std::{io::BufReader, str::FromStr};
 use color_eyre::eyre::{Context, OptionExt};
 use semver::Version;
 use tracing::{error, info};
+use windows::Win32::System::Console::{
+    GetConsoleMode, GetStdHandle, SetConsoleMode, ENABLE_PROCESSED_OUTPUT,
+    ENABLE_VIRTUAL_TERMINAL_PROCESSING, STD_OUTPUT_HANDLE,
+};
 use winreg::{
     enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE},
     RegKey,
@@ -100,4 +104,20 @@ pub fn update() -> color_eyre::Result<()> {
     }
 
     Ok(())
+}
+
+pub fn enable_ansi() -> color_eyre::Result<()> {
+    unsafe {
+        let console = GetStdHandle(STD_OUTPUT_HANDLE)?;
+
+        let mut mode = ENABLE_PROCESSED_OUTPUT;
+        GetConsoleMode(console, &mut mode)?;
+
+        SetConsoleMode(
+            console,
+            mode | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING,
+        )?;
+
+        Ok(())
+    }
 }

@@ -279,43 +279,30 @@ pub fn launch(
     let app_id = game.app_id();
     info!(?game, app_id, "resolved game");
 
-    let steam_dir = config.resolve_steam_dir()?;
-    info!(?steam_dir, "found steam dir");
+    let steam_dir = config.resolve_steam_dir();
 
-    let (steam_app, steam_library) = steam_dir
-        .find_app(app_id)?
-        .ok_or_eyre("installation for requested game wasn't found")?;
-    info!(name = ?steam_app.name, "found steam app in library");
+    let steam_src = config.resolve_steam_dir().and_then(|dir| {
+        dir.find_app(app_id)?
+            .ok_or_eyre("installation for requested game wasn't found")
+    });
 
-    let app_install_path = steam_library.resolve_app_dir(&steam_app);
-    info!(?app_install_path, "found steam app path");
+    let launcher;
 
-    let launcher_path = args.exe.unwrap_or_else(|| game.launcher());
-    info!(?launcher_path, "found steam app launcher");
-
-    let launcher = app_install_path.join(launcher_path);
-
-    let ordered_natives = sort_dependencies(all_natives)?;
-    let ordered_packages = sort_dependencies(all_packages)?;
-
-    let attach_config_dir = paths.cache_path.unwrap_or(app_install_path.clone());
-    std::fs::create_dir_all(&attach_config_dir)?;
-
-    let attach_config_file = NamedTempFile::new_in(&attach_config_dir)?;
-    let attach_config = AttachConfig {
-        game: game.into(),
-        packages: ordered_packages,
-        natives: ordered_natives,
-        suspend: args.suspend,
-    };
-
-    std::fs::write(&attach_config_file, toml::to_string_pretty(&attach_config)?)?;
-    info!(?attach_config_file, ?attach_config, "wrote attach config");
-
-    let injector_path: PathBuf = bins_dir.join("me3-launcher.exe");
-    let dll_path: PathBuf = bins_dir.join("me3_mod_host.dll");
+    let injector_path = bins_dir.join("me3-launcher.exe");
 
     let mut injector_command = if cfg!(target_os = "linux") {
+        let steam_dir = steam_dir?;
+        info!(?steam_dir, "found steam dir");
+
+        let (steam_app, steam_library) = steam_src?;
+        info!(name = ?steam_app.name, "found steam app in library");
+
+        launcher = args.exe.unwrap_or_else(|| {
+            steam_library
+                .resolve_app_dir(&steam_app)
+                .join(game.launcher())
+        });
+
         let compat_tools = steam_dir.compat_tool_mapping()?;
         let app_compat_tool = compat_tools
             .get(&app_id)
@@ -333,8 +320,46 @@ pub fn launch(
 
         launcher.into_command(injector_path)
     } else {
+        launcher = if let Some(launcher) = args.exe {
+            launcher
+        } else {
+            let steam_dir = steam_dir?;
+            info!(?steam_dir, "found steam dir");
+
+            let (steam_app, steam_library) = steam_src?;
+            info!(name = ?steam_app.name, "found steam app in library");
+
+            steam_library
+                .resolve_app_dir(&steam_app)
+                .join(game.launcher())
+        };
+
         DirectLauncher.into_command(injector_path)
     }?;
+
+    info!(?launcher, "found steam app launcher");
+
+    let ordered_natives = sort_dependencies(all_natives)?;
+    let ordered_packages = sort_dependencies(all_packages)?;
+
+    let app_install_path = launcher.parent().map(Path::to_path_buf);
+
+    let attach_config_dir = paths
+        .cache_path
+        .unwrap_or(app_install_path.unwrap_or_default());
+
+    std::fs::create_dir_all(&attach_config_dir)?;
+
+    let attach_config_file = NamedTempFile::new_in(&attach_config_dir)?;
+    let attach_config = AttachConfig {
+        game: game.into(),
+        packages: ordered_packages,
+        natives: ordered_natives,
+        suspend: args.suspend,
+    };
+
+    std::fs::write(&attach_config_file, toml::to_string_pretty(&attach_config)?)?;
+    info!(?attach_config_file, ?attach_config, "wrote attach config");
 
     let now = Local::now();
     let log_id = now.format("%Y-%m-%d_%H-%M-%S").to_string();
@@ -377,9 +402,11 @@ pub fn launch(
 
     info!(path = ?monitor_log_file.path(), "temporary log file created");
 
+    let dll_path: PathBuf = bins_dir.join("me3_mod_host.dll");
+
     let launcher_vars = LauncherVars {
-        exe: launcher.to_path_buf(),
-        host_dll: dll_path.to_path_buf(),
+        exe: launcher,
+        host_dll: dll_path,
         host_config_path: attach_config_file.path().to_path_buf(),
     };
 
