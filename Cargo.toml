@@ -34,7 +34,7 @@ crash-context = "0.6"
 crash-handler = "0.6"
 ctrlc = "3"
 directories = "6"
-dll-syringe = "0.16"
+dll-syringe = { version = "0.16", default-features = false, features = ["syringe", "rpc"] }
 expect-test = "1"
 eyre = { version = "0.6", default-features = false }
 iced-x86 = "1"
@@ -65,6 +65,7 @@ tracing = "0.1"
 tracing-appender = "0.2"
 tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", default-features = false }
+ureq = "2"
 windows = "0.61"
 
 [workspace.metadata.release]
