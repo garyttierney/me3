@@ -23,16 +23,20 @@ pub enum ModProfile {
     Clone, Copy, Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, PartialOrd, Ord,
 )]
 pub enum Game {
-    #[serde(alias = "eldenring")]
+    #[serde(rename = "sekiro")]
+    #[serde(alias = "sdt")]
+    Sekiro,
+
     #[serde(rename = "elden-ring")]
+    #[serde(alias = "eldenring")]
     EldenRing,
 
     #[serde(rename = "armoredcore6")]
     #[serde(alias = "ac6")]
     ArmoredCore6,
 
-    #[serde(alias = "nightrein")]
     #[serde(rename = "nightreign")]
+    #[serde(alias = "nightrein")]
     Nightreign,
 }
 

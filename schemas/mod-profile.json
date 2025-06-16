@@ -36,6 +36,7 @@
       "description": "Chronologically sorted list of games supported by me3.\n\n Feature gates can use [`Ord`] comparisons between game type constants.",
       "type": "string",
       "enum": [
+        "sekiro",
         "elden-ring",
         "armoredcore6",
         "nightreign"
