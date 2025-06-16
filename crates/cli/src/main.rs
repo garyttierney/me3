@@ -43,6 +43,7 @@ impl ValueEnum for Game {
     fn value_variants<'a>() -> &'a [Self] {
         use me3_mod_protocol::Game as G;
         &[
+            Game(G::Sekiro),
             Game(G::EldenRing),
             Game(G::Nightreign),
             Game(G::ArmoredCore6),
@@ -52,6 +53,7 @@ impl ValueEnum for Game {
     fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {
         use me3_mod_protocol::Game as G;
         Some(match self.0 {
+            G::Sekiro => PossibleValue::new("sekiro").alias("sdt"),
             G::EldenRing => PossibleValue::new("eldenring").aliases(["er", "elden-ring"]),
             G::Nightreign => PossibleValue::new("nightreign").aliases(["nr", "nightrein"]),
             G::ArmoredCore6 => PossibleValue::new("armoredcore6").alias("ac6"),
@@ -64,6 +66,7 @@ impl Game {
         use me3_mod_protocol::Game as G;
 
         match self.0 {
+            G::Sekiro => 814380,
             G::EldenRing => 1245620,
             G::Nightreign => 2622380,
             G::ArmoredCore6 => 1888160,
@@ -74,6 +77,7 @@ impl Game {
         use me3_mod_protocol::Game as G;
 
         PathBuf::from(match self.0 {
+            G::Sekiro => "sekiro.exe",
             G::EldenRing => "Game/eldenring.exe",
             G::Nightreign => "Game/nightreign.exe",
             G::ArmoredCore6 => "Game/armoredcore6.exe",
@@ -84,6 +88,7 @@ impl Game {
         use me3_mod_protocol::Game as G;
 
         let game = match id {
+            814380 => G::Sekiro,
             1245620 => G::EldenRing,
             2622380 => G::Nightreign,
             1888160 => G::ArmoredCore6,
