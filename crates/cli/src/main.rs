@@ -228,6 +228,10 @@ fn bins_dir(_config: &Config) -> PathBuf {
 fn main() {
     me3_telemetry::install_error_handler();
 
+    // Some Windows terminals do not display ANSI escape codes by default.
+    #[cfg(target_os = "windows")]
+    let _ = crate::commands::windows::enable_ansi();
+
     let cli = Cli::parse();
 
     let app_install = AppInstallInfo::try_from_cargo()

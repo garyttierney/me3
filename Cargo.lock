@@ -1553,6 +1553,7 @@ dependencies = [
  "toml",
  "tracing",
  "ureq 3.0.11",
+ "windows",
  "winreg",
  "winresource",
 ]

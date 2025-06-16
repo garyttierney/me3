@@ -38,6 +38,7 @@ toml.workspace = true
 tracing.workspace = true
 
 [target.'cfg(windows)'.dependencies]
+windows = { workspace = true, features = ["Win32_System_Console"] }
 winreg = "0.55.0"
 ureq = "3.0.11"
 semver = "1.0.26"
