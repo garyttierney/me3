@@ -29,18 +29,29 @@
       "problemMatcher": []
     },
     {
+      "label": "Run Launcher (Windows)",
+      "type": "shell",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "dependsOn": [
+        "rust: cargo build all (windows)",
+      ],
+      "command": "${workspaceFolder}/target/x86_64-pc-windows-msvc/debug/me3 ${input:command}",
+      "problemMatcher": []
+    },
+    {
       "type": "process",
       "command": "cargo",
       "args": [
         "build",
-        "--all",
-        "--features=sentry"
+        "--all"
       ],
-      "options": {
-        "env": {
-          "SENTRY_DSN": "${config:me3.sentry.dsn}"
-        }
-      },
       "problemMatcher": [],
       "presentation": {
         "reveal": "never",
@@ -61,14 +72,8 @@
         "-p",
         "me3-cli",
         "--target",
-        "x86_64-unknown-linux-gnu",
-        "--features=sentry"
+        "x86_64-unknown-linux-gnu"
       ],
-      "options": {
-        "env": {
-          "SENTRY_DSN": "${config:me3.sentry.dsn}"
-        }
-      },
       "problemMatcher": [],
       "presentation": {
         "reveal": "never",
