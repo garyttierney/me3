@@ -30,6 +30,7 @@ tag_sha=$(git rev-parse --verify HEAD)
 read -r -d '' tag_command_template <<'EOF'
 
 
+
 ### Create and publish the tag:
 
 ```
@@ -54,10 +55,10 @@ git commit -am "chore: start $new_version development"
 
 if [ -n "$RELEASE_PUSH" ]; then
     git push origin "HEAD:release-$tag_name" --force
-
+    pr_body=$(printf '%s \n\n %s' "$release_notes" "$tag_command")
     if ! gh pr view; then
-        gh pr create -B main -b "$release_notes $tag_command" --title "chore(release): $version"
+        gh pr create -B main -b "$pr_body" --title "chore(release): $version"
     else
-        gh pr edit -B main -b "$release_notes $tag_command" --title "chore(release): $version"
+        gh pr edit -B main -b "$pr_body" --title "chore(release): $version"
     fi
 fi
