@@ -148,9 +148,7 @@ commit_parsers = [
 # Exclude commits that are not matched by any commit parser.
 filter_commits = false
 # An array of link parsers for extracting external references, and turning them into URLs, using regex.
-link_parsers = [
-  { pattern = "#(\\d+)", href = "https://github.com/garyttierney/me3/issues/$1" },
-]
+link_parsers = [{ pattern = "#(\\d+)", href = "https://github.com/garyttierney/me3/issues/$1" }]
 # Include only the tags that belong to the current branch.
 use_branch_tags = false
 
@@ -158,7 +156,6 @@ use_branch_tags = false
 topo_order = false
 # sort the commits inside sections by oldest/newest order
 sort_commits = "newest"
-ignore_tags = '^\d+\.\d+\.\d+$'
+ignore_tags = '^(.*prerelease|0.5.0)$'
 # Process submodules commits
 recurse_submodules = false
-skip_tags = "prerelease"
