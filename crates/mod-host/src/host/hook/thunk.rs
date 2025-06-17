@@ -1,6 +1,7 @@
 use std::{
     any::Any,
-    arch::asm,
+    arch::{asm, global_asm},
+    array,
     cmp::max,
     marker::Tuple,
     mem::{offset_of, size_of, transmute},
@@ -218,41 +219,52 @@ impl ThunkCounter {
 }
 
 fn thunk_prototype(info_offset: usize, trampoline_offset: usize) -> Result<Vec<u8>, eyre::Error> {
-    #[rustfmt::skip]
-    const SHELLCODE: [u8; 22] = [
-        // lea rax,[rip+SHELLCODE]
-        0x48, 0x8d, 0x05, 0xF9, 0xFF, 0xFF, 0xFF,
+    let start_ptr = &raw const thunk_prototype_start;
 
-        // mov gs:[0x28],rax
-        0x65, 0x48, 0x89, 0x04, 0x25, 0x28, 0x00, 0x00, 0x00,
+    let lea_end_ptr = &raw const thunk_prototype_lea;
+    let lea_ptr = unsafe { lea_end_ptr.sub(4) };
+    let lea_start = unsafe { lea_ptr.offset_from_unsigned(start_ptr) };
 
-        // jmp [rip+SHELLCODE]
-        0xFF, 0x25, 0xEA, 0xFF, 0xFF, 0xFF,
-    ];
+    let jmp_end_ptr = &raw const thunk_prototype_jmp;
+    let jmp_ptr = unsafe { jmp_end_ptr.sub(4) };
+    let jmp_start = unsafe { jmp_ptr.offset_from_unsigned(start_ptr) };
 
-    const MOV_DISP: i32 = i32::from_le_bytes([0xF9, 0xFF, 0xFF, 0xFF]);
-    const JMP_DISP: i32 = i32::from_le_bytes([0xEA, 0xFF, 0xFF, 0xFF]);
+    let mut thunk_prototype = unsafe { slice::from_raw_parts(start_ptr, jmp_start + 4).to_owned() };
 
-    let mut shellcode = SHELLCODE[..3].to_owned();
+    let lea_disp = i32::from_le_bytes(array::from_fn(|i| unsafe { *lea_ptr.add(i) }));
+    let jmp_disp = i32::from_le_bytes(array::from_fn(|i| unsafe { *jmp_ptr.add(i) }));
 
-    shellcode.extend_from_slice(
-        &MOV_DISP
-            .checked_add(i32::try_from(info_offset)?)
-            .ok_or_eyre("offset too big")?
-            .to_le_bytes(),
-    );
+    let lea_disp = lea_disp
+        .checked_add(i32::try_from(info_offset)?)
+        .ok_or_eyre("offset too big")?;
 
-    shellcode.extend_from_slice(&SHELLCODE[7..18]);
+    let jmp_disp = jmp_disp
+        .checked_add(i32::try_from(trampoline_offset)?)
+        .ok_or_eyre("offset too big")?;
 
-    shellcode.extend_from_slice(
-        &JMP_DISP
-            .checked_add(i32::try_from(trampoline_offset)?)
-            .ok_or_eyre("offset too big")?
-            .to_le_bytes(),
-    );
+    let _ = thunk_prototype.splice(lea_start..lea_start + 4, lea_disp.to_le_bytes());
+    let _ = thunk_prototype.splice(jmp_start..jmp_start + 4, jmp_disp.to_le_bytes());
 
-    Ok(shellcode)
+    Ok(thunk_prototype)
 }
+
+unsafe extern "C" {
+    static thunk_prototype_start: u8;
+    static thunk_prototype_lea: u8;
+    static thunk_prototype_jmp: u8;
+}
+
+global_asm!(
+    ".global thunk_prototype_start",
+    ".global thunk_prototype_lea",
+    ".global thunk_prototype_jmp",
+    "thunk_prototype_start:",
+    "lea rax,[rip+thunk_prototype_start]",
+    "thunk_prototype_lea:",
+    "mov gs:[0x28],rax",
+    "jmp [rip+thunk_prototype_start]",
+    "thunk_prototype_jmp:",
+);
 
 #[cfg(test)]
 mod test {
