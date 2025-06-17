@@ -254,17 +254,7 @@ unsafe extern "C" {
     static thunk_prototype_jmp: u8;
 }
 
-global_asm!(
-    ".global thunk_prototype_start",
-    ".global thunk_prototype_lea",
-    ".global thunk_prototype_jmp",
-    "thunk_prototype_start:",
-    "lea rax,[rip+thunk_prototype_start]",
-    "thunk_prototype_lea:",
-    "mov gs:[0x28],rax",
-    "jmp [rip+thunk_prototype_start]",
-    "thunk_prototype_jmp:",
-);
+global_asm!(include_str!("thunk.S"));
 
 #[cfg(test)]
 mod test {
