@@ -244,5 +244,5 @@ Section "Uninstall"
     RMDir "$INSTDIR\assets"
     RMDir "$INSTDIR\bin"
 
-    DeleteRegKey HKLM "$UNINSTALL_REG_KEY"
+    DeleteRegKey HKCU "$UNINSTALL_REG_KEY"
 SectionEnd
