@@ -1451,7 +1451,6 @@ dependencies = [
  "crash-handler",
  "dll-syringe",
  "eyre",
- "iced-x86",
  "libloading",
  "me3-env",
  "me3-launcher-attach-protocol",
