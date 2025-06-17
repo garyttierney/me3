@@ -1,12 +1,12 @@
 use std::{
     any::Any,
-    arch::naked_asm,
+    arch::asm,
     cmp::max,
     marker::Tuple,
     mem::{offset_of, size_of, transmute},
     ptr::NonNull,
     slice,
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::atomic::{compiler_fence, AtomicUsize, Ordering},
 };
 
 use eyre::OptionExt;
@@ -20,9 +20,13 @@ use windows::Win32::System::{
     Threading::GetCurrentProcess,
 };
 
-#[unsafe(naked)]
-pub unsafe extern "C" fn thunk_info() -> *const ThunkInfo {
-    naked_asm!("mov rax, gs:[0]", "ret")
+pub unsafe fn thunk_info() -> *const ThunkInfo {
+    unsafe {
+        let thunk_info: *const ThunkInfo;
+        asm!("mov {}, gs:[0x28]", out(reg) thunk_info);
+        compiler_fence(Ordering::SeqCst);
+        thunk_info
+    }
 }
 
 #[allow(unused)]
@@ -89,24 +93,12 @@ pub struct ThunkCounter {
 
 impl ThunkPool {
     pub fn new() -> Result<Self, eyre::Error> {
-        use iced_x86::code_asm::*;
-
         let mut sysinfo = SYSTEM_INFO::default();
         unsafe { GetSystemInfo(&mut sysinfo) };
         let page_size = sysinfo.dwPageSize as usize;
 
-        let mut a = CodeAssembler::new(64)?;
-        let mut start = a.create_label();
-        let info_ptr = ptr(start) + page_size - 1;
-        let trampoline_ptr = info_ptr + offset_of!(ThunkInfo, trampoline);
+        let thunk = thunk_prototype(page_size, page_size + offset_of!(ThunkInfo, trampoline))?;
 
-        a.set_label(&mut start)?;
-        a.lea(rax, info_ptr)?;
-        a.mov(qword_ptr(0).gs(), rax)?;
-        a.mov(rax, qword_ptr(trampoline_ptr))?;
-        a.jmp(rax)?;
-
-        let thunk = a.assemble(0)?;
         let (code_ptr, data_ptr) = unsafe {
             let memory = NonNull::new(
                 VirtualAlloc(
@@ -135,6 +127,10 @@ impl ThunkPool {
         };
 
         let code = unsafe { slice::from_raw_parts_mut(code_ptr, page_size) };
+
+        // Padding with int3.
+        code.fill(0xCC);
+
         for thunk_copy in code.chunks_exact_mut(stride) {
             thunk_copy[..thunk.len()].copy_from_slice(&thunk);
         }
@@ -219,6 +215,43 @@ impl ThunkCounter {
             }
         }
     }
+}
+
+fn thunk_prototype(info_offset: usize, trampoline_offset: usize) -> Result<Vec<u8>, eyre::Error> {
+    #[rustfmt::skip]
+    const SHELLCODE: [u8; 22] = [
+        // lea rax,[rip+SHELLCODE]
+        0x48, 0x8d, 0x05, 0xF9, 0xFF, 0xFF, 0xFF,
+
+        // mov gs:[0x28],rax
+        0x65, 0x48, 0x89, 0x04, 0x25, 0x28, 0x00, 0x00, 0x00,
+
+        // jmp [rip+SHELLCODE]
+        0xFF, 0x25, 0xEA, 0xFF, 0xFF, 0xFF,
+    ];
+
+    const MOV_DISP: i32 = i32::from_le_bytes([0xF9, 0xFF, 0xFF, 0xFF]);
+    const JMP_DISP: i32 = i32::from_le_bytes([0xEA, 0xFF, 0xFF, 0xFF]);
+
+    let mut shellcode = SHELLCODE[..3].to_owned();
+
+    shellcode.extend_from_slice(
+        &MOV_DISP
+            .checked_add(i32::try_from(info_offset)?)
+            .ok_or_eyre("offset too big")?
+            .to_le_bytes(),
+    );
+
+    shellcode.extend_from_slice(&SHELLCODE[7..18]);
+
+    shellcode.extend_from_slice(
+        &JMP_DISP
+            .checked_add(i32::try_from(trampoline_offset)?)
+            .ok_or_eyre("offset too big")?
+            .to_le_bytes(),
+    );
+
+    Ok(shellcode)
 }
 
 #[cfg(test)]
