@@ -118,11 +118,10 @@ pub struct TelemetryConfig {
 pub type TelemetryWriter = (BoxMakeWriter, WorkerGuard);
 
 pub fn report_fatal_error(error: &color_eyre::Report) {
-    let (_spantrace, backtrace) = error
+    let backtrace = error
         .handler()
         .downcast_ref::<color_eyre::Context>()
-        .and_then(|ctx| ctx.span_trace().zip(ctx.backtrace()))
-        .unzip();
+        .and_then(|ctx| ctx.backtrace());
 
     #[cfg(feature = "sentry")]
     {
