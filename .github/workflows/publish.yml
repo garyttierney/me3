@@ -72,7 +72,7 @@ jobs:
         with:
           subject-path: "target/x86_64-unknown-linux-musl/release/me3"
           sbom-path: "crates/cli/me3-cli_x86_64-unknown-linux-musl.cdx.json"
-      - uses: taiki-e/install-action@cfe1303741c2e620e5f7daa667105e0da1316db9 # v2.53.0
+      - uses: taiki-e/install-action@dd154fff2f898f480894c915c12aa8782e93c71b # v2.53.1
         with:
           tool: git-cliff
       - run: |
@@ -206,7 +206,7 @@ jobs:
         run: |
           make me3-windows-amd64.zip me3-linux-amd64.tar.gz
 
-      - uses: taiki-e/install-action@cfe1303741c2e620e5f7daa667105e0da1316db9 # v2.53.0
+      - uses: taiki-e/install-action@dd154fff2f898f480894c915c12aa8782e93c71b # v2.53.1
         with:
           tool: cargo-cyclonedx
 
