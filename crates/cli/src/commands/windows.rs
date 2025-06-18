@@ -46,16 +46,16 @@ pub fn add_to_path() -> color_eyre::Result<()> {
 pub fn update() -> color_eyre::Result<()> {
     const RELEASE_URI: &str = "https://api.github.com/repos/garyttierney/me3/releases/latest";
     let response = ureq::get(RELEASE_URI)
-        .set("Accept", "application/vnd.github.v3+json")
-        .set("User-Agent", "me3")
+        .header("Accept", "application/vnd.github.v3+json")
+        .header("User-Agent", "me3-cli")
         .call()?;
 
-    if response.status() >= 400 && response.status() <= 599 {
+    if !response.status().is_success() {
         error!("unable to check latest version, check https://github.com/garyttierney/me3/releases/latest");
         return Ok(());
     }
 
-    let body = response.into_reader();
+    let body = response.into_body().into_reader();
     let release: serde_json::Value = serde_json::from_reader(body)?;
 
     let current_version =
@@ -77,7 +77,7 @@ pub fn update() -> color_eyre::Result<()> {
         info!(installer_url, "Downloading installer");
 
         let mut response = ureq::get(&installer_url)
-            .set("User-Agent", "me3-cli")
+            .header("User-Agent", "me3-cli")
             .call()?;
 
         let mut installer_file: tempfile::NamedTempFile = tempfile::Builder::new()
@@ -92,7 +92,7 @@ pub fn update() -> color_eyre::Result<()> {
             "Saved installer file"
         );
 
-        let mut body_reader = BufReader::new(response.into_reader());
+        let mut body_reader = BufReader::new(response.into_body().into_reader());
         std::io::copy(&mut body_reader, &mut installer_file)?;
 
         let mut installer_path = installer_file.into_temp_path();
