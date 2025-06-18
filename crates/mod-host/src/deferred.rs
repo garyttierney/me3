@@ -43,8 +43,8 @@ where
 fn hook_steam_init() -> Result<(), eyre::Error> {
     ModHost::get_attached_mut()
         .hook(steam_init_fn()?)
-        .with_closure(|ctx| {
-            let result = (ctx.trampoline)();
+        .with_closure(|trampoline| {
+            let result = unsafe { trampoline() };
 
             if result {
                 if let Some(deferred) = DEFERRED.lock().unwrap().take() {
@@ -60,7 +60,7 @@ fn hook_steam_init() -> Result<(), eyre::Error> {
 }
 
 #[instrument(ret(level = Level::DEBUG))]
-fn steam_init_fn() -> Result<extern "C" fn() -> bool, eyre::Error> {
+fn steam_init_fn() -> Result<unsafe extern "C" fn() -> bool, eyre::Error> {
     unsafe {
         let steam_dll = LoadLibraryW(w!("steam_api64.dll"))?;
 

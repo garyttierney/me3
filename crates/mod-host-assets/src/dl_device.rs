@@ -55,7 +55,7 @@ pub struct DlDeviceManagerGuard {
     inner: NonNull<DlDeviceManager>,
 }
 
-type DlDeviceOpen = extern "C" fn(
+type DlDeviceOpen = unsafe extern "C" fn(
     NonNull<DlDevice>,
     path: NonNull<DlUtf16String>,
     path_cstr: *const u16,
@@ -71,7 +71,7 @@ pub struct DlDeviceVtable {
 }
 
 type DlFileOperatorSetPath =
-    extern "C" fn(NonNull<DlFileOperator>, path: NonNull<DlUtf16String>, bool, bool) -> bool;
+    unsafe extern "C" fn(NonNull<DlFileOperator>, path: NonNull<DlUtf16String>, bool, bool) -> bool;
 
 #[repr(C)]
 pub struct DlFileOperatorVtable {
@@ -315,7 +315,7 @@ impl DlDeviceManagerGuard {
         expanded
     }
 
-    pub fn open_disk_file_fn(&self) -> DlDeviceOpen {
+    pub fn open_disk_file(&self) -> DlDeviceOpen {
         unsafe {
             let device_manager = self.inner.as_ref();
             device_manager.disk_device.as_ref().as_ref().open_file
@@ -356,7 +356,9 @@ impl VfsMounts {
         self.inner.append(&mut inner);
     }
 
-    pub fn try_open_file(
+    /// # Safety
+    /// only if passed arguments from `DlDeviceOpen`.
+    pub unsafe fn try_open_file(
         &self,
         path: NonNull<DlUtf16String>,
         path_cstr: *const u16,
@@ -374,14 +376,16 @@ impl VfsMounts {
             .find(|m| m.root.get().is_ok_and(|r| root == r.as_bytes()))
             .and_then(|m| {
                 let f = unsafe { ptr::read(&raw const m.device.read().as_ref().open_file) };
-                f(
-                    m.device,
-                    path,
-                    path_cstr,
-                    container,
-                    allocator,
-                    is_temp_file,
-                )
+                unsafe {
+                    f(
+                        m.device,
+                        path,
+                        path_cstr,
+                        container,
+                        allocator,
+                        is_temp_file,
+                    )
+                }
             })
     }
 

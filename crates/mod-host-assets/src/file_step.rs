@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::pe;
 
-type FileStepInit = extern "C" fn(usize);
+type FileStepInit = unsafe extern "C" fn(usize);
 
 /// # Safety
 /// [`pelite::pe64::PeView::module`] must be safe to call on `image_base`

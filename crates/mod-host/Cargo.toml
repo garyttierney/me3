@@ -15,6 +15,11 @@ sentry = ["me3-telemetry/sentry"]
 crate-type = ["cdylib"]
 
 [dependencies]
+closure-ffi = { version = "3.0", features = [
+    "coverage",
+    "std",
+    "tuple_trait"
+] }
 color-eyre.workspace = true
 crash-handler.workspace = true
 dll-syringe = { workspace = true, features = ["payload-utils"] }

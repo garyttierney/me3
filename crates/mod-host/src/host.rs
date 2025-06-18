@@ -1,32 +1,34 @@
 use std::{
     ffi::CString,
     fmt::Debug,
-    marker::{FnPtr, Tuple},
+    marker::Tuple,
     path::Path,
     sync::{Arc, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
     time::Duration,
 };
 
+use closure_ffi::traits::FnPtr;
 use libloading::{Library, Symbol};
 use me3_mod_protocol::{native::NativeInitializerCondition, ModProfile};
 use retour::Function;
 use tracing::{error, info, warn};
 
-use self::hook::{thunk::ThunkPool, HookInstaller};
+use self::hook::HookInstaller;
 use crate::{
     detour::UntypedDetour,
     native::{ModEngineConnectorShim, ModEngineExtension, ModEngineInitializer},
 };
 
+mod append;
 pub mod hook;
 
 static ATTACHED_INSTANCE: OnceLock<RwLock<ModHost>> = OnceLock::new();
 
+#[derive(Default)]
 pub struct ModHost {
     hooks: Vec<Arc<UntypedDetour>>,
     native_modules: Vec<Library>,
     profiles: Vec<ModProfile>,
-    thunk_pool: ThunkPool,
 }
 
 impl Debug for ModHost {
@@ -34,20 +36,14 @@ impl Debug for ModHost {
         f.debug_struct("ModHost")
             .field("hooks", &self.hooks)
             .field("profiles", &self.profiles)
-            .field("thunk_pool", &self.thunk_pool)
             .finish()
     }
 }
 
 #[allow(unused)]
 impl ModHost {
-    pub fn new(thunk_pool: ThunkPool) -> Self {
-        Self {
-            hooks: vec![],
-            native_modules: vec![],
-            profiles: vec![],
-            thunk_pool,
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn load_native(
@@ -129,6 +125,6 @@ impl ModHost {
         F: Function + FnPtr,
         F::Arguments: Tuple,
     {
-        HookInstaller::new(Some(&mut self.hooks), &self.thunk_pool, target)
+        HookInstaller::new(Some(&mut self.hooks), target)
     }
 }

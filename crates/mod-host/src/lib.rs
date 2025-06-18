@@ -22,11 +22,7 @@ use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use me3_telemetry::TelemetryConfig;
 use tracing::{error, info, Span};
 
-use crate::{
-    debugger::suspend_for_debugger,
-    deferred::defer_until_init,
-    host::{hook::thunk::ThunkPool, ModHost},
-};
+use crate::{debugger::suspend_for_debugger, deferred::defer_until_init, host::ModHost};
 
 mod asset_hooks;
 mod debugger;
@@ -132,7 +128,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     let result = me3_telemetry::with_root_span("host", "attach", move || {
         info!("Beginning host attach");
 
-        let host = ModHost::new(ThunkPool::new()?);
+        let host = ModHost::new();
 
         host.attach();
         let mut override_mapping = ArchiveOverrideMapping::new()?;

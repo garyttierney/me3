@@ -28,8 +28,11 @@ struct EblUtilityVtableNR {
     make_ebl_object: MakeEblObject,
 }
 
-type MakeEblObject =
-    extern "C" fn(this: usize, path: *const u16, allocator: DlStdAllocator) -> Option<NonNull<u8>>;
+type MakeEblObject = unsafe extern "C" fn(
+    this: usize,
+    path: *const u16,
+    allocator: DlStdAllocator,
+) -> Option<NonNull<u8>>;
 
 impl EblFileManager {
     /// # Safety
