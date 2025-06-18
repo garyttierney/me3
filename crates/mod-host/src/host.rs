@@ -55,49 +55,39 @@ impl ModHost {
         path: &Path,
         condition: Option<NativeInitializerCondition>,
     ) -> eyre::Result<()> {
-        let result = microseh::try_seh(|| {
-            let module: Library = unsafe { libloading::Library::new(path) }?;
+        let module: Library = unsafe { libloading::Library::new(path) }?;
 
-            match &condition {
-                Some(NativeInitializerCondition::Delay { ms }) => {
-                    std::thread::sleep(Duration::from_millis(*ms as u64))
+        match &condition {
+            Some(NativeInitializerCondition::Delay { ms }) => {
+                std::thread::sleep(Duration::from_millis(*ms as u64))
+            }
+            Some(NativeInitializerCondition::Function(symbol)) => unsafe {
+                let sym_name = CString::new(symbol.as_bytes())?;
+                let initializer: Symbol<unsafe extern "C" fn() -> bool> =
+                    module.get(sym_name.as_bytes_with_nul())?;
+
+                if initializer() {
+                    info!(?path, symbol, "native initialized successfully");
+                } else {
+                    error!(?path, symbol, "native failed to initialize");
                 }
-                Some(NativeInitializerCondition::Function(symbol)) => unsafe {
-                    let sym_name = CString::new(symbol.as_bytes())?;
-                    let initializer: Symbol<unsafe extern "C" fn() -> bool> =
-                        module.get(sym_name.as_bytes_with_nul())?;
+            },
+            None => {
+                let me2_initializer: Option<Symbol<ModEngineInitializer>> =
+                    unsafe { module.get(b"modengine_ext_init\0").ok() };
 
-                    if initializer() {
-                        info!(?path, symbol, "native initialized successfully");
-                    } else {
-                        error!(?path, symbol, "native failed to initialize");
-                    }
-                },
-                None => {
-                    let me2_initializer: Option<Symbol<ModEngineInitializer>> =
-                        unsafe { module.get(b"modengine_ext_init\0").ok() };
+                let mut extension_ptr: *mut ModEngineExtension = std::ptr::null_mut();
+                if let Some(initializer) = me2_initializer {
+                    unsafe { initializer(&ModEngineConnectorShim, &mut extension_ptr) };
 
-                    let mut extension_ptr: *mut ModEngineExtension = std::ptr::null_mut();
-                    if let Some(initializer) = me2_initializer {
-                        unsafe { initializer(&ModEngineConnectorShim, &mut extension_ptr) };
-
-                        info!(?path, "loaded native with me2 compatibility shim");
-                    }
+                    info!(?path, "loaded native with me2 compatibility shim");
                 }
             }
-
-            self.native_modules.push(module);
-
-            eyre::Ok(())
-        });
-
-        match result {
-            Err(exception) => {
-                warn!("an error occurred while loading {path:?}, it may not work as expected");
-                Ok(())
-            }
-            Ok(result) => result,
         }
+
+        self.native_modules.push(module);
+
+        eyre::Ok(())
     }
 
     pub fn get_attached() -> RwLockReadGuard<'static, ModHost> {

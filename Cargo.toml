@@ -55,6 +55,7 @@ sentry = { version = "0.40", default-features = false }
 serde = "1"
 serde_derive = "1"
 serde_json = "1"
+slint = { version = "1", default-features = false }
 steamlocate = "2"
 tempfile = "3"
 thiserror = "2"

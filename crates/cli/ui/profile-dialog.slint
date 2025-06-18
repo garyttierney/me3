@@ -1,0 +1,121 @@
+import { StandardButton, GridBox, LineEdit, Button, ListView, HorizontalBox, StandardListView, VerticalBox } from "std-widgets.slint";
+import { Palette, StyleMetrics, ComboBox } from "std-widgets.slint";
+
+export global Me3Data { }
+
+export struct ModItem  {
+    path: string,
+    is_dll: bool,
+}
+
+export component ProfileDialog inherits Dialog {
+    in property <[string]> supported_games: [
+        "ELDEN RING",
+        "ELDEN RING: NIGHTREIGN",
+        "Armored Core VI",
+        "Sekiro: Shadows Die Twice"
+    ];
+
+    out property <bool> discard_changes;
+    in-out property <int> game;
+    in-out property <[ModItem]> mods;
+
+    callback add_new_mod;
+    callback remove_mod(int);
+    callback cancel;
+    callback save;
+
+    preferred-width: 350px;
+    preferred-height: 300px;
+
+    VerticalBox {
+        HorizontalLayout {
+            alignment: stretch;
+            spacing: 10px;
+            game_label := Text {
+                text: "Game:";
+
+                vertical-alignment: center;
+                horizontal-alignment: left;
+            }
+
+            ComboBox {
+                model: root.supported_games;
+                current-index: root.game >= 0 ? root.game : -1;
+                horizontal-stretch: 1;
+                max-height: game_label.preferred-height;
+            }
+        }
+
+        Rectangle {
+            padding: 5px;
+            border-width: 1px;
+            border-color: grey;
+
+            if root.mods.length == 0: Text {
+                text: "Click 'Add new mod' to start customizing your Mod Profile";
+                wrap: TextWrap.word-wrap;
+                width: 100%;
+                horizontal-alignment: TextHorizontalAlignment.center;
+            }
+            ListView {
+                padding: 5px;
+                for dep[index] in root.mods: HorizontalBox {
+                    alignment: stretch;
+                    padding-bottom: 0;
+                    label := HorizontalBox {
+                        alignment: start;
+                        horizontal-stretch: 1;
+
+                        crate_name := Text {
+                            text: dep.path;
+                        }
+
+                        if (dep.is_dll): Text {
+                            text: " (DLL)";
+                            color: gray;
+                        }
+                    }
+
+                    Button {
+                        clicked => {
+                            remove_mod(index);
+                        }
+
+                        min-height: label.preferred_height;
+                        text: "🗑️ Remove";
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            alignment: end;
+            Button {
+                clicked => {
+                    root.add_new_mod()
+                }
+
+                text: "Add new mod";
+            }
+
+            StandardButton {
+                kind: ok;
+
+                clicked => {
+                    root.discard_changes = false;
+                    root.save();
+                }
+            }
+
+            StandardButton {
+                kind: StandardButtonKind.cancel;
+
+                clicked => {
+                    root.discard_changes = true;
+                    root.cancel();
+                }
+            }
+        }
+    }
+}
