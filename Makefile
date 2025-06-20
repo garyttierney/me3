@@ -15,14 +15,14 @@ build:
 	$(CARGO) build $(CARGO_FLAGS) --target=x86_64-unknown-linux-musl -p me3-cli
 
 
-$(ME3_BINARIES): build
+$(ME3_WINDOWS_BINARIES) $(ME3_LINUX_BINARIES): build
 me3-linux-amd64.tar.gz: $(ME3_WINDOWS_BINARIES) $(ME3_LINUX_BINARIES) CHANGELOG.md
 	tar -czv -f $@ \
 		--show-transformed-names --show-stored-names \
 		--transform="s|target/x86_64-pc-windows-msvc/$(CARGO_PROFILE)/|bin/win64/|" \
 		--transform="s|target/x86_64-unknown-linux-musl/$(CARGO_PROFILE)/|bin/|" \
-		--transform="s|distribution/portable/cross-platform/|/|" \
-		--transform="s|distribution/portable/linux/|/|" \
+		--transform="s|distribution/portable/cross-platform/||" \
+		--transform="s|distribution/portable/linux/||" \
 		distribution/portable/cross-platform \
 		distribution/portable/linux \
 		$^
