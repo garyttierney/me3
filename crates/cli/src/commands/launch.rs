@@ -460,6 +460,8 @@ pub fn launch(
             if !line.is_empty() {
                 eprint!("{line}");
             }
+
+            std::thread::yield_now();
         }
 
         let _ = launcher_proc.kill();

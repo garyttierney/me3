@@ -5,13 +5,12 @@ use tracing::Level;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{
-    fmt::{self, writer::BoxMakeWriter},
+    fmt::{self, writer::BoxMakeWriter, MakeWriter},
     prelude::*,
     EnvFilter,
 };
 
 pub struct Telemetry {
-    cleanup: Vec<Box<dyn FnOnce() + Send + Sync>>,
     #[cfg(feature = "sentry")]
     client: Option<sentry::ClientInitGuard>,
 }
@@ -75,10 +74,6 @@ pub fn with_root_span<T>(
 
 impl Drop for Telemetry {
     fn drop(&mut self) {
-        for cleanup_fn in self.cleanup.drain(..) {
-            cleanup_fn();
-        }
-
         #[cfg(feature = "sentry")]
         if let Some(client) = self.client.take() {
             client.flush(Some(std::time::Duration::from_secs(10)));
@@ -115,7 +110,7 @@ pub struct TelemetryConfig {
     console_writer: Option<TelemetryWriter>,
 }
 
-pub type TelemetryWriter = (BoxMakeWriter, WorkerGuard);
+pub type TelemetryWriter = BoxMakeWriter;
 
 pub fn report_fatal_error(error: &color_eyre::Report) {
     let backtrace = error
@@ -170,22 +165,20 @@ pub fn trace_id() -> Option<String> {
 impl TelemetryConfig {
     pub fn with_console_writer<W2>(self, writer: W2) -> Self
     where
-        W2: std::io::Write + Send + Sync + 'static,
+        W2: for<'a> MakeWriter<'a> + Send + Sync + 'static,
     {
-        let (console_writer, console_guard) = tracing_appender::non_blocking(writer);
         Self {
-            console_writer: Some((BoxMakeWriter::new(console_writer), console_guard)),
+            console_writer: Some(BoxMakeWriter::new(writer)),
             ..self
         }
     }
 
     pub fn with_file_writer<W2>(self, writer: W2) -> Self
     where
-        W2: std::io::Write + Send + Sync + 'static,
+        W2: for<'a> MakeWriter<'a> + Send + Sync + 'static,
     {
-        let (file_writer, file_guard) = tracing_appender::non_blocking(writer);
         Self {
-            file_writer: Some((BoxMakeWriter::new(file_writer), file_guard)),
+            file_writer: Some(BoxMakeWriter::new(writer)),
             ..self
         }
     }
@@ -216,12 +209,7 @@ pub fn install_error_handler() {
 }
 
 pub fn install(config: TelemetryConfig) -> Telemetry {
-    let (file_writer, file_guard) = config.file_writer.unzip();
-    let (console_writer, console_guard) = config.console_writer.unzip();
-
-    let mut cleanup: Vec<Box<dyn FnOnce() + Send + Sync>> = vec![];
-
-    let file_layer = file_writer.map(|writer| {
+    let file_layer = config.file_writer.map(|writer| {
         let filter_layer = log_filter("ME3_FILE_LOG_LEVEL", Level::DEBUG);
 
         fmt::layer()
@@ -231,7 +219,7 @@ pub fn install(config: TelemetryConfig) -> Telemetry {
             .with_filter(filter_layer)
     });
 
-    let console_layer = console_writer.map(|writer| {
+    let console_layer = config.console_writer.map(|writer| {
         let filter_layer = log_filter("ME3_CONSOLE_LOG_LEVEL", Level::INFO);
 
         fmt::layer()
@@ -253,9 +241,6 @@ pub fn install(config: TelemetryConfig) -> Telemetry {
         .with(console_layer.boxed())
         .with(layer)
         .init();
-
-    cleanup.push(Box::from(move || drop(console_guard)));
-    cleanup.push(Box::from(move || drop(file_guard)));
 
     #[cfg(feature = "sentry")]
     let client = {
@@ -312,7 +297,6 @@ pub fn install(config: TelemetryConfig) -> Telemetry {
     };
 
     Telemetry {
-        cleanup,
         #[cfg(feature = "sentry")]
         client,
     }

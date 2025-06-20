@@ -277,7 +277,7 @@ fn main() {
 
     let telemetry_config = TelemetryConfig::default()
         .enabled(config.crash_reporting)
-        .with_console_writer(stderr());
+        .with_console_writer(stderr);
 
     let _telemetry = me3_telemetry::install(telemetry_config);
 
