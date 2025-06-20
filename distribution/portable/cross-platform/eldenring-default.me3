@@ -1,3 +1,5 @@
+profileVersion = "v1"
+
 [[supports]]
 game = "eldenring"
 
