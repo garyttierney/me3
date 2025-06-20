@@ -132,11 +132,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     let result = me3_telemetry::with_root_span("host", "attach", move || {
         info!("Beginning host attach");
 
-        let mut host = ModHost::new(ThunkPool::new()?);
-
-        for native in natives {
-            host.load_native(&native.path, native.initializer)?;
-        }
+        let host = ModHost::new(ThunkPool::new()?);
 
         host.attach();
         let mut override_mapping = ArchiveOverrideMapping::new()?;
@@ -151,6 +147,16 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
             move || {
                 let _span_guard = current_span.enter();
+
+                for native in natives {
+                    let mut host = ModHost::get_attached_mut();
+                    if let Err(e) = host.load_native(&native.path, native.initializer) {
+                        error!(
+                            error = &*e,
+                            "failed to load native mod from {:?}", &native.path
+                        )
+                    }
+                }
 
                 if let Err(e) = asset_hooks::attach_override(game, override_mapping) {
                     error!(
