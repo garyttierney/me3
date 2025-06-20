@@ -309,6 +309,7 @@ main() {
     need_cmd mkdir
     need_cmd rm
     need_cmd rmdir
+    need_cmd tar
 
     local me3_version
     local me3_windows_binary_dir
@@ -340,26 +341,27 @@ main() {
         exit 1
     fi
 
-    local _file
-    for _file in "me3" "me3-launcher.exe" "me3_mod_host.dll"; do
-        say "downloading $_file"
-        downloader "https://github.com/garyttierney/me3/releases/download/$me3_version/$_file" "$_dir/$_file"
+    local _distfile="me3-linux-amd64.tar.gz"
+    say "downloading $_distfile"
+    downloader "https://github.com/garyttierney/me3/releases/download/$me3_version/me3-linux-amd64.tar.gz" "$_dir/$_distfile"
 
-        if check_cmd gh; then
-            ensure gh attestation verify --owner garyttierney --predicate-type https://cyclonedx.org/bom "$_dir/$_file" >/dev/null
-            say "successfully verified $_file"
-        fi
-    done
+    if check_cmd gh; then
+        ensure gh attestation verify --owner garyttierney "$_dir/$_distfile" >/dev/null
+        say "successfully verified $_distfile"
+    fi
 
-    ensure chmod u+x "$_dir/me3"
+    local _distdir="$_dir/dist"
+    ensure mkdir -p "$_distdir"
+    ensure tar xf "$_dir/$_distfile" -C "$_distdir"
+
     ensure mkdir -p "$me3_windows_binary_dir"
     ensure mkdir -p "$me3_binary_dir"
 
-    ensure mv "$_dir/me3" "$me3_binary_dir/me3"
-    {
-        ensure cd "$_dir"
-        ensure mv ./*.dll ./*.exe "$me3_windows_binary_dir"
-    }
+    ensure mv "$_distdir/bin/me3" "$me3_binary_dir"
+    ensure mv "$_distdir/bin/win64/me3_mod_host.dll" "$me3_windows_binary_dir"
+    ensure mv "$_distdir/bin/win64/me3-launcher.exe" "$me3_windows_binary_dir"
+
+    say "installed me3 to $me3_binary_dir, windows binaries to $me3_windows_binary_dir"
 
     local _config_home_path="${XDG_CONFIG_HOME:-$HOME/.config}/me3"
     local _config_path="$_config_home_path/me3.toml"
@@ -391,7 +393,7 @@ EOF
         say "me3 is not available on PATH, make sure to update your shell profile\nPATH=\"\$PATH:$HOME/.local/bin\""
     fi
 
-    rmdir "$_dir"
+    ensure rm -rf "$_dir"
 }
 
 set +u
