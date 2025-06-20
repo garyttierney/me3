@@ -10,7 +10,9 @@ use me3_mod_protocol::{
 };
 use tracing::{debug, error, warn};
 
-use crate::{output::OutputBuilder, Config, Game};
+use crate::{commands::profile::dialog::show_profile_dialog, output::OutputBuilder, Config, Game};
+
+mod dialog;
 
 #[derive(Subcommand, Debug)]
 #[command(flatten_help = true)]
@@ -57,6 +59,10 @@ pub struct ProfileCreateArgs {
     /// Overwrite the profile if it already exists
     #[clap(long, action = ArgAction::SetTrue)]
     overwrite: bool,
+
+    /// Show an interactive profile creation GUI
+    #[clap(long, action = ArgAction::SetTrue)]
+    interactive: bool,
 }
 
 #[tracing::instrument]
@@ -129,8 +135,13 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         natives.push(Native::new(pkg));
     }
 
-    let contents = toml::to_string_pretty(&profile)?;
+    let complete_profile = if args.interactive {
+        show_profile_dialog(profile)?
+    } else {
+        Some(profile)
+    };
 
+    let contents = toml::to_string_pretty(&complete_profile)?;
     std::fs::write(profile_path, contents)?;
 
     Ok(())

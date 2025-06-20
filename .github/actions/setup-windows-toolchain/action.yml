@@ -1,16 +1,16 @@
-name: 'Hello World'
-description: 'Greet someone'
+name: "Hello World"
+description: "Greet someone"
 inputs:
   who-to-greet: # id of input
-    description: 'Who to greet'
+    description: "Who to greet"
     required: true
-    default: 'World'
+    default: "World"
 outputs:
   random-number:
-    description: 'Random number'
+    description: "Random number"
     value: ${{ steps.random-number-generator.outputs.random-number }}
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Install WINE + LLVM
       shell: bash
@@ -57,7 +57,6 @@ runs:
             "-Lnative=${{ github.workspace }}/xwin/sdk/lib/ucrt/x86_64",
             "-C",
             "target-feature=+crt-static",
-            "--cfg", "windows_raw_dylib",
             "--cfg", "windows_debugger_visualizer"
         ]
         EOF

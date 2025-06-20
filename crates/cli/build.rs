@@ -5,4 +5,9 @@ fn main() {
         res.set_icon("resources/me3.ico");
         res.compile().unwrap();
     }
+
+    for component in ["profile-dialog"] {
+        println!("cargo::rerun-if-changed=ui/{component}.slint");
+        slint_build::compile(format!("ui/{component}.slint")).unwrap();
+    }
 }

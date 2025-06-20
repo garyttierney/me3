@@ -62,14 +62,15 @@ pub struct Package {
 }
 
 impl Package {
-    pub fn new(path: PathBuf) -> Self {
+    pub fn new<S: AsRef<Path>>(path: S) -> Self {
+        let path = path.as_ref();
         Self {
             id: path
                 .file_name()
                 .expect("no name for this package")
                 .to_string_lossy()
                 .into(),
-            path: ModFile(path),
+            path: ModFile(path.to_path_buf()),
             load_after: vec![],
             load_before: vec![],
         }

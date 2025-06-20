@@ -10,6 +10,9 @@ use serde::{Deserialize, Serialize};
 mod commands;
 pub mod output;
 
+pub mod ui {
+    slint::include_modules!();
+}
 #[derive(Parser)]
 #[command(name = "me3", version, about)]
 #[command(propagate_version = true)]

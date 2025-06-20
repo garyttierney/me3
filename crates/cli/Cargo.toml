@@ -11,8 +11,9 @@ name = "me3"
 path = "src/main.rs"
 
 [features]
-default = []
+default = ["gui"]
 sentry = ["me3-telemetry/sentry"]
+gui = ["dep:slint"]
 
 [dependencies]
 chrono.workspace = true
@@ -30,8 +31,14 @@ me3-mod-protocol.workspace = true
 me3-telemetry.workspace = true
 normpath.workspace = true
 open = { version = "5" }
+rfd = "0.15.3"
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
+slint = { workspace = true, optional = true, default-features = false, features = [
+    "backend-winit",
+    "renderer-femtovg",
+    "compat-1-2",
+] }
 steamlocate.workspace = true
 tempfile.workspace = true
 toml.workspace = true
@@ -44,6 +51,7 @@ ureq.workspace = true
 semver = "1.0.26"
 
 [build-dependencies]
+slint-build = "1.12.0"
 winresource = "0.1"
 
 [lints]
