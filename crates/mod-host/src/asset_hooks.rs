@@ -156,14 +156,8 @@ fn hook_device_manager(
     let override_path = {
         let mapping = mapping.clone();
 
-        let hook_span = info_span!("hook");
-
         move |path: &DlUtf16String| {
-            let _span_guard = hook_span.enter();
-
             let path = path.get().ok()?;
-            debug!("asset" = path.to_string());
-
             let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
 
             let (mapped_path, mapped_override) =
