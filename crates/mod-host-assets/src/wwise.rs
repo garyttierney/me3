@@ -6,7 +6,8 @@ use tracing::debug;
 
 use crate::{mapping::ArchiveOverrideMapping, pe, rtti};
 
-pub type WwiseOpenFileByName = extern "C" fn(usize, *const u16, u64, usize, usize, usize) -> usize;
+pub type WwiseOpenFileByName =
+    unsafe extern "C" fn(usize, *const u16, u64, usize, usize, usize) -> usize;
 
 #[repr(C)]
 struct FilePackageLowLevelIOBlockingVtable {
@@ -115,7 +116,7 @@ mod test {
 
 /// # Safety
 /// [`pelite::pe64::PeView::module`] must be safe to call on `image_base`
-pub unsafe fn find_wwise_open_file_fn(
+pub unsafe fn find_wwise_open_file(
     image_base: *const u8,
 ) -> Result<WwiseOpenFileByName, FindError> {
     let rtti_result = unsafe {

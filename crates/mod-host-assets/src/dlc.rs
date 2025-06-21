@@ -2,7 +2,7 @@ use std::ptr::{self, NonNull};
 
 use crate::rtti::{find_vmt, FindError};
 
-type MountDlcEbl = extern "C" fn(usize, bool, usize, usize);
+type MountDlcEbl = unsafe extern "C" fn(usize, bool, usize, usize);
 
 /// # Safety
 /// Same as [`find_vmt`].

@@ -14,7 +14,7 @@ use me3_mod_host_assets::{
     file_step,
     mapping::ArchiveOverrideMapping,
     string::DlUtf16String,
-    wwise::{self, find_wwise_open_file_fn, AkOpenMode},
+    wwise::{self, find_wwise_open_file, AkOpenMode},
 };
 use me3_mod_protocol::Game;
 use tracing::{debug, error, info, info_span, instrument, warn};
@@ -57,7 +57,7 @@ fn hook_file_init(
 
     ModHost::get_attached_mut()
         .hook(init_fn)
-        .with_closure(move |ctx, p1| {
+        .with_closure(move |p1, trampoline| {
             let _span_guard = hook_span.enter();
 
             let mut device_manager = match locate_device_manager(image_base) {
@@ -65,7 +65,9 @@ fn hook_file_init(
                 Err(e) => {
                     error!("error" = &*eyre!(e), "failed to locate device manager");
 
-                    (ctx.trampoline)(p1);
+                    unsafe {
+                        trampoline(p1);
+                    }
 
                     return;
                 }
@@ -74,14 +76,18 @@ fn hook_file_init(
             if let Err(e) = hook_device_manager(image_base, mapping.clone()) {
                 error!("error" = &*eyre!(e), "failed to hook device manager");
 
-                (ctx.trampoline)(p1);
+                unsafe {
+                    trampoline(p1);
+                }
 
                 return;
             }
 
             let snap = device_manager.snapshot();
 
-            (ctx.trampoline)(p1);
+            unsafe {
+                trampoline(p1);
+            }
 
             match snap {
                 Ok(snap) => {
@@ -126,7 +132,7 @@ fn hook_ebl_utility(
 
     mod_host
         .hook(make_ebl_object)
-        .with_closure(move |ctx, p1, path, p3| {
+        .with_closure(move |p1, path, p3, trampoline| {
             let mut device_manager = DlDeviceManager::lock(device_manager);
 
             let path_cstr = PCWSTR::from_raw(path);
@@ -141,7 +147,7 @@ fn hook_ebl_utility(
 
             let _guard = device_manager.push_vfs(&VFS.lock().unwrap());
 
-            (ctx.trampoline)(p1, path, p3)
+            unsafe { (trampoline)(p1, path, p3) }
         })
         .install()?;
 
@@ -157,7 +163,7 @@ fn hook_device_manager(
 ) -> Result<(), eyre::Error> {
     let device_manager = locate_device_manager(image_base)?;
 
-    let open_disk_file = DlDeviceManager::lock(device_manager).open_disk_file_fn();
+    let open_disk_file = DlDeviceManager::lock(device_manager).open_disk_file();
 
     let override_path = {
         let mapping = mapping.clone();
@@ -188,18 +194,20 @@ fn hook_device_manager(
 
     ModHost::get_attached_mut()
         .hook(open_disk_file)
-        .with_closure(move |ctx, p1, path, p3, p4, p5, p6| {
+        .with_closure(move |p1, path, p3, p4, p5, p6, trampoline| {
             let file_operator = if let Some(path) = override_path(unsafe { path.as_ref() }) {
-                (ctx.trampoline)(
-                    p1,
-                    NonNull::from(&path).cast(),
-                    path.as_ptr(),
-                    p4,
-                    p5.clone(),
-                    p6,
-                )
+                unsafe {
+                    trampoline(
+                        p1,
+                        NonNull::from(&path).cast(),
+                        path.as_ptr(),
+                        p4,
+                        p5.clone(),
+                        p6,
+                    )
+                }
             } else {
-                (ctx.trampoline)(p1, path, p3, p4, p5.clone(), p6)
+                unsafe { trampoline(p1, path, p3, p4, p5.clone(), p6) }
             };
 
             if let Some(file_operator) = file_operator {
@@ -210,7 +218,7 @@ fn hook_device_manager(
                 }
             }
 
-            VFS.lock().unwrap().try_open_file(path, p3, p4, p5, p6)
+            unsafe { VFS.lock().unwrap().try_open_file(path, p3, p4, p5, p6) }
         })
         .install()?;
 
@@ -246,11 +254,11 @@ fn hook_set_path(
 
         ModHost::get_attached_mut()
             .hook(set_path)
-            .with_closure(move |ctx, p1, path, p3, p4| {
+            .with_closure(move |p1, path, p3, p4, trampoline| {
                 if let Some(path) = override_path(unsafe { path.as_ref() }) {
-                    (ctx.trampoline)(p1, path.as_ref().into(), p3, p4)
+                    unsafe { trampoline(p1, path.as_ref().into(), p3, p4) }
                 } else {
-                    (ctx.trampoline)(p1, path, p3, p4)
+                    unsafe { trampoline(p1, path, p3, p4) }
                 }
             })
             .install()?;
@@ -264,13 +272,13 @@ fn try_hook_wwise(
     image_base: *const u8,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
-    let wwise_open_file = unsafe { find_wwise_open_file_fn(image_base)? };
+    let wwise_open_file = unsafe { find_wwise_open_file(image_base)? };
 
     let hook_span = info_span!("hook");
 
     ModHost::get_attached_mut()
         .hook(wwise_open_file)
-        .with_closure(move |ctx, p1, path, open_mode, p4, p5, p6| {
+        .with_closure(move |p1, path, open_mode, p4, p5, p6, trampoline| {
             let _span_guard = hook_span.enter();
 
             let path_string = unsafe { PCWSTR::from_raw(path).to_string().unwrap() };
@@ -282,16 +290,18 @@ fn try_hook_wwise(
                 info!("override" = mapped_path);
 
                 // Force lookup to wwise's ordinary read (from disk) mode instead of the EBL read.
-                (ctx.trampoline)(
-                    p1,
-                    mapped_override.as_ptr(),
-                    AkOpenMode::Read as _,
-                    p4,
-                    p5,
-                    p6,
-                )
+                unsafe {
+                    trampoline(
+                        p1,
+                        mapped_override.as_ptr(),
+                        AkOpenMode::Read as _,
+                        p4,
+                        p5,
+                        p6,
+                    )
+                }
             } else {
-                (ctx.trampoline)(p1, path, open_mode, p4, p5, p6)
+                unsafe { trampoline(p1, path, open_mode, p4, p5, p6) }
             }
         })
         .install()?;
@@ -307,13 +317,15 @@ fn try_hook_dlc(image_base: *const u8) -> Result<(), eyre::Error> {
 
     ModHost::get_attached_mut()
         .hook(mount_dlc_ebl)
-        .with_closure(move |ctx, p1, p2, p3, p4| {
+        .with_closure(move |p1, p2, p3, p4, trampoline| {
             if let Ok(device_manager) = locate_device_manager(image_base) {
                 let mut device_manager = DlDeviceManager::lock(device_manager);
 
                 let snap = device_manager.snapshot();
 
-                (ctx.trampoline)(p1, p2, p3, p4);
+                unsafe {
+                    trampoline(p1, p2, p3, p4);
+                }
 
                 match snap {
                     Ok(snap) => {
@@ -333,7 +345,9 @@ fn try_hook_dlc(image_base: *const u8) -> Result<(), eyre::Error> {
                 return;
             }
 
-            (ctx.trampoline)(p1, p2, p3, p4);
+            unsafe {
+                trampoline(p1, p2, p3, p4);
+            }
         })
         .install()?;
 

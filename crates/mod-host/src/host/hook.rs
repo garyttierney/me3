@@ -1,109 +1,90 @@
-use std::{marker::Tuple, mem::MaybeUninit, sync::Arc};
+use std::{cell::OnceCell, mem, sync::Arc};
 
-use curried::Prepend;
+use closure_ffi::{
+    traits::{FnPtr, FnThunk},
+    BareFn,
+};
 use retour::Function;
-use thunk::thunk_data;
 
 use crate::{
     detour::{install_detour, Detour, DetourError, UntypedDetour},
-    host::hook::thunk::ThunkPool,
+    host::append::{Append, WithAppended},
 };
 
-pub mod curried;
-pub mod thunk;
-
-pub struct HookContext<F: Function> {
-    pub trampoline: F,
-}
-
-pub enum HookSource<F: Function>
-where
-    F::Arguments: Tuple,
-{
-    FunctionPointer(F),
-    Closure(Box<dyn Fn<F::Arguments, Output = F::Output>>),
+pub enum HookSource<F: Function> {
+    Function(F),
+    Closure((F, &'static OnceCell<F>)),
 }
 
 pub struct HookInstaller<'a, F>
 where
     F: Function,
-    F::Arguments: Tuple,
 {
     enable_on_install: bool,
     source: Option<HookSource<F>>,
     storage: Option<&'a mut Vec<Arc<UntypedDetour>>>,
     target: F,
-    thunk_pool: &'a ThunkPool,
 }
 
 impl<'a, F> HookInstaller<'a, F>
 where
     F: Function,
-    F::Arguments: Tuple,
 {
-    pub fn new(
-        storage: Option<&'a mut Vec<Arc<UntypedDetour>>>,
-        thunk_pool: &'a ThunkPool,
-        target: F,
-    ) -> Self {
+    pub fn new(storage: Option<&'a mut Vec<Arc<UntypedDetour>>>, target: F) -> Self {
         Self {
             enable_on_install: true,
             source: None,
             storage,
             target,
-            thunk_pool,
         }
     }
 
     #[allow(unused)]
     pub fn with(self, source: F) -> Self {
         Self {
-            source: Some(HookSource::FunctionPointer(source)),
+            source: Some(HookSource::Function(source)),
             ..self
         }
     }
 
     pub fn with_closure<C>(self, closure: C) -> Self
     where
-        F::Arguments: Prepend<HookContext<F>>,
-        C: Fn<<F::Arguments as Prepend<HookContext<F>>>::Output, Output = F::Output> + 'static,
+        C: Fn<<F::Arguments as Append<F>>::Output, Output = F::Output> + 'static,
+        F: FnPtr,
+        F::Arguments: Append<F>,
+        (F::CC, WithAppended<C, F>): FnThunk<F>,
     {
-        let curried = curried::Curried::new(closure, || {
-            let trampoline_ptr = unsafe { thunk_data::<F>().expect("no thunk data present") };
-            let trampoline = unsafe { trampoline_ptr.read() };
+        let trampoline: &OnceCell<F> = Box::leak(Box::<OnceCell<F>>::default());
 
-            HookContext { trampoline }
-        });
+        let with_appended = WithAppended::new(closure, trampoline);
+
+        let bare: BareFn<_> = with_appended.bare();
 
         Self {
-            source: Some(HookSource::Closure(Box::new(curried))),
+            source: Some(HookSource::Closure((bare.leak(), trampoline))),
             ..self
         }
     }
 
     pub fn install(self) -> Result<Arc<Detour<F>>, DetourError> {
-        let mut trampoline_ptr = None;
-        let hook = match self.source.expect("no hook source") {
-            HookSource::FunctionPointer(ptr) => ptr,
-            HookSource::Closure(closure) => {
-                let (thunk, thunk_trampoline_ptr) = self
-                    .thunk_pool
-                    .get::<F, _>(closure, MaybeUninit::<F>::uninit())
-                    .expect("no free thunks available in pool");
+        let mut uninit_trampoline = None;
 
-                trampoline_ptr = Some(thunk_trampoline_ptr);
-                thunk
+        let hook = match self.source.expect("no hook source") {
+            HookSource::Function(f) => f,
+            HookSource::Closure((f, trampoline)) => {
+                uninit_trampoline = Some(trampoline);
+                f
             }
         };
 
         let detour = Arc::new(install_detour(self.target, hook)?);
 
         if let Some(storage) = self.storage {
-            storage.push(unsafe { std::mem::transmute(detour.clone()) });
+            storage.push(unsafe { mem::transmute(detour.clone()) });
         }
 
-        if let Some(mut trampoline_ptr) = trampoline_ptr {
-            unsafe { trampoline_ptr.as_mut().write(detour.trampoline()) };
+        if let Some(trampoline) = uninit_trampoline {
+            trampoline.get_or_init(|| detour.trampoline());
         }
 
         if self.enable_on_install {
@@ -118,23 +99,23 @@ where
 mod tests {
     use std::error::Error;
 
-    use super::{thunk::ThunkPool, HookInstaller};
+    use super::HookInstaller;
 
-    type TestFn = extern "C" fn() -> usize;
-    extern "C" fn test_fn() -> usize {
+    unsafe extern "C" fn test_fn() -> usize {
         5
     }
 
     #[test]
     fn context_with_closure() -> Result<(), Box<dyn Error>> {
-        let thunks = ThunkPool::new()?;
-        let hook = HookInstaller::<TestFn>::new(None, &thunks, test_fn)
-            .with_closure(|ctx| 5 + (ctx.trampoline)())
+        let hook_installer = HookInstaller::<unsafe extern "C" fn() -> usize>::new(None, test_fn);
+
+        let hook = hook_installer
+            .with_closure(|trampoline| 5 + unsafe { trampoline() })
             .install()?;
 
         unsafe { hook.enable()? };
 
-        assert_eq!(10, test_fn());
+        assert_eq!(10, unsafe { test_fn() });
 
         Ok(())
     }
