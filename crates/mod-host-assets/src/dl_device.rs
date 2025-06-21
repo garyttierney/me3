@@ -384,6 +384,10 @@ impl VfsMounts {
                 )
             })
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
 }
 
 fn is_root_separator(w: &[u16]) -> bool {
