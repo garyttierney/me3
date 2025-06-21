@@ -317,13 +317,15 @@ fn try_hook_dlc(image_base: *const u8) -> Result<(), eyre::Error> {
 
     ModHost::get_attached_mut()
         .hook(mount_dlc_ebl)
-        .with_closure(move |ctx, p1, p2, p3, p4| {
+        .with_closure(move |p1, p2, p3, p4, trampoline| {
             if let Ok(device_manager) = locate_device_manager(image_base) {
                 let mut device_manager = DlDeviceManager::lock(device_manager);
 
                 let snap = device_manager.snapshot();
 
-                (ctx.trampoline)(p1, p2, p3, p4);
+                unsafe {
+                    trampoline(p1, p2, p3, p4);
+                }
 
                 match snap {
                     Ok(snap) => {
@@ -343,7 +345,9 @@ fn try_hook_dlc(image_base: *const u8) -> Result<(), eyre::Error> {
                 return;
             }
 
-            (ctx.trampoline)(p1, p2, p3, p4);
+            unsafe {
+                trampoline(p1, p2, p3, p4);
+            }
         })
         .install()?;
 
