@@ -76,7 +76,12 @@ impl ArchiveOverrideMapping {
 
         let mut paths_to_scan = VecDeque::from(vec![base_directory.clone()]);
         while let Some(current_path) = paths_to_scan.pop_front() {
-            for dir_entry in read_dir(current_path).map_err(ArchiveOverrideMappingError::ReadDir)? {
+            let Ok(entries) = read_dir(&current_path) else {
+                tracing::error!(path = ?current_path, "unable to read asset override files in directory");
+                continue;
+            };
+
+            for dir_entry in entries {
                 let dir_entry = dir_entry
                     .map_err(ArchiveOverrideMappingError::DirEntryAcquire)?
                     .path();
