@@ -9,6 +9,7 @@ use std::{
 use eyre::eyre;
 use me3_mod_host_assets::{
     dl_device::{self, DlDeviceManager, DlFileOperator, VfsMounts},
+    dlc::mount_dlc_ebl,
     ebl::EblFileManager,
     file_step,
     mapping::ArchiveOverrideMapping,
@@ -36,6 +37,10 @@ pub fn attach_override(
         debug!("error" = &*e, "skipping Wwise hook");
     }
 
+    if let Err(e) = try_hook_dlc(image_base) {
+        debug!("error" = &*e, "skipping DLC hook");
+    }
+
     Ok(())
 }
 
@@ -61,6 +66,7 @@ fn hook_file_init(
                     error!("error" = &*eyre!(e), "failed to locate device manager");
 
                     (ctx.trampoline)(p1);
+
                     return;
                 }
             };
@@ -287,6 +293,47 @@ fn try_hook_wwise(
             } else {
                 (ctx.trampoline)(p1, path, open_mode, p4, p5, p6)
             }
+        })
+        .install()?;
+
+    info!("applied asset override hook");
+
+    Ok(())
+}
+
+#[instrument(name = "dlc", skip_all)]
+fn try_hook_dlc(image_base: *const u8) -> Result<(), eyre::Error> {
+    let mount_dlc_ebl = unsafe { mount_dlc_ebl(image_base)? };
+
+    ModHost::get_attached_mut()
+        .hook(mount_dlc_ebl)
+        .with_closure(move |ctx, p1, p2, p3, p4| {
+            if let Ok(device_manager) = locate_device_manager(image_base) {
+                let mut device_manager = DlDeviceManager::lock(device_manager);
+
+                let snap = device_manager.snapshot();
+
+                (ctx.trampoline)(p1, p2, p3, p4);
+
+                match snap {
+                    Ok(snap) => {
+                        let new = device_manager.extract_new(snap);
+
+                        if !new.is_empty() {
+                            debug!("extracted_mounts" = ?new);
+
+                            let mut vfs = VFS.lock().unwrap();
+
+                            vfs.append(new);
+                        }
+                    }
+                    Err(e) => error!("BND4 snapshot error: {e}"),
+                }
+
+                return;
+            }
+
+            (ctx.trampoline)(p1, p2, p3, p4);
         })
         .install()?;
 
