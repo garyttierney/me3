@@ -30,6 +30,8 @@
 
 
 - [About The Project](#about-the-project)
+  - [Supported platforms](#supported-platforms)
+  - [Supported games](#supported-games)
 - [Installation](#installation)
 - [Developer Quickstart](#developer-quickstart)
   - [Prerequisites](#prerequisites)
@@ -43,13 +45,20 @@
 
 ## About The Project
 
-me3 is a tool that extends the functionality of FROMSOTWARE games running on Windows and Linux via Proton.
+me3 is a tool that extends the functionality of FROMSOTWARE games.
 
-Currently it supports the following titles:
+### Supported platforms
+
+- Windows
+- Linux via Proton
+- macOS via [CrossOver®](https://www.codeweavers.com/crossover)
+
+### Supported games
 
 - ELDEN RING
-- ELDEN RING: NIGHTREIGN
+- ELDEN RING NIGHTREIGN
 - Armored Core VI: Fires of Rubicon
+- Sekiro: Shadows Die Twice
 
 ## Installation
 
