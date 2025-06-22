@@ -174,6 +174,13 @@ impl Launcher for CompatToolLauncher {
                 .join(format!("steamapps/compatdata/{}", self.app_id)),
         );
 
+        // TODO(gtierney): unsure if this works for every scenario, but it shouldn't break anything
+        // where it doesn't
+        command.env(
+            "LD_PRELOAD",
+            self.steam.path().join("ubuntu12_64/gameoverlayrenderer.so"),
+        );
+
         Ok(command)
     }
 }
@@ -433,6 +440,7 @@ pub fn launch(
 
     injector_command.env("SteamAppId", app_id.to_string());
     injector_command.env("SteamGameId", app_id.to_string());
+    injector_command.env("SteamOverlayGameId", app_id.to_string());
 
     info!(?injector_command, "running injector command");
 
