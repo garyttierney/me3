@@ -67,6 +67,10 @@ pub struct LaunchArgs {
     #[clap(long("suspend"), action = ArgAction::SetTrue)]
     suspend: bool,
 
+    /// Skip initializing Steam within the launcher?
+    #[clap(long("skip-steam-init"), action = ArgAction::SetTrue)]
+    skip_steam_init: bool,
+
     /// An optional path to the game executable to launch with mod support. Uses the default
     /// launcher if not present.
     #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
@@ -373,6 +377,7 @@ pub fn launch(
         game: game.into(),
         packages: ordered_packages,
         natives: ordered_natives,
+        skip_steam_init: args.skip_steam_init,
         suspend: args.suspend,
     };
 

@@ -12,9 +12,9 @@ use std::{
 
 use eyre::Context;
 use me3_env::{LauncherVars, TelemetryVars};
-use me3_launcher_attach_protocol::{AttachRequest, HostMessage};
+use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, HostMessage};
 use me3_telemetry::TelemetryConfig;
-use tracing::{error, info, instrument};
+use tracing::{error, info, instrument, warn};
 use windows::Win32::{
     Foundation::{DuplicateHandle, DUPLICATE_CLOSE_SOURCE, DUPLICATE_SAME_ACCESS, HANDLE},
     System::Threading::GetCurrentProcess,
@@ -36,14 +36,18 @@ fn run() -> LauncherResult<()> {
     info!(?args, "Parsed launcher args");
 
     let attach_config_text = std::fs::read_to_string(args.host_config_path)?;
-    let config = toml::from_str(&attach_config_text)?;
+    let config: AttachConfig = toml::from_str(&attach_config_text)?;
 
     info!(
         "Starting game at {:?} with DLL {:?}",
         args.exe, args.host_dll
     );
 
-    require_steam(&args.exe)?;
+    if !config.skip_steam_init {
+        require_steam(&args.exe)?;
+    } else {
+        warn!("skpping steam initialization, no guarantee Steam game will launch successfully");
+    }
 
     let game_path = args.exe.parent();
     let game = Game::launch(&args.exe, game_path)?;

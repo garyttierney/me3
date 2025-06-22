@@ -27,6 +27,9 @@ pub struct AttachConfig {
 
     /// Suspend the game until a debugger is attached?
     pub suspend: bool,
+
+    /// Should we avoid checking if Steam is running as part of pre-launch checks?
+    pub skip_steam_init: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
