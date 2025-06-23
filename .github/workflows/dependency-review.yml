@@ -77,7 +77,7 @@ jobs:
         with:
           name: sboms
       - name: Component detection
-        uses: advanced-security/component-detection-dependency-submission-action@04aaaf6193088d414326e842c528257b1daa4039
+        uses: advanced-security/component-detection-dependency-submission-action@b242ddf67aef4f7bb927d0d249749b63178ff9eb
         with:
           # We enable any random detector in the filter to restrict the Rust detectors that are used,
           # since EnableIfDefaultOff is additive to detectorsFilters.
