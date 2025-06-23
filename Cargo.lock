@@ -430,9 +430,9 @@ checksum = "b94f61472cee1439c0b966b47e3aca9ae07e45d070759512cd390ea2bebc6675"
 
 [[package]]
 name = "closure-ffi"
-version = "3.0.0"
+version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54a29649457c9e40365ea6407a1dc9834279ae620f04a4810f40b63271350862"
+checksum = "019d1e3eb88c3a56d3144b51198f9f43868ec5833947d8e8589dd62c13e8acb1"
 dependencies = [
  "jit-allocator2",
  "libc",
