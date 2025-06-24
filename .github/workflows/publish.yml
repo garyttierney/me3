@@ -180,31 +180,23 @@ jobs:
         with:
           shared-key: me3-build
           save-if: ${{ github.event_name == 'push' }}
-      - run: |
-          cargo build --target x86_64-pc-windows-msvc --all --release --features=sentry
-          cargo build --target x86_64-unknown-linux-musl -p me3-cli --release --features=sentry
-        env:
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-      - run: |
-          ls target/
-          ls target/release
-          ls target/x86_64-pc-windows-msvc/release
-
-      - name: Install NSIS
+      - name: Install NSIS + wkhtmltopdf
         run: |
-          sudo apt-get install nsis
-
+          sudo apt-get install nsis wkhtmltopdf
+      - name: Install pandoc
+        uses: pandoc/actions/setup@v1
+        with:
+          version: 2.19
       - run: |
           echo "version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)" >> $GITHUB_OUTPUT
         id: get_version
         shell: bash
 
-      - name: Build installer
-        run: makensis -DTARGET_DIR="${{ github.workspace }}/target/x86_64-pc-windows-msvc/release/" -DVERSION=${{ steps.get_version.outputs.version }} installer.nsi "-XOutFile me3_installer.exe"
-
       - name: Create distributions
         run: |
           make dist
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       - uses: taiki-e/install-action@9ba3ac3fd006a70c6e186a683577abc1ccf0ff3a # v2.54.0
         with:
