@@ -10,14 +10,16 @@ SOURCE_DATE_EPOCH=$(shell git log -1 --format=%ct)
 ME3_SIGNING_CERTIFICATE ?= releng/certificate.pem
 ME3_SIGNING_KEY ?= e25a03beabebbaa4b79fe76121540ec059794a60
 ME3_LINUX_BINARIES=out/me3
-
 ifeq ($(ME3_SIGNED),1)
 	ME3_WINDOWS_BINARIES=out/signed/me3.exe out/signed/me3-launcher.exe out/signed/me3_mod_host.dll
 	ME3_INSTALLER_BINARY=out/signed/me3_installer.exe
+	ME3_DIST_FILES=$(ME3_INSTALLER_BINARY) $(ME3_INSTALLER_BINARY).sig out/me3-linux-amd64.tar.gz out/me3-linux-amd64.tar.gz.sig out/me3-linux-amd64.tar.gz out/me3-linux-amd64.tar.gz.sig
 else
 	ME3_WINDOWS_BINARIES=out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll
 	ME3_INSTALLER_BINARY=out/me3_installer.exe
+	ME3_DIST_FILES=$(ME3_INSTALLER_BINARY) out/me3-linux-amd64.tar.gz out/me3-linux-amd64.tar.gz
 endif
+
 
 all: dist
 clean:
@@ -60,10 +62,9 @@ out/signed/%: out/%
 		-in $< \
 		-out $@
 
-dist: $(ME3_INSTALLER_BINARY).sig out/me3-windows-amd64.zip.sig out/me3-linux-amd64.tar.gz.sig
+dist: $(ME3_DIST_FILES)
 	@mkdir -p dist
 	@cp -v $^ dist/
-	@cp -v $(basename $^) dist/
 
 cwd := $(shell pwd)
 
