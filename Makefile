@@ -13,11 +13,11 @@ ME3_LINUX_BINARIES=out/me3
 ifeq ($(ME3_SIGNED),1)
 	ME3_WINDOWS_BINARIES=out/signed/me3.exe out/signed/me3-launcher.exe out/signed/me3_mod_host.dll
 	ME3_INSTALLER_BINARY=out/signed/me3_installer.exe
-	ME3_DIST_FILES=$(ME3_INSTALLER_BINARY) $(ME3_INSTALLER_BINARY).sig out/me3-linux-amd64.tar.gz out/me3-linux-amd64.tar.gz.sig out/me3-linux-amd64.tar.gz out/me3-linux-amd64.tar.gz.sig
+	ME3_DIST_FILES=$(ME3_INSTALLER_BINARY) $(ME3_INSTALLER_BINARY).sig out/me3-linux-amd64.tar.gz out/me3-linux-amd64.tar.gz.sig out/me3-windows-amd64.zip out/me3-windows-amd64.zip.sig
 else
 	ME3_WINDOWS_BINARIES=out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll
 	ME3_INSTALLER_BINARY=out/me3_installer.exe
-	ME3_DIST_FILES=$(ME3_INSTALLER_BINARY) out/me3-linux-amd64.tar.gz out/me3-linux-amd64.tar.gz
+	ME3_DIST_FILES=$(ME3_INSTALLER_BINARY) out/me3-linux-amd64.tar.gz out/me3-windows-amd64.zip
 endif
 
 

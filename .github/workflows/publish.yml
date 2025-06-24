@@ -49,9 +49,9 @@ jobs:
         id: attest-installer
         with:
           subject-path: |
-            me3_installer.exe
-            me3-windows-amd64.zip
-            me3-linux-amd64.tar.gz
+            dist/me3_installer.exe
+            dist/me3-windows-amd64.zip
+            dist/me3-linux-amd64.tar.gz
 
       - uses: actions/attest-sbom@bd218ad0dbcb3e146bd073d1d9c6d78e08aa8a0b # v2.4.0
         with:
@@ -212,16 +212,8 @@ jobs:
         with:
           name: me3-artifacts
           path: |
-            me3_installer.exe
-            target/x86_64-pc-windows-msvc/release/me3_mod_host.dll
-            target/x86_64-pc-windows-msvc/release/me3_mod_host.pdb
-            target/x86_64-pc-windows-msvc/release/me3-launcher.exe
-            target/x86_64-pc-windows-msvc/release/me3_launcher.pdb
-            target/x86_64-pc-windows-msvc/release/me3.exe
-            target/x86_64-pc-windows-msvc/release/me3.pdb
-            target/x86_64-unknown-linux-musl/release/me3
-            me3-windows-amd64.zip
-            me3-linux-amd64.tar.gz
+            out/
+            dist/
             crates/**/*.cdx.json
             installer.sh
 
@@ -243,7 +235,7 @@ jobs:
         with:
           name: me3-artifacts
       - run: ls -R
-      - run: ./me3_installer.exe /S
+      - run: ./dist/me3_installer.exe /S
 
       - run: |
           Import-Module "$env:ChocolateyInstall/helpers/chocolateyInstaller.psm1"
