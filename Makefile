@@ -81,7 +81,7 @@ dist-windows: dist-common $(ME3_WINDOWS_BINARIES)
 	@cp -v $(ME3_WINDOWS_BINARIES) out/dist-windows/bin
 	@cp -v -R distribution/portable/cross-platform/* distribution/portable/windows/* out/dist-common/* out/dist-windows/
 
-dist-linux: $(ME3_WINDOWS_BINARIES) $(ME3_LINUX_BINARIES)
+dist-linux: dist-common $(ME3_WINDOWS_BINARIES) $(ME3_LINUX_BINARIES)
 	@rm -rf out/dist-linux
 	@mkdir -p out/dist-linux/bin/win64
 	@mkdir -p "out/dist-linux/eldenring-mods" "out/dist-linux/nightreign-mods"
