@@ -49,9 +49,9 @@ jobs:
         id: attest-installer
         with:
           subject-path: |
-            me3_installer.exe
-            me3-windows-amd64.zip
-            me3-linux-amd64.tar.gz
+            dist/me3_installer.exe
+            dist/me3-windows-amd64.zip
+            dist/me3-linux-amd64.tar.gz
 
       - uses: actions/attest-sbom@bd218ad0dbcb3e146bd073d1d9c6d78e08aa8a0b # v2.4.0
         with:
@@ -180,31 +180,23 @@ jobs:
         with:
           shared-key: me3-build
           save-if: ${{ github.event_name == 'push' }}
-      - run: |
-          cargo build --target x86_64-pc-windows-msvc --all --release --features=sentry
-          cargo build --target x86_64-unknown-linux-musl -p me3-cli --release --features=sentry
-        env:
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-      - run: |
-          ls target/
-          ls target/release
-          ls target/x86_64-pc-windows-msvc/release
-
-      - name: Install NSIS
+      - name: Install NSIS + wkhtmltopdf
         run: |
-          sudo apt-get install nsis
-
+          sudo apt-get install nsis wkhtmltopdf
+      - name: Install pandoc
+        uses: pandoc/actions/setup@v1
+        with:
+          version: 2.19
       - run: |
           echo "version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)" >> $GITHUB_OUTPUT
         id: get_version
         shell: bash
 
-      - name: Build installer
-        run: makensis -DTARGET_DIR="${{ github.workspace }}/target/x86_64-pc-windows-msvc/release/" -DVERSION=${{ steps.get_version.outputs.version }} installer.nsi "-XOutFile me3_installer.exe"
-
       - name: Create distributions
         run: |
-          make me3-windows-amd64.zip me3-linux-amd64.tar.gz
+          make dist
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       - uses: taiki-e/install-action@9ba3ac3fd006a70c6e186a683577abc1ccf0ff3a # v2.54.0
         with:
@@ -220,16 +212,8 @@ jobs:
         with:
           name: me3-artifacts
           path: |
-            me3_installer.exe
-            target/x86_64-pc-windows-msvc/release/me3_mod_host.dll
-            target/x86_64-pc-windows-msvc/release/me3_mod_host.pdb
-            target/x86_64-pc-windows-msvc/release/me3-launcher.exe
-            target/x86_64-pc-windows-msvc/release/me3_launcher.pdb
-            target/x86_64-pc-windows-msvc/release/me3.exe
-            target/x86_64-pc-windows-msvc/release/me3.pdb
-            target/x86_64-unknown-linux-musl/release/me3
-            me3-windows-amd64.zip
-            me3-linux-amd64.tar.gz
+            out/
+            dist/
             crates/**/*.cdx.json
             installer.sh
 
@@ -251,7 +235,7 @@ jobs:
         with:
           name: me3-artifacts
       - run: ls -R
-      - run: ./me3_installer.exe /S
+      - run: ./dist/me3_installer.exe /S
 
       - run: |
           Import-Module "$env:ChocolateyInstall/helpers/chocolateyInstaller.psm1"
