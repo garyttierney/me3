@@ -1,5 +1,5 @@
 use std::{error::Error, fmt::Display, fs::File, io::Read, path::Path, str::FromStr};
-
+use std::path::PathBuf;
 use native::Native;
 use package::Package;
 use schemars::JsonSchema;
@@ -66,6 +66,9 @@ impl FromStr for Game {
 pub struct Supports {
     #[serde(rename = "game")]
     pub game: Game,
+    
+    #[serde(rename = "exe")]
+    pub exe: Option<PathBuf>,
 
     #[serde(rename = "since")]
     pub since_version: Option<String>,

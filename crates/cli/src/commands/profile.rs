@@ -41,6 +41,16 @@ pub struct ProfileCreateArgs {
     #[arg(value_enum)]
     game: Option<Game>,
 
+    /// Path to the game executable
+    #[clap(
+        long("exe"),
+        short('e'),
+        value_name = "PATH",
+        help = "Path to the game executable file",
+        help_heading = "Game selection",
+    )]
+    exe: Option<PathBuf>,
+
     /// Path to a list of packages to add to the profile.
     #[clap(long("package"))]
     packages: Vec<PathBuf>,
@@ -105,6 +115,7 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
 
         supports.push(Supports {
             game: game.into(),
+            exe: args.exe,
             since_version: None,
         });
     }
