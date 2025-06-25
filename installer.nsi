@@ -242,7 +242,9 @@ Section "Uninstall"
 
     RMDir "$SMPROGRAMS\me3"
     RMDir "$INSTDIR\assets"
+    RMDir "$INSTDIR\config"
     RMDir "$INSTDIR\bin"
+    RMDir "$INSTDIR"
 
     DeleteRegKey HKCU "$UNINSTALL_REG_KEY"
 SectionEnd
