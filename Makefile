@@ -18,13 +18,13 @@ _WINDOWS_BINARY_DESTDIR = $(if $(SIGNED),$(DESTDIR)/signed,$(DESTDIR))
 
 WINDOWS_BINARIES=$(addprefix $(_WINDOWS_BINARY_DESTDIR)/,$(_WINDOWS_BINARIES))
 INSTALLER_BINARY=$(addprefix $(_WINDOWS_BINARY_DESTDIR)/,$(_WINDOWS_INSTALLER))
-DIST_FILES = $(INSTALLER_BINARY) $(WINDOWS_BINARIES)
+DIST_FILES=$(INSTALLER_BINARY) $(DESTDIR)/me3-windows-amd64.zip $(DESTDIR)/me3-linux-amd64.tar.gz
 
 ifeq ($(SIGNED),1)
-	DIST_FILES += $(addsuffix .sig,$(DIST_FILES))
+	DIST_FILES+=$(addsuffix .sig,$(INSTALLER_BINARY) $(DESTDIR)/me3-windows-amd64.zip $(DESTDIR)/me3-linux-amd64.tar.gz)
 endif
 
-all: dist
+all: $(DIST_FILES)
 clean:
 	rm -Rf $(DESTDIR)/
 
@@ -65,26 +65,11 @@ $(DESTDIR)/signed/%: $(DESTDIR)/%
 		-in $< \
 		-out $@
 
-upload-release-binaries: dist
-	$(if $(value RELEASE_TAG),,$(error "release tag not set"))
-	gh release upload --clobber -R garyttierney/me3 $(RELEASE_TAG) \
-          'dist/me3_installer.exe#me3_installer.exe (Installer for Windows)' \
-          'dist/me3-windows-amd64.zip#me3-windows-amd64.zip (Portable distribution for Windows)' \
-          'dist/me3-linux-amd64.tar.gz#me3-linux-amd64.tar.gz (Portable distribution for Linux)' \
-		  dist/*.sig
-
-
-dist: $(DIST_FILES)
-	@mkdir -p dist
-	@cp -v $^ dist/
-
-cwd := $(shell pwd)
-
 $(DESTDIR)/me3-windows-amd64.zip: dist-windows
-	@(cd "$(DESTDIR)/dist-windows" && zip -r "${cwd}/$@" ./*)
+	@(cd "$(DESTDIR)/dist-windows" && zip -r "$(DESTDIR)/me3-windows-amd64.zip" ./*)
 
 $(DESTDIR)/me3-linux-amd64.tar.gz: dist-linux
-	@(cd "$(DESTDIR)/dist-linux" && tar --mtime="@0" --sort=name --owner=0 --group=0 --numeric-owner -czv -f "${cwd}/$@" ./*)
+	@(cd "$(DESTDIR)/dist-linux" && tar --mtime="@0" --sort=name --owner=0 --group=0 --numeric-owner -czv -f "$(DESTDIR)/me3-linux-amd64.tar.gz" ./*)
 
 dist-windows: dist-common $(WINDOWS_BINARIES)
 	@rm -rf $(DESTDIR)/dist-windows
