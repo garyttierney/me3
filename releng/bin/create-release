@@ -89,10 +89,12 @@ function setup_worktree() {
             gh release edit "$_next_version" "${_gh_release_opts[@]}"
         fi
 
-        if ! gh pr view; then
-            gh pr create -B main -b "$_git_changelog" --head "release-$_next_version"
-        else
-            gh pr edit -B main -b "$_git_changelog" --head "release-$_next_version"
+        if [ "$_draft" = true ]; then
+            if ! gh pr view "release-$_next_version"; then
+                gh pr create -B main --title "chore: Release $_next_version" -b "$_git_changelog" --head "release-$_next_version"
+            else
+                gh pr edit "release-$_next_version" -b "$_git_changelog"
+            fi
         fi
     fi
 }
