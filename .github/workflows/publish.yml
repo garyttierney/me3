@@ -45,7 +45,7 @@ jobs:
         run: |
           sudo apt-get install nsis wkhtmltopdf
       - name: Install pandoc
-        uses: pandoc/actions/setup@v1
+        uses: pandoc/actions/setup@54978b2465cef52a89f0e50a71d1397b1c25b469 # v1.1.0
         with:
           version: 2.19
       - run: |
