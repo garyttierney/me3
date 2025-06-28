@@ -1,5 +1,5 @@
 # me3 $VERSION
-
+$NEWS
 <!-- markdown-link-check-disable -->
 ## Windows Installation
 
