@@ -1,7 +1,0 @@
-#!/bin/bash
-
-script_dir=$(dirname "$(realpath "$0")")
-
-CHANGES=$(git cliff --strip=all --tag="$ME3_RELEASE_TAG" "$ME3_PREV_RELEASE_TAG"..HEAD)
-export VERSION="$ME3_RELEASE_TAG" CHANGES
-envsubst <"$script_dir/../RELEASE_NOTES.md"

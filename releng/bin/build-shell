@@ -1,9 +1,0 @@
-#!/bin/bash
-
-set -eux
-
-script_dir=$(dirname "$(realpath "$0")")
-buildah build --layers -f "$script_dir/../Dockerfile.build" -t me3-build:latest "$script_dir/.."
-toolbox rm --force me3-build-latest
-toolbox create --image me3-build:latest
-toolbox enter me3-build-latest

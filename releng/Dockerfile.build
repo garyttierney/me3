@@ -37,6 +37,7 @@ RUN set -eux; \
     rustup --version; \
     cargo --version; \
     rustc --version; \
+    rustup target add x86_64-pc-windows-msvc; \
     cargo install xwin cargo-auditable;  \
     xwin --accept-license splat --output /xwin;  \
     chmod -R a+rw $RUSTUP_HOME $CARGO_HOME;
@@ -58,7 +59,7 @@ ENV AR_x86_64_pc_windows_msvc=llvm-lib \
     CXXFLAGS_x86_64_pc_windows_msvc="$CL_FLAGS /EHsc" \
     CC_x86_64_pc_windows_msvc=clang-cl \
     CXX_x86_64_pc_windows_msvc=clang-cl
-ENV CARGO="cargo-auditable"
+ENV CARGO="cargo auditable"
 
 RUN set -eux; \
     curl -L -o proCertumCardManager-install.bin https://files.certum.eu/software/proCertumCardManager/Linux-RedHat/2.2.13/proCertumCardManager-2.2.13-x86_64-centos.bin; \
