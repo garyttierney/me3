@@ -55,7 +55,7 @@ jobs:
 
       - name: Create distributions
         run: |
-          make dist
+          make all
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
