@@ -1,0 +1,20 @@
+name: "Upload release to VirusTotal"
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  virustotal:
+    name: "VirusTotal"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "VirusTotal Action"
+        uses: cssnr/virustotal-action@7e2883f1666c5750a3587cc31b93a3746a82a065 # v1.3.1
+        with:
+          vt_api_key: ${{ secrets.VIRUSTOTAL_TOKEN }}
+          rate_limit: 4
+          update_release: false
