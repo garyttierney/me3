@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -u
+
+if ! release_commit=$(gh release view "$1" --json "targetCommitish" --jq '.targetCommitish'); then
+    echo "Draft release hasn't been created yet"
+    exit 1
+fi
+
+if ! prev_release_tag=$(gh release view --json "tagName" --jq '.tagName'); then
+    echo "Draft release hasn't been created yet"
+    exit 1
+fi
+
+ME3_PREV_RELEASE_TAG="$prev_release_tag"
+ME3_RELEASE_TAG="$1"
+ME3_RELEASE_REF="$release_commit"
+export ME3_PREV_RELEASE_TAG ME3_RELEASE_TAG ME3_RELEASE_REF

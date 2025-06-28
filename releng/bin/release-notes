@@ -2,10 +2,6 @@
 
 script_dir=$(dirname "$(realpath "$0")")
 
-VERSION="$1"
-SUMMARY=$(git tag -l --format='%(contents:subject)' "$VERSION")
-BODY=$(git tag -l --format='%(contents:body)' "$VERSION")
-SIGNATURE=$(git tag -l --format='%(contents:signature)' "$VERSION")
-
-export VERSION SUMMARY SIGNATURE BODY
+CHANGES=$(git cliff --strip=all --tag="$ME3_RELEASE_TAG" "$ME3_PREV_RELEASE_TAG"..HEAD)
+export VERSION="$ME3_RELEASE_TAG" CHANGES
 envsubst <"$script_dir/../RELEASE_NOTES.md"

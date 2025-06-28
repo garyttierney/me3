@@ -26,7 +26,6 @@ sed -i "
 }
 " .github/ISSUE_TEMPLATE/bug-report.yml
 
-tag_sha=$(git rev-parse --verify HEAD)
 read -r -d '' tag_command_template <<'EOF'
 
 
@@ -37,10 +36,10 @@ read -r -d '' tag_command_template <<'EOF'
 ./releng/bin/create-release "$TAG_SHA"
 ```
 EOF
-
 cargo set-version "$version"
 cargo update
 git commit -am "release: $version"
+tag_sha=$(git rev-parse --verify HEAD)
 
 echo "$tag_command_template"
 tag_command=$(TAG_NAME="$tag_name" TAG_SHA="$tag_sha" envsubst <<<"$tag_command_template")
@@ -60,5 +59,11 @@ if [ -n "$RELEASE_PUSH" ]; then
         gh pr create -B main -b "$pr_body" --title "chore(release): $version"
     else
         gh pr edit -B main -b "$pr_body" --title "chore(release): $version"
+    fi
+
+    if ! gh release view "$tag_name"; then
+        gh release create "$tag_name" --draft --target "$tag_sha" -n "$release_notes"
+    else
+        gh release edit "$tag_name" --draft --target "$tag_sha" -n "$release_notes"
     fi
 fi
