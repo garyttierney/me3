@@ -86,7 +86,7 @@ jobs:
         with:
           name: me3-artifacts
       - run: ls -R
-      - run: ./out/me3_installer.exe /S
+      - run: ./me3_installer.exe /S
 
       - run: |
           Import-Module "$env:ChocolateyInstall/helpers/chocolateyInstaller.psm1"
