@@ -8,7 +8,7 @@ use std::{
     io::PipeWriter,
     mem,
     os::windows::{prelude::FromRawHandle, raw::HANDLE},
-    sync::{mpsc::RecvTimeoutError, Arc, OnceLock},
+    sync::{Arc, OnceLock, mpsc::RecvTimeoutError},
     time::Duration,
 };
 
@@ -20,7 +20,7 @@ use me3_launcher_attach_protocol::{
 };
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use me3_telemetry::TelemetryConfig;
-use tracing::{error, info, Span};
+use tracing::{Span, error, info};
 
 use crate::{debugger::suspend_for_debugger, deferred::defer_until_init, host::ModHost};
 
@@ -49,12 +49,12 @@ dll_syringe::payload_procedure! {
 }
 
 #[cfg(coverage)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(non_upper_case_globals)]
 static __lvm_profile_runtime: i32 = 1;
 
 #[cfg(coverage)]
-extern "C" {
+unsafe extern "C" {
     fn __llvm_profile_write_file() -> i32;
     fn __llvm_profile_initialize_file();
 }
@@ -77,15 +77,17 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     let mut monitor_pipe = unsafe { PipeWriter::from_raw_handle(monitor_handle) };
     let (monitor_tx, monitor_rx) = std::sync::mpsc::channel::<HostMessage>();
 
-    std::thread::spawn(move || loop {
-        match monitor_rx.recv_timeout(Duration::from_millis(100)) {
-            Ok(msg) => {
-                if msg.write_to(&mut monitor_pipe).is_err() {
-                    break;
+    std::thread::spawn(move || {
+        loop {
+            match monitor_rx.recv_timeout(Duration::from_millis(100)) {
+                Ok(msg) => {
+                    if msg.write_to(&mut monitor_pipe).is_err() {
+                        break;
+                    }
                 }
+                Err(RecvTimeoutError::Timeout) => continue,
+                Err(_) => break,
             }
-            Err(RecvTimeoutError::Timeout) => continue,
-            Err(_) => break,
         }
     });
 
@@ -171,7 +173,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     Ok(result)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "system" fn DllMain(instance: usize, reason: u32, _: *mut usize) -> i32 {
     match reason {
         DLL_PROCESS_ATTACH => {
