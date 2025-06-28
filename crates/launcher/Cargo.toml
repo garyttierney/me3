@@ -13,23 +13,24 @@ default = []
 
 [dependencies]
 crash-context.workspace = true
-eyre = { workspace = true, default-features = false, features = [
-    "track-caller",
-] }
+dll-syringe.workspace = true
+eyre = { workspace = true, default-features = false, features = ["track-caller"] }
+me3-env.workspace = true
+me3-launcher-attach-protocol.workspace = true
+me3-mod-protocol.workspace = true
+me3-telemetry.workspace = true
+minidump-writer.workspace = true
+sentry = { workspace = true, optional = true }
+toml.workspace = true
+tracing.workspace = true
 windows = { workspace = true, features = [
     "Win32_System_Diagnostics_Debug",
     "Win32_System_LibraryLoader",
     "Win32_System_Threading",
 ] }
-dll-syringe.workspace = true
-me3-launcher-attach-protocol.workspace = true
-me3-mod-protocol.workspace = true
-minidump-writer.workspace = true
-tracing.workspace = true
-sentry = { workspace = true, optional = true }
-toml.workspace = true
-me3-telemetry.workspace = true
-me3-env.workspace = true
+
+[build-dependencies]
+winresource = "0.1"
 
 [lints]
 workspace = true

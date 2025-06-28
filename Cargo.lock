@@ -1452,6 +1452,7 @@ dependencies = [
  "toml",
  "tracing",
  "windows",
+ "winresource",
 ]
 
 [[package]]
@@ -1487,6 +1488,7 @@ dependencies = [
  "thiserror 2.0.12",
  "tracing",
  "windows",
+ "winresource",
 ]
 
 [[package]]
