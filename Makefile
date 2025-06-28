@@ -65,11 +65,13 @@ $(DESTDIR)/signed/%: $(DESTDIR)/%
 		-in $< \
 		-out $@
 
+windows_zip_path := $(abspath $(DESTDIR)/me3-windows-amd64.zip)
 $(DESTDIR)/me3-windows-amd64.zip: dist-windows
-	@(cd "$(DESTDIR)/dist-windows" && zip -r "$(DESTDIR)/me3-windows-amd64.zip" ./*)
+	@(cd "$(DESTDIR)/dist-windows" && zip -r "$(windows_zip_path)" ./*)
 
+linux_tarball_path := $(abspath $(DESTDIR)/me3-linux-amd64.tar.gz)
 $(DESTDIR)/me3-linux-amd64.tar.gz: dist-linux
-	@(cd "$(DESTDIR)/dist-linux" && tar --mtime="@0" --sort=name --owner=0 --group=0 --numeric-owner -czv -f "$(DESTDIR)/me3-linux-amd64.tar.gz" ./*)
+	@(cd "$(DESTDIR)/dist-linux" && tar --mtime="@0" --sort=name --owner=0 --group=0 --numeric-owner -czv -f "$(linux_tarball_path)" ./*)
 
 dist-windows: dist-common $(WINDOWS_BINARIES)
 	@rm -rf $(DESTDIR)/dist-windows
