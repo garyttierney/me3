@@ -53,7 +53,6 @@ jobs:
     name: Check if config schema is up to date
     runs-on: windows-latest
     permissions:
-      checks: write
       contents: read
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -78,11 +77,7 @@ jobs:
         run: cargo run --locked --package me3-mod-protocol --bin schema > schemas/mod-profile.json
 
       - name: Check | Detect Changes
-        uses: reviewdog/action-suggester@4747dbc9f9e37adba0943e681cc20db466642158 # v1.21.0
-        with:
-          tool_name: me3-mod-protocol schema
-          filter_mode: nofilter
-          fail_level: any
+        run: git diff --exit-code schemas/mod-profile.json
 
   clippy:
     name: Clippy

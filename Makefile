@@ -2,95 +2,94 @@
 
 CARGO ?= cargo
 CARGOFLAGS ?= --features=sentry --release
+DESTDIR ?= out
 
 WINDOWS_TRIPLE ?= x86_64-pc-windows-msvc
-LINUX_TRIPLE ?= x86_64-unknown-linux-musl
+LINUX_TRIPLE ?= x86_64-unknown-linux-gnu
 SOURCE_DATE_EPOCH=$(shell git log -1 --format=%ct)
 
-ME3_SIGNING_CERTIFICATE ?= releng/certificate.pem
-ME3_SIGNING_KEY ?= e25a03beabebbaa4b79fe76121540ec059794a60
-ME3_LINUX_BINARIES=out/me3
-ifeq ($(ME3_SIGNED),1)
-	ME3_WINDOWS_BINARIES=out/signed/me3.exe out/signed/me3-launcher.exe out/signed/me3_mod_host.dll
-	ME3_INSTALLER_BINARY=out/signed/me3_installer.exe
-	ME3_DIST_FILES=$(ME3_INSTALLER_BINARY) $(ME3_INSTALLER_BINARY).sig out/me3-linux-amd64.tar.gz out/me3-linux-amd64.tar.gz.sig out/me3-windows-amd64.zip out/me3-windows-amd64.zip.sig
-else
-	ME3_WINDOWS_BINARIES=out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll
-	ME3_INSTALLER_BINARY=out/me3_installer.exe
-	ME3_DIST_FILES=$(ME3_INSTALLER_BINARY) out/me3-linux-amd64.tar.gz out/me3-windows-amd64.zip
+SIGNING_CERTIFICATE ?= releng/certificate.pem
+SIGNING_KEY ?= e25a03beabebbaa4b79fe76121540ec059794a60
+LINUX_BINARIES=$(DESTDIR)/me3
+
+_WINDOWS_BINARIES=me3.exe me3_mod_host.dll me3-launcher.exe
+_WINDOWS_INSTALLER=me3_installer.exe
+_WINDOWS_BINARY_DESTDIR = $(if $(SIGNED),$(DESTDIR)/signed,$(DESTDIR))
+
+WINDOWS_BINARIES=$(addprefix $(_WINDOWS_BINARY_DESTDIR)/,$(_WINDOWS_BINARIES))
+INSTALLER_BINARY=$(addprefix $(_WINDOWS_BINARY_DESTDIR)/,$(_WINDOWS_INSTALLER))
+DIST_FILES=$(INSTALLER_BINARY) $(DESTDIR)/me3-windows-amd64.zip $(DESTDIR)/me3-linux-amd64.tar.gz
+
+ifeq ($(SIGNED),1)
+	DIST_FILES+=$(addsuffix .sig,$(INSTALLER_BINARY) $(DESTDIR)/me3-windows-amd64.zip $(DESTDIR)/me3-linux-amd64.tar.gz)
 endif
 
-
-all: dist
+all: $(DIST_FILES)
 clean:
-	rm -Rf out/
+	rm -Rf $(DESTDIR)/
 
 %.sig: %
 	rm -f $@
 	gpg -o $@ -b $<
 
-out/%.pdf: %.md
+$(DESTDIR)/%.pdf: %.md
 	pandoc -t html $< -o $@
 
-out/me3:
+$(DESTDIR)/me3:
 	SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) $(CARGO) build $(CARGOFLAGS) \
 		--target $(LINUX_TRIPLE) \
-		-Z unstable-options --artifact-dir=out/ \
+		-Z unstable-options --artifact-dir=$(DESTDIR)/ \
 		-p me3-cli
 
-out/me3_installer.exe: $(ME3_WINDOWS_BINARIES) out/CHANGELOG.pdf
+$(DESTDIR)/me3_installer.exe: $(WINDOWS_BINARIES) $(DESTDIR)/CHANGELOG.pdf
 	makensis -DTARGET_DIR=$(shell dirname $<)/ installer.nsi -X"OutFile $@"
 
-out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll:
+$(DESTDIR)/me3.exe $(DESTDIR)/me3-launcher.exe $(DESTDIR)/me3_mod_host.dll:
 	SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) $(CARGO) build $(CARGOFLAGS) \
 		--target $(WINDOWS_TRIPLE) \
-		-Z unstable-options --artifact-dir=out/ \
+		-Z unstable-options --artifact-dir=$(DESTDIR)/ \
 		-p me3-launcher -p me3-mod-host -p me3-cli
 
-out/signed/%: out/%
-	$(if $(value ME3_SIGNING_PIN),,$(error "signing pin not set"))
-	@mkdir -p out/signed
+$(DESTDIR)/signed/%: $(DESTDIR)/%
+	$(if $(value SIGNING_PIN),,$(error "signing pin not set"))
+	@mkdir -p $(DESTDIR)/signed
 	@rm -f $@
 	@osslsigncode sign \
 		-verbose \
 		-pkcs11module /opt/proCertumCardManager/sc30pkcs11-*.so \
-		-certs $(ME3_SIGNING_CERTIFICATE) \
-		-key $(ME3_SIGNING_KEY) \
-		-pass $(ME3_SIGNING_PIN) \
+		-certs $(SIGNING_CERTIFICATE) \
+		-key $(SIGNING_KEY) \
+		-pass $(SIGNING_PIN) \
 		-h sha256 \
 		-t http://time.certum.pl/ \
 		-in $< \
 		-out $@
 
-dist: $(ME3_DIST_FILES)
-	@mkdir -p dist
-	@cp -v $^ dist/
+windows_zip_path := $(abspath $(DESTDIR)/me3-windows-amd64.zip)
+$(DESTDIR)/me3-windows-amd64.zip: dist-windows
+	@(cd "$(DESTDIR)/dist-windows" && zip -r "$(windows_zip_path)" ./*)
 
-cwd := $(shell pwd)
+linux_tarball_path := $(abspath $(DESTDIR)/me3-linux-amd64.tar.gz)
+$(DESTDIR)/me3-linux-amd64.tar.gz: dist-linux
+	@(cd "$(DESTDIR)/dist-linux" && tar --mtime="@0" --sort=name --owner=0 --group=0 --numeric-owner -czv -f "$(linux_tarball_path)" ./*)
 
-out/me3-windows-amd64.zip: dist-windows
-	@(cd "out/dist-windows" && zip -r "${cwd}/$@" ./*)
+dist-windows: dist-common $(WINDOWS_BINARIES)
+	@rm -rf $(DESTDIR)/dist-windows
+	@mkdir -p $(DESTDIR)/dist-windows/bin
+	@mkdir -p "$(DESTDIR)/dist-windows/eldenring-mods" "$(DESTDIR)/dist-windows/nightreign-mods"
+	@cp -v $(WINDOWS_BINARIES) $(DESTDIR)/dist-windows/bin
+	@cp -v -R distribution/portable/cross-platform/* distribution/portable/windows/* $(DESTDIR)/dist-common/* $(DESTDIR)/dist-windows/
 
-out/me3-linux-amd64.tar.gz: dist-linux
-	@(cd "out/dist-linux" && tar --mtime="@0" --sort=name --owner=0 --group=0 --numeric-owner -czv -f "${cwd}/$@" ./*)
+dist-linux: dist-common $(WINDOWS_BINARIES) $(LINUX_BINARIES)
+	@rm -rf $(DESTDIR)/dist-linux
+	@mkdir -p $(DESTDIR)/dist-linux/bin/win64
+	@mkdir -p "$(DESTDIR)/dist-linux/eldenring-mods" "$(DESTDIR)/dist-linux/nightreign-mods"
+	@cp -v $(LINUX_BINARIES) $(DESTDIR)/dist-linux/bin
+	@cp -v $(WINDOWS_BINARIES) $(DESTDIR)/dist-linux/bin/win64
+	@cp -v -R distribution/portable/cross-platform/* distribution/portable/linux/* $(DESTDIR)/dist-common/* $(DESTDIR)/dist-linux/
 
-dist-windows: dist-common $(ME3_WINDOWS_BINARIES)
-	@rm -rf out/dist-windows
-	@mkdir -p out/dist-windows/bin
-	@mkdir -p "out/dist-windows/eldenring-mods" "out/dist-windows/nightreign-mods"
-	@cp -v $(ME3_WINDOWS_BINARIES) out/dist-windows/bin
-	@cp -v -R distribution/portable/cross-platform/* distribution/portable/windows/* out/dist-common/* out/dist-windows/
-
-dist-linux: dist-common $(ME3_WINDOWS_BINARIES) $(ME3_LINUX_BINARIES)
-	@rm -rf out/dist-linux
-	@mkdir -p out/dist-linux/bin/win64
-	@mkdir -p "out/dist-linux/eldenring-mods" "out/dist-linux/nightreign-mods"
-	@cp -v $(ME3_LINUX_BINARIES) out/dist-linux/bin
-	@cp -v $(ME3_WINDOWS_BINARIES) out/dist-linux/bin/win64
-	@cp -v -R distribution/portable/cross-platform/* distribution/portable/linux/* out/dist-common/* out/dist-linux/
-
-dist-common: out/CHANGELOG.pdf
-	@rm -rf out/dist-common
-	@mkdir -p out/dist-common
-	@cp -v out/CHANGELOG.pdf out/dist-common
-	@cp -v LICENSE-APACHE LICENSE-MIT out/dist-common
+dist-common: $(DESTDIR)/CHANGELOG.pdf
+	@rm -rf $(DESTDIR)/dist-common
+	@mkdir -p $(DESTDIR)/dist-common
+	@cp -v $(DESTDIR)/CHANGELOG.pdf $(DESTDIR)/dist-common
+	@cp -v LICENSE-APACHE LICENSE-MIT $(DESTDIR)/dist-common

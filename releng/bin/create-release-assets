@@ -1,0 +1,60 @@
+#!/bin/bash
+
+_release=
+_signed=false
+_signing_pin=
+
+while true; do
+    case "$1" in
+    --signed)
+        _signed=true
+        shift
+        ;;
+    --release)
+        _release="$2"
+        shift 2
+        ;;
+    *) break ;;
+    esac
+done
+
+set -ux
+
+if [ "$_signed" = true ]; then
+    IFS= read -rs -p "Signing pin: " signing_pin
+fi
+
+if ! release_commit=$(gh release view "$_release" --json "targetCommitish" --jq '.targetCommitish'); then
+    echo "Draft release hasn't been created yet"
+    exit 1
+fi
+
+script_dir=$(dirname "$(realpath "$0")")
+buildah build --layers -f "$script_dir/../Dockerfile.build" -t me3-build:latest "$script_dir/.."
+toolbox rm --force me3-build-latest
+toolbox create --image me3-build:latest
+
+destdir="$(pwd)/out"
+
+trap "git worktree remove -f release-prep || true" EXIT
+{
+    git worktree add release-prep "$release_commit"
+    pushd release-prep || exit 1
+
+    make_env=(DESTDIR="$destdir")
+    if [ "$_signed" = true ]; then
+        make_env+=("SIGNED=1" "SIGNING_PIN=$signing_pin")
+    fi
+
+    toolbox run --container me3-build-latest -- env "${make_env[@]}" make
+    popd || exit 1
+
+    gh release upload --clobber -R garyttierney/me3 "$_release" \
+        'out/me3_installer.exe#me3_installer.exe (Installer for Windows)' \
+        'out/me3-windows-amd64.zip#me3-windows-amd64.zip (Portable distribution for Windows)' \
+        'out/me3-linux-amd64.tar.gz#me3-linux-amd64.tar.gz (Portable distribution for Linux)'
+
+    if [ "$_signed" = true ]; then
+        gh release upload --clobber -R garyttierney/me3 "$_release" out/*.sig
+    fi
+}

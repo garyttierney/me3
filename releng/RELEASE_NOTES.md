@@ -1,7 +1,5 @@
 # me3 $VERSION
-
-$SUMMARY
-$BODY
+$NEWS
 <!-- markdown-link-check-disable -->
 ## Windows Installation
 
@@ -15,14 +13,4 @@ Already have me3 installed? Update to the latest version by opening the run prom
 curl --proto '=https' --tlsv1.2 -sSfL https://github.com/garyttierney/me3/releases/download/$VERSION/installer.sh | sh
 ```
 <!-- markdown-link-check-enable -->
-## Changelog
 $CHANGES
-
-## Release Details
-
-<details>
-<summary>PGP signature</summary>
-```
-$SIGNATURE
-```
-</details>

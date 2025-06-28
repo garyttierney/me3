@@ -51,7 +51,9 @@ pub fn update() -> color_eyre::Result<()> {
         .call()?;
 
     if !response.status().is_success() {
-        error!("unable to check latest version, check https://github.com/garyttierney/me3/releases/latest");
+        error!(
+            "unable to check latest version, check https://github.com/garyttierney/me3/releases/latest"
+        );
         return Ok(());
     }
 

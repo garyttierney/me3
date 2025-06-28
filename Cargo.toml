@@ -8,12 +8,13 @@ members = [
   "crates/mod-host-assets",
   "crates/telemetry",
   "crates/env",
+  "crates/xtask",
 ]
 resolver = "2"
 
 [workspace.package]
 version = "0.6.0-prerelease"
-edition = "2021"
+edition = "2024"
 repository = "https://github.com/garyttierney/me3"
 license = "MIT OR Apache-2.0"
 
@@ -65,12 +66,3 @@ tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", default-features = false }
 ureq = "3"
 windows = "0.61"
-
-[workspace.metadata.release]
-pre_release_replacements = [
-  { file = "CHANGELOG.md", search = "Unreleased", replace = "$TAG_NAME" },
-  { file = "CHANGELOG.md", search = "...HEAD", replace = "...$TAG_NAME", exactly = 1 },
-  { file = "CHANGELOG.md", search = "ReleaseDate", replace = "$DATE" },
-  { file = "CHANGELOG.md", search = "<!-- next-header -->", replace = "<!-- next-header -->\n\n## [Unreleased] - ReleaseDate", exactly = 1 },
-  { file = "CHANGELOG.md", search = "<!-- next-url -->", replace = "<!-- next-url -->[Unreleased]: https://github.com/garyttierney/me3/compare/$TAG_NAME...HEAD", exactly = 1 },
-]

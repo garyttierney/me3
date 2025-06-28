@@ -1,36 +1,100 @@
 #!/bin/bash
 
-set -xe
-
-trap "git worktree remove mkrelease || true" EXIT
 script_dir=$(dirname "$(realpath "$0")")
 
-SHA=$1
+GITHUB_TOKEN=$(gh auth token)
+export GITHUB_TOKEN
 
-if [ -z "$SHA" ]; then
+_draft=true
+_dry_run=false
+
+while true; do
+    case "$1" in
+    --publish)
+        _draft=false
+        shift
+        ;;
+    --dry-run)
+        _dry_run=true
+        shift
+        ;;
+    *) break ;;
+    esac
+done
+
+set -eux
+
+if ! _prev_version=$(gh release view --json "tagName" --jq '.tagName'); then
+    echo "Unable to handle initial release. Create it manually."
     exit 1
 fi
 
-git fetch origin
-git worktree add -B "release-prep" mkrelease "$SHA"
-(
-    pushd mkrelease || exit 1
+if ! _next_version=$(git cliff --bumped-version); then
+    echo "Unable to determine next version from changelog"
+    exit 1
+fi
 
-    version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)
-    tag_name="v$version"
+function update_release_files() {
+    sed -i "s/INSTALLER_VERSION=.*/INSTALLER_VERSION=$_next_version/" installer.sh
+    sed -i "
+    / (Latest)/{
+    i\\
+            - ${_next_version} (Latest)
+    s/ (Latest)//
+    }
+    " .github/ISSUE_TEMPLATE/bug-report.yml
 
-    git tag --sign -a "$tag_name" "$SHA"
-    changes=$(git cliff --current)
-    notes=$(CHANGES="$changes" "$script_dir/release-notes" "$tag_name")
-    echo "$notes"
+    local _rust_version
+    _rust_version=${_next_version#"v"}
 
-    if [ -n "$RELEASE_PUSH" ]; then
-        git push origin "$tag_name"
-        gh release create "$tag_name" --notes "$notes" --verify-tag --discussion-category "Announcements"
-        git fetch origin main
-        git branch "merge-release-$tag_name" origin/main
-        git merge --ff-only --into-name "merge-release-$tag_name" "release-$tag_name"
-        git push origin "merge-release-$tag_name"
+    cargo set-version "$_rust_version"
+    cargo update
+
+    git cliff --tag "$_next_version" -o CHANGELOG.md
+}
+
+function commit_release() {
+    git commit -am "chore: Release $_next_version"
+}
+
+trap "git worktree remove -f release-prep || true" EXIT
+
+function setup_worktree() {
+    git worktree add release-prep HEAD
+    pushd release-prep
+}
+
+{
+    setup_worktree
+    update_release_files
+    commit_release
+
+    _git_changelog=$(git cliff --strip=all --tag="$_next_version" "$_prev_version..HEAD")
+    _git_news=$(awk "NR == 1, /^## $_next_version/ { next }; /^## / { exit }; { print }" <NEWS.md)
+    _git_sha=$(git rev-parse --verify HEAD)
+
+    _gh_rel_notes=$(NEWS="$_git_news" VERSION="$_next_version" CHANGES="$_git_changelog" envsubst <"$script_dir/../RELEASE_NOTES.md")
+    _gh_release_opts=(--target "$_git_sha" -n "$_gh_rel_notes")
+
+    if [ "$_draft" = true ]; then
+        _gh_release_opts+=("--draft")
     fi
 
-)
+    if [ "$_dry_run" = false ]; then
+        git push origin "HEAD:refs/heads/release-$_next_version" --force
+
+        if ! gh release view "$_next_version"; then
+            gh release create "$_next_version" "${_gh_release_opts[@]}"
+        else
+            gh release edit "$_next_version" "${_gh_release_opts[@]}"
+        fi
+
+        if [ "$_draft" = true ]; then
+            if ! gh pr view "release-$_next_version"; then
+                gh pr create -B main --title "chore: Release $_next_version" -b "$_git_changelog" --head "release-$_next_version"
+            else
+                gh pr edit "release-$_next_version" -b "$_git_changelog"
+            fi
+        fi
+    fi
+}

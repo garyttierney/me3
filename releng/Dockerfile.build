@@ -1,0 +1,69 @@
+FROM registry.fedoraproject.org/fedora-minimal:latest
+LABEL com.github.containers.toolbox="true"
+RUN set -eux; \
+    dnf install -y \
+        clang \
+        llvm \
+        git \
+        lld \
+        make \
+        pip3 \
+        gpg \
+        pandoc \
+        tar \
+        zip \
+        wkhtmltopdf \
+        osslsigncode \
+        mingw32-nsis \
+        mingw64-nsis \
+        pkcs11-provider \
+        pkcs11-helper \
+        openssl-pkcs11 \
+        gh; \
+    dnf clean all
+
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH \
+    RUST_VERSION=nightly
+
+RUN set -eux; \
+    url="https://static.rust-lang.org/rustup/archive/1.28.2/x86_64-unknown-linux-gnu/rustup-init"; \
+    curl -L -O "$url"; \
+    echo "20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c *rustup-init" | sha256sum -c -; \
+    chmod +x rustup-init; \
+    ./rustup-init -y --no-modify-path --profile minimal --default-toolchain $RUST_VERSION --default-host x86_64-unknown-linux-gnu; \
+    rm rustup-init; \
+    rustup --version; \
+    cargo --version; \
+    rustc --version; \
+    rustup target add x86_64-pc-windows-msvc; \
+    cargo install xwin cargo-auditable;  \
+    xwin --accept-license splat --output /xwin;  \
+    chmod -R a+rw $RUSTUP_HOME $CARGO_HOME;
+
+ENV CL_FLAGS="-Wno-unused-command-line-argument -fuse-ld=lld-link \
+    /imsvc/xwin/crt/include \
+    /imsvc/xwin/sdk/include/ucrt \
+    /imsvc/xwin/sdk/include/um \
+    /imsvc/xwin/sdk/include/shared"
+
+ENV CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS="-Lnative=/xwin/crt/lib/x86_64 \
+        -Lnative=/xwin/sdk/lib/um/x86_64 \
+        -Lnative=/xwin/sdk/lib/ucrt/x86_64 \
+        -Ctarget-feature=+crt-static" \
+    CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER="lld"
+
+ENV AR_x86_64_pc_windows_msvc=llvm-lib \
+    CFLAGS_x86_64_pc_windows_msvc="$CL_FLAGS" \
+    CXXFLAGS_x86_64_pc_windows_msvc="$CL_FLAGS /EHsc" \
+    CC_x86_64_pc_windows_msvc=clang-cl \
+    CXX_x86_64_pc_windows_msvc=clang-cl
+ENV CARGO="cargo auditable"
+
+RUN set -eux; \
+    curl -L -o proCertumCardManager-install.bin https://files.certum.eu/software/proCertumCardManager/Linux-RedHat/2.2.13/proCertumCardManager-2.2.13-x86_64-centos.bin; \
+    chmod +x proCertumCardManager-install.bin; \
+    sh ./proCertumCardManager-install.bin --noexec --keep --nox11 --nochown --target /opt/proCertumCardManager; \
+    ls /opt/proCertumCardManager;
+RUN set -eux; pip install --root-user-action ignore in-toto

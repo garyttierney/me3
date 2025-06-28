@@ -12,7 +12,7 @@ jobs:
   create-release-pr:
     name: Prerelease
     permissions:
-      contents: write
+      contents: read
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
@@ -27,8 +27,6 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions"
 
-          set +e
-          # git-cliff uses GITHUB_TOKEN
-          RELEASE_PUSH=1 GITHUB_TOKEN="$GH_TOKEN" ./releng/bin/create-release-pr
+          GITHUB_TOKEN="$GH_TOKEN" ./releng/bin/create-release --draft
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PUSH_TOKEN }}

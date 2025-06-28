@@ -202,8 +202,10 @@ fn log_filter(env_var: &str, default_directive: Level) -> EnvFilter {
 }
 
 pub fn install_error_handler() {
-    std::env::set_var("RUST_LIB_BACKTRACE", "1");
-    std::env::set_var("RUST_BACKTRACE", "1");
+    unsafe {
+        std::env::set_var("RUST_LIB_BACKTRACE", "1");
+        std::env::set_var("RUST_BACKTRACE", "1");
+    }
 
     color_eyre::install().expect("failed to install error handler");
 }
