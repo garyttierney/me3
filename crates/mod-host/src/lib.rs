@@ -8,7 +8,7 @@ use std::{
     io::PipeWriter,
     mem,
     os::windows::{prelude::FromRawHandle, raw::HANDLE},
-    sync::{Arc, OnceLock, mpsc::RecvTimeoutError},
+    sync::{mpsc::RecvTimeoutError, Arc, OnceLock},
     time::Duration,
 };
 
@@ -20,7 +20,7 @@ use me3_launcher_attach_protocol::{
 };
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use me3_telemetry::TelemetryConfig;
-use tracing::{Span, error, info};
+use tracing::{error, info, Span};
 
 use crate::{debugger::suspend_for_debugger, deferred::defer_until_init, host::ModHost};
 
@@ -77,17 +77,15 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     let mut monitor_pipe = unsafe { PipeWriter::from_raw_handle(monitor_handle) };
     let (monitor_tx, monitor_rx) = std::sync::mpsc::channel::<HostMessage>();
 
-    std::thread::spawn(move || {
-        loop {
-            match monitor_rx.recv_timeout(Duration::from_millis(100)) {
-                Ok(msg) => {
-                    if msg.write_to(&mut monitor_pipe).is_err() {
-                        break;
-                    }
+    std::thread::spawn(move || loop {
+        match monitor_rx.recv_timeout(Duration::from_millis(100)) {
+            Ok(msg) => {
+                if msg.write_to(&mut monitor_pipe).is_err() {
+                    break;
                 }
-                Err(RecvTimeoutError::Timeout) => continue,
-                Err(_) => break,
             }
+            Err(RecvTimeoutError::Timeout) => continue,
+            Err(_) => break,
         }
     });
 
