@@ -104,7 +104,7 @@ jobs:
           targets: x86_64-pc-windows-msvc
           components: clippy
 
-      - uses: taiki-e/install-action@9ba3ac3fd006a70c6e186a683577abc1ccf0ff3a # v2.54.0
+      - uses: taiki-e/install-action@a27ef18d36cfa66b0af3a360104621793b41c036 # v2.54.3
         with:
           tool: clippy-sarif, sarif-fmt
       - run: cargo clippy --workspace --message-format=json -- -Aunused | clippy-sarif | tee results.sarif | sarif-fmt
