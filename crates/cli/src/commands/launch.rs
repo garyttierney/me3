@@ -8,7 +8,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    time::SystemTime,
+    time::{Duration, SystemTime},
 };
 
 use chrono::Local;
@@ -472,6 +472,10 @@ pub fn launch(
 
             if !line.is_empty() {
                 eprint!("{line}");
+            } else {
+                // Back-off the read loop because read_line() returns EOF.
+                // This needs replaced with a proper pipe.
+                std::thread::sleep(Duration::from_millis(250));
             }
 
             std::thread::yield_now();
