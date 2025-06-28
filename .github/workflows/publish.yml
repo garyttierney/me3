@@ -64,7 +64,9 @@ jobs:
         with:
           name: me3-artifacts
           path: |
-            dist/
+            out/me3_installer.exe
+            out/me3-windows-amd64.zip
+            out/me3-linux-amd64.tar.gz
 
   test-windows:
     name: End-to-end tests (Windows)
@@ -84,7 +86,7 @@ jobs:
         with:
           name: me3-artifacts
       - run: ls -R
-      - run: ./dist/me3_installer.exe /S
+      - run: ./out/me3_installer.exe /S
 
       - run: |
           Import-Module "$env:ChocolateyInstall/helpers/chocolateyInstaller.psm1"
