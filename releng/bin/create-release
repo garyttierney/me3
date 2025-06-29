@@ -29,9 +29,19 @@ if ! _prev_version=$(gh release view --json "tagName" --jq '.tagName'); then
     exit 1
 fi
 
+if ! _current_version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2); then
+    echo "Unable to get current version"
+    exit 1
+fi
+
 if ! _next_version=$(git cliff --bumped-version); then
     echo "Unable to determine next version from changelog"
     exit 1
+fi
+
+if [ "$_current_version" = "$_next_version" ]; then
+    echo "No changes"
+    exit 0
 fi
 
 function update_release_files() {
@@ -39,7 +49,7 @@ function update_release_files() {
     sed -i "
     / (Latest)/{
     i\\
-            - ${_next_version} (Latest)
+        - ${_next_version} (Latest)
     s/ (Latest)//
     }
     " .github/ISSUE_TEMPLATE/bug-report.yml
