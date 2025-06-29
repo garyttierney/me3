@@ -47,6 +47,10 @@ trap "git worktree remove -f release-prep || true" EXIT
     fi
 
     toolbox run --container me3-build-latest -- env "${make_env[@]}" make
+
+    echo "$release_commit" >>"buildinfo"
+    gh release upload --clobber -R garyttierney/me3 "$_release" out/buildinfo
+
     popd || exit 1
 
     gh release upload --clobber -R garyttierney/me3 "$_release" \
@@ -55,6 +59,8 @@ trap "git worktree remove -f release-prep || true" EXIT
         'out/me3-linux-amd64.tar.gz#me3-linux-amd64.tar.gz (Portable distribution for Linux)'
 
     if [ "$_signed" = true ]; then
+        gpg -o out/buildinfo.sig -b buildinfo
         gh release upload --clobber -R garyttierney/me3 "$_release" out/*.sig
     fi
+
 }

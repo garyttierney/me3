@@ -21,6 +21,51 @@ permissions:
   contents: read
 
 jobs:
+  check-release-binaries:
+    name: Check if release binaries need updated
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # needed for visibility of draft releases
+    steps:
+      - run: echo "version=${BRANCH##*-}" >> $GITHUB_OUTPUT
+        id: get-version
+        env:
+          BRANCH: ${{ github.head_ref }}
+        if: startsWith(github.head_ref, 'release-')
+
+      - run: |
+          if ! gh release -R garyttierney/me3 download "$VERSION" -p buildinfo -O - | grep '${{ github.event.pull_request.head.sha }}'; then
+            echo "$version binaries weren't built from ${{ github.event.pull_request.head.sha }}"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.get-version.outputs.version }}
+        if: startsWith(github.head_ref, 'release-')
+
+  check-release-status:
+    name: Check if release needs published
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # needed for visibility of draft releases
+    steps:
+      - run: echo "version=${BRANCH##*-}" >> $GITHUB_OUTPUT
+        id: get-version
+        env:
+          BRANCH: ${{ github.head_ref }}
+        if: startsWith(github.head_ref, 'release-')
+
+      - run: |
+          is_draft=$(gh release view -R garyttierney/me3 $VERSION --json 'isDraft' --jq '.isDraft')
+          if [ "$is_draft" = "true" ]; then
+            echo "Release is still in draft status"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.get-version.outputs.version }}
+        if: startsWith(github.head_ref, 'release-')
+
   check-spelling:
     name: Check spelling
     runs-on: ubuntu-latest
