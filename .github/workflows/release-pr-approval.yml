@@ -1,0 +1,22 @@
+name: Check release PR approval
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions: read-all
+
+jobs:
+  check-release-binaries:
+    name: Check release binaries
+    if: startsWith(github.head_ref, 'release-') && github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "version=${BRANCH##*/}" >> $GITHUB_OUTPUT
+        env:
+          BRANCH: ${{ github.head_ref }}
+
+      - run: |
+          if ! gh release view --jq '.body' --json 'body' | grep 'Build-Commit-Id: ${{ github.event.pull_request.head.sha }}'; then
+            echo "Release binaries weren't built from ${{ github.event.pull_request.head.sha }}"
+            exit 1
+          fi
