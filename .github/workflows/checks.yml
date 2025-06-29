@@ -2,12 +2,6 @@ name: Checks
 on:
   pull_request:
     branches: [main]
-    types:
-      - labeled
-      - synchronize
-      - opened
-      - reopened
-      - edited
   push:
     branches: [main]
 
@@ -40,7 +34,7 @@ jobs:
         if: startsWith(github.head_ref, 'testrelease-')
 
       - run: |
-          if ! gh release -R garyttierney/me3 view "$VERSION" --jq '.body' --json 'body' | grep 'Build-Commit-Id: ${{ github.event.pull_request.head.sha }}'; then
+          if ! gh release -R garyttierney/me3 download "$VERSION" -p buildinfo -O - | grep '${{ github.event.pull_request.head.sha }}'; then
             echo "$version binaries weren't built from ${{ github.event.pull_request.head.sha }}"
             exit 1
           fi
@@ -50,7 +44,7 @@ jobs:
         if: startsWith(github.head_ref, 'testrelease-')
 
   check-release-status:
-    name: Check if release is published
+    name: Check if release needs published
     runs-on: ubuntu-latest
     permissions:
       contents: write # needed for visibility of draft releases
