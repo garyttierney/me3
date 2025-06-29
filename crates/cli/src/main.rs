@@ -6,6 +6,7 @@ use commands::{profile::ProfileCommands, Commands};
 use directories::ProjectDirs;
 use me3_telemetry::TelemetryConfig;
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 mod commands;
 pub mod output;
@@ -280,6 +281,11 @@ fn main() {
         .with_console_writer(stderr);
 
     let _telemetry = me3_telemetry::install(telemetry_config);
+
+    info!(
+        version = env!("CARGO_PKG_VERSION"),
+        commit_id = option_env!("BUILD_COMMIT_ID").unwrap_or("unknown")
+    );
 
     let result = me3_telemetry::with_root_span("me3", "run command", || match cli.command {
         Commands::Info => commands::info::info(app_install, app_paths, config),
