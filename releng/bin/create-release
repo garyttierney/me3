@@ -96,6 +96,13 @@ function setup_worktree() {
         if ! gh release view "$_next_version"; then
             gh release create "$_next_version" "${_gh_release_opts[@]}"
         else
+            is_draft=$(gh release view -R garyttierney/me3 "$_next_version" --json 'isDraft' --jq '.isDraft')
+
+            if [ "$is_draft" = "false" ]; then
+                echo "Release is already published. Not overwriting"
+                exit 1
+            fi
+
             gh release edit "$_next_version" "${_gh_release_opts[@]}"
         fi
 
