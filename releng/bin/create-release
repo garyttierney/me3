@@ -29,7 +29,7 @@ if ! _prev_version=$(gh release view --json "tagName" --jq '.tagName'); then
     exit 1
 fi
 
-if ! _current_version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2); then
+if ! _current_version="v$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)"; then
     echo "Unable to get current version"
     exit 1
 fi
