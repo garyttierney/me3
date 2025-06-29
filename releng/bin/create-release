@@ -29,9 +29,19 @@ if ! _prev_version=$(gh release view --json "tagName" --jq '.tagName'); then
     exit 1
 fi
 
+if ! _current_version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2); then
+    echo "Unable to get current version"
+    exit 1
+fi
+
 if ! _next_version=$(git cliff --bumped-version); then
     echo "Unable to determine next version from changelog"
     exit 1
+fi
+
+if [ "$_current_version" = "$_next_version" ]; then
+    echo "No changes"
+    exit 0
 fi
 
 function update_release_files() {
@@ -39,7 +49,7 @@ function update_release_files() {
     sed -i "
     / (Latest)/{
     i\\
-            - ${_next_version} (Latest)
+        - ${_next_version} (Latest)
     s/ (Latest)//
     }
     " .github/ISSUE_TEMPLATE/bug-report.yml
@@ -86,6 +96,13 @@ function setup_worktree() {
         if ! gh release view "$_next_version"; then
             gh release create "$_next_version" "${_gh_release_opts[@]}"
         else
+            is_draft=$(gh release view -R garyttierney/me3 "$_next_version" --json 'isDraft' --jq '.isDraft')
+
+            if [ "$is_draft" = "false" ]; then
+                echo "Release is already published. Not overwriting"
+                exit 1
+            fi
+
             gh release edit "$_next_version" "${_gh_release_opts[@]}"
         fi
 
