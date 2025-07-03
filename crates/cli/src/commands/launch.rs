@@ -253,6 +253,7 @@ pub fn launch(
     );
 
     let mut profile_supported_games = BTreeSet::new();
+    let mut profile_supported_games_exe_path = BTreeSet::new();
 
     let profile_details = if let Some(profile_name) = args.profile {
         config
@@ -279,6 +280,7 @@ pub fn launch(
 
     for supports in profile.supports() {
         profile_supported_games.insert(Game(supports.game));
+        profile_supported_games_exe_path.insert(supports.exe);
     }
 
     let game = if args.target_selector.auto_detect {
@@ -311,7 +313,11 @@ pub fn launch(
     let launcher;
 
     let injector_path = bins_dir.join("me3-launcher.exe");
-
+    
+    let game_exe_path = profile_supported_games_exe_path.pop_first().unwrap_or_else(|| {
+        args.exe
+    });
+    
     let mut injector_command = if cfg!(target_os = "linux") {
         let steam_dir = steam_dir?;
         info!(?steam_dir, "found steam dir");
@@ -319,7 +325,7 @@ pub fn launch(
         let (steam_app, steam_library) = steam_src?;
         info!(name = ?steam_app.name, "found steam app in library");
 
-        launcher = args.exe.unwrap_or_else(|| {
+        launcher = game_exe_path.unwrap_or_else(|| {
             steam_library
                 .resolve_app_dir(&steam_app)
                 .join(game.launcher())
@@ -342,7 +348,7 @@ pub fn launch(
 
         launcher.into_command(injector_path)
     } else {
-        launcher = if let Some(launcher) = args.exe {
+        launcher = if let Some(launcher) = game_exe_path {
             launcher
         } else {
             let steam_dir = steam_dir?;
