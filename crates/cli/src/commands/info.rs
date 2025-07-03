@@ -12,13 +12,11 @@ fn format_path(path: Option<PathBuf>) -> String {
 }
 
 fn format_status(status: bool) -> String {
-    let status = if status {
+    if status {
         "Found".green().to_string()
     } else {
         "Not found".red().to_string()
-    };
-
-    status
+    }
 }
 
 pub fn info(

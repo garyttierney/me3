@@ -169,4 +169,14 @@ mod tests {
     fn basic_config_toml() {
         check("basic_config.me3.toml");
     }
+
+    #[test]
+    fn plural_packages_name() {
+        check("plural_packages.me3");
+    }
+
+    #[test]
+    fn singular_packages_name() {
+        check("singular_package.me3");
+    }
 }

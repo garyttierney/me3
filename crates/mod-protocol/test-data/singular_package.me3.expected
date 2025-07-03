@@ -1,0 +1,16 @@
+V1(
+    ModProfileV1 {
+        supports: [],
+        natives: [],
+        packages: [
+            Package {
+                id: "test-pkg",
+                path: ModFile(
+                    ".",
+                ),
+                load_after: [],
+                load_before: [],
+            },
+        ],
+    },
+)
