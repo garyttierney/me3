@@ -2,18 +2,13 @@
 #![feature(fn_ptr_trait)]
 #![feature(tuple_trait)]
 #![feature(unboxed_closures)]
-#![feature(mapped_lock_guards)]
 
 use std::{
-    io::PipeWriter,
-    mem,
-    os::windows::{prelude::FromRawHandle, raw::HANDLE},
-    sync::{mpsc::RecvTimeoutError, Arc, OnceLock},
-    time::Duration,
+    fs::OpenOptions,
+    io::stdout,
+    sync::{Arc, OnceLock},
 };
 
-use crash_handler::CrashEventResult;
-use eyre::Context;
 use me3_env::TelemetryVars;
 use me3_launcher_attach_protocol::{
     AttachConfig, AttachRequest, AttachResult, Attachment, HostMessage,
@@ -63,7 +58,6 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     me3_telemetry::install_error_handler();
 
     let AttachRequest {
-        monitor_handle,
         config:
             AttachConfig {
                 game,
@@ -73,52 +67,17 @@ fn on_attach(request: AttachRequest) -> AttachResult {
             },
     } = request;
 
-    let monitor_handle = HANDLE::from(monitor_handle as *mut _);
-    let mut monitor_pipe = unsafe { PipeWriter::from_raw_handle(monitor_handle) };
-    let (monitor_tx, monitor_rx) = std::sync::mpsc::channel::<HostMessage>();
+    let telemetry_vars: TelemetryVars = me3_env::deserialize_from_env()?;
+    let telemetry_log_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&telemetry_vars.log_file_path)?;
 
-    std::thread::spawn(move || loop {
-        match monitor_rx.recv_timeout(Duration::from_millis(100)) {
-            Ok(msg) => {
-                if msg.write_to(&mut monitor_pipe).is_err() {
-                    break;
-                }
-            }
-            Err(RecvTimeoutError::Timeout) => continue,
-            Err(_) => break,
-        }
-    });
-
-    let crash_handler_guard = crash_handler::CrashHandler::attach(unsafe {
-        let monitor_tx = monitor_tx.clone();
-
-        crash_handler::make_crash_event(move |crash_context: &crash_handler::CrashContext| {
-            info!("Handling crash event");
-            let _ = monitor_tx.send(HostMessage::CrashDumpRequest {
-                exception_pointers: crash_context.exception_pointers as u64,
-                process_id: crash_context.process_id,
-                thread_id: crash_context.thread_id,
-                exception_code: crash_context.exception_code,
-            });
-
-            // TODO: we need a safe way keep the process alive until the minidump is captured.
-            std::thread::sleep(Duration::from_secs(5));
-
-            CrashEventResult::Handled(false)
-        })
-    })?;
-
-    // Keep the crash handler installed for the duration of the program.
-    // `CrashHandler` is an empty struct with a `Drop` impl that uninstalls
-    // the program-wide handler.
-    mem::forget(crash_handler_guard);
-
-    let _ = monitor_tx.send(HostMessage::Attached);
-
-    let telemetry_config = me3_env::deserialize_from_env()
-        .wrap_err("couldn't deserialize env vars")
-        .and_then(|vars: TelemetryVars| TelemetryConfig::try_from(vars))
-        .expect("couldn't get telemetry config");
+    let telemetry_config = TelemetryConfig::default()
+        .enabled(telemetry_vars.enabled)
+        .with_console_writer(stdout)
+        .with_file_writer(telemetry_log_file)
+        .capture_panics(true);
 
     let telemetry_guard = me3_telemetry::install(telemetry_config);
 

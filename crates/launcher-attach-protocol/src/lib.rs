@@ -9,8 +9,6 @@ use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AttachRequest {
-    pub monitor_handle: usize,
-
     pub config: AttachConfig,
 }
 
@@ -51,7 +49,6 @@ impl<E: Into<eyre::Report>> From<E> for AttachError {
 
 #[derive(Debug, Decode, Encode)]
 pub enum HostMessage {
-    Attached,
     CrashDumpRequest {
         /// The address of an `EXCEPTION_POINTERS` in the client's memory
         exception_pointers: u64,
