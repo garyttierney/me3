@@ -138,11 +138,13 @@ pub struct ModProfileV1 {
 
     /// Native modules (DLLs) that will be loaded.
     #[serde(default)]
+    #[serde(alias = "native")]
     natives: Vec<Native>,
 
     /// A collection of packages containing assets that should be considered for loading
     /// before the DVDBND.
     #[serde(default)]
+    #[serde(alias = "package")]
     packages: Vec<Package>,
 }
 
