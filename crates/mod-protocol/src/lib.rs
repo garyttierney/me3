@@ -138,11 +138,13 @@ pub struct ModProfileV1 {
 
     /// Native modules (DLLs) that will be loaded.
     #[serde(default)]
+    #[serde(alias = "native")]
     natives: Vec<Native>,
 
     /// A collection of packages containing assets that should be considered for loading
     /// before the DVDBND.
     #[serde(default)]
+    #[serde(alias = "package")]
     packages: Vec<Package>,
 }
 
@@ -166,5 +168,15 @@ mod tests {
     #[test]
     fn basic_config_toml() {
         check("basic_config.me3.toml");
+    }
+
+    #[test]
+    fn plural_packages_name() {
+        check("plural_packages.me3");
+    }
+
+    #[test]
+    fn singular_packages_name() {
+        check("singular_package.me3");
     }
 }

@@ -1,0 +1,5 @@
+profileVersion = "v1"
+
+[[package]]
+id = "test-pkg"
+path = "."
