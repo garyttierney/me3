@@ -4,3 +4,12 @@
 {{ super() }}
 <meta name="readthedocs-addons-api-version" content="1" />
 {% endblock %}
+
+
+{% block extrahead %}
+
+  <link
+    rel="stylesheet"
+    href="{{ 'assets/stylesheets/custom.css' | url }}"
+  />
+{% endblock %}
