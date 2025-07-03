@@ -36,3 +36,6 @@ dist/
 # LLVM
 *.profraw
 *.profdata
+
+# Python
+*.pyc
