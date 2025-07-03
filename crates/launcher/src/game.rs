@@ -1,4 +1,5 @@
 use std::{
+    fs::OpenOptions,
     os::windows::{io::AsHandle, process::CommandExt},
     path::{Path, PathBuf},
     process::Command,
@@ -48,10 +49,16 @@ impl Game {
         let mut telemetry_vars: TelemetryVars = deserialize_from_env()?;
         telemetry_vars.trace_id = me3_telemetry::trace_id();
 
-        info!(trace_id = telemetry_vars.trace_id, "game trace_id");
+        let log_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&telemetry_vars.monitor_file_path)?;
+
+        info!(trace_id = telemetry_vars.trace_id);
         serialize_into_command(telemetry_vars, &mut command);
 
         command.creation_flags(DEBUG_PROCESS.0);
+        command.stdout(log_file);
 
         let child = command.spawn().map_err(|e| match e.raw_os_error().map(|i| WIN32_ERROR(i as u32)) {
             Some(ERROR_ELEVATION_REQUIRED) => eyre!(

@@ -1,24 +1,10 @@
 #![windows_subsystem = "windows"]
 
-use std::{
-    io::ErrorKind,
-    os::windows::prelude::{AsRawHandle, IntoRawHandle},
-    sync::{
-        atomic::{AtomicBool, Ordering::SeqCst},
-        Arc,
-    },
-    time::Duration,
-};
-
 use eyre::Context;
 use me3_env::{LauncherVars, TelemetryVars};
-use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, HostMessage};
+use me3_launcher_attach_protocol::{AttachConfig, AttachRequest};
 use me3_telemetry::TelemetryConfig;
 use tracing::{error, info, instrument, warn};
-use windows::Win32::{
-    Foundation::{DuplicateHandle, DUPLICATE_CLOSE_SOURCE, DUPLICATE_SAME_ACCESS, HANDLE},
-    System::Threading::GetCurrentProcess,
-};
 
 use crate::{game::Game, steam::require_steam};
 
@@ -51,50 +37,7 @@ fn run() -> LauncherResult<()> {
 
     let game_path = args.exe.parent();
     let game = Game::launch(&args.exe, game_path)?;
-    let mut game_monitor_handle = HANDLE::default();
-
-    let (mut pipe_rx, pipe_tx) = std::io::pipe()?;
-
-    unsafe {
-        DuplicateHandle(
-            GetCurrentProcess(),
-            HANDLE(pipe_tx.into_raw_handle()),
-            HANDLE(game.child.as_raw_handle()),
-            &raw mut game_monitor_handle,
-            0,
-            true,
-            DUPLICATE_SAME_ACCESS | DUPLICATE_CLOSE_SOURCE,
-        )?;
-    }
-
-    let request = AttachRequest {
-        monitor_handle: game_monitor_handle.0.addr(),
-        config,
-    };
-
-    let shutdown_requested = Arc::new(AtomicBool::new(false));
-
-    let _ = std::thread::spawn({
-        let shutdown_requested = shutdown_requested.clone();
-
-        move || {
-            while !shutdown_requested.load(SeqCst) {
-                match HostMessage::read_from(&mut pipe_rx) {
-                    Ok(msg) => {
-                        info!(?msg);
-                    }
-                    Err(e) if e.kind() == ErrorKind::UnexpectedEof => {
-                        std::thread::yield_now();
-                        std::thread::sleep(Duration::from_millis(100));
-                    }
-                    Err(e) => {
-                        info!(?e, "monitor exiting");
-                        break;
-                    }
-                }
-            }
-        }
-    });
+    let request = AttachRequest { config };
 
     match game.attach(&args.host_dll, request) {
         Ok(_) => info!("attached to game successfully"),
@@ -103,12 +46,10 @@ fn run() -> LauncherResult<()> {
                 error = &*error,
                 "an error occurred while loading me3, modded content will not be available"
             );
-            shutdown_requested.store(true, SeqCst);
         }
     }
 
     game.join();
-    shutdown_requested.store(true, SeqCst);
 
     Ok(())
 }

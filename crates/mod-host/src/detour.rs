@@ -12,13 +12,13 @@ pub struct Detour<F: Function> {
 
 impl<F: Function> Detour<F> {
     pub unsafe fn disable(&self) -> Result<(), DetourError> {
-        self.detour.disable()?;
+        unsafe { self.detour.disable()? };
 
         Ok(())
     }
 
     pub unsafe fn enable(&self) -> Result<(), DetourError> {
-        self.detour.enable()?;
+        unsafe { self.detour.enable()? };
 
         Ok(())
     }
