@@ -12,6 +12,7 @@ use std::{
 use me3_mod_protocol::package::AssetOverrideSource;
 use normpath::PathExt;
 use thiserror::Error;
+use tracing::error;
 
 pub struct ArchiveOverrideMapping {
     map: HashMap<PathBuf, (String, Vec<u16>)>,
@@ -25,9 +26,6 @@ pub enum ArchiveOverrideMappingError {
 
     #[error("Could not read directory while discovering override assets {0}")]
     ReadDir(std::io::Error),
-
-    #[error("Could not acquire directory entry")]
-    DirEntryAcquire(std::io::Error),
 
     #[error("Could not acquire directory entry")]
     StripPrefix(#[from] StripPrefixError),
@@ -77,30 +75,30 @@ impl ArchiveOverrideMapping {
         let mut paths_to_scan = VecDeque::from(vec![base_directory.clone()]);
         while let Some(current_path) = paths_to_scan.pop_front() {
             let Ok(entries) = read_dir(&current_path) else {
-                tracing::error!(path = ?current_path, "unable to read asset override files in directory");
+                error!(path = ?current_path, "unable to read asset override files in directory");
                 continue;
             };
 
-            for dir_entry in entries {
-                let dir_entry = dir_entry
-                    .map_err(ArchiveOverrideMappingError::DirEntryAcquire)?
-                    .path();
-
+            for dir_entry in entries.flatten().map(|e| e.path()) {
                 if dir_entry.is_dir() {
                     paths_to_scan.push_back(dir_entry);
-                } else {
-                    let override_path = dir_entry
-                        .normalize_virtually()
-                        .map_err(ArchiveOverrideMappingError::DirEntryAcquire)?;
-
-                    let vfs_path = path_to_asset_lookup_key(&base_directory, &override_path)?;
-                    let as_wide = override_path.encode_wide_with_nul().collect();
-
-                    self.map.insert(
-                        vfs_path,
-                        (override_path.as_os_str().display().to_string(), as_wide),
-                    );
+                    continue;
                 }
+
+                let Ok(override_path) = dir_entry.normalize() else {
+                    continue;
+                };
+
+                let Ok(vfs_path) = path_to_asset_lookup_key(&base_directory, &override_path) else {
+                    continue;
+                };
+
+                let as_wide = override_path.encode_wide_with_nul().collect();
+
+                self.map.insert(
+                    vfs_path,
+                    (override_path.as_os_str().display().to_string(), as_wide),
+                );
             }
         }
 
