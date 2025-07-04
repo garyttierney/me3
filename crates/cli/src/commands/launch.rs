@@ -25,7 +25,7 @@ use me3_mod_protocol::{
 use normpath::PathExt;
 use steamlocate::{CompatTool, Library, SteamDir};
 use tempfile::NamedTempFile;
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::{AppPaths, Config, Game};
 
@@ -276,6 +276,19 @@ pub fn launch(
 
     all_packages.extend(packages);
     all_natives.extend(natives);
+
+    fn exists<S: WithPackageSource>(p: &S) -> bool {
+        match p.source().try_exists() {
+            Ok(true) => true,
+            _ => {
+                warn!(path = %p.source().display(), "specified path does not exist or is inaccessible");
+                false
+            }
+        }
+    }
+
+    all_packages.retain(exists);
+    all_natives.retain(exists);
 
     for supports in profile.supports() {
         profile_supported_games.insert(Game(supports.game));
