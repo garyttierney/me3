@@ -15,6 +15,14 @@ permissions:
   contents: read
 
 jobs:
+  warp-connect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Boostport/setup-cloudflare-warp@v1
+        with:
+          organization: me3dev
+          auth_client_id: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
+          auth_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
   build-installer:
     name: Installer
     runs-on: ubuntu-latest
