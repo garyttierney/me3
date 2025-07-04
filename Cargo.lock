@@ -349,9 +349,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.27"
+version = "1.2.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d487aa071b5f64da6f19a3e848e3578944b726ee5a4854b82172f02aa876bfdc"
+checksum = "4ad45f4f74e4e20eaa392913b7b33a7091c87e59628f4dd27888205ad888843c"
 dependencies = [
  "shlex",
 ]
@@ -1181,6 +1181,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "io-uring"
+version = "0.7.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b86e202f00093dcba4275d4636b93ef9dd75d025ae560d2521b45ea28ab49013"
+dependencies = [
+ "bitflags 2.9.1",
+ "cfg-if",
+ "libc",
+]
+
+[[package]]
 name = "is-docker"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1401,7 +1412,7 @@ dependencies = [
 
 [[package]]
 name = "me3-cli"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "chrono",
  "clap",
@@ -1430,7 +1441,7 @@ dependencies = [
 
 [[package]]
 name = "me3-env"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -1438,7 +1449,7 @@ dependencies = [
 
 [[package]]
 name = "me3-launcher"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "crash-context",
  "dll-syringe",
@@ -1457,7 +1468,7 @@ dependencies = [
 
 [[package]]
 name = "me3-launcher-attach-protocol"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "bincode",
  "eyre",
@@ -1468,7 +1479,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-host"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "closure-ffi",
  "color-eyre",
@@ -1493,7 +1504,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-host-assets"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "cxx-stl",
  "from-singleton",
@@ -1509,7 +1520,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-protocol"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "expect-test",
  "schemars",
@@ -1522,7 +1533,7 @@ dependencies = [
 
 [[package]]
 name = "me3_telemetry"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "color-eyre",
  "eyre",
@@ -2626,6 +2637,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "slab"
+version = "0.4.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04dc19736151f35336d325007ac991178d504a119863a2fcb3758cdb5e52c50d"
+
+[[package]]
 name = "slice-pool2"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2857,16 +2874,18 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.45.1"
+version = "1.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75ef51a33ef1da925cea3e4eb122833cb377c61439ca401b770f54902b806779"
+checksum = "1140bb80481756a8cbe10541f37433b459c5aa1e727b4c020fbfebdc25bf3ec4"
 dependencies = [
  "backtrace",
+ "io-uring",
  "libc",
  "mio",
  "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
+ "slab",
  "socket2",
  "windows-sys 0.52.0",
 ]
@@ -3694,7 +3713,7 @@ checksum = "ea2f10b9bb0928dfb1b42b65e1f9e36f7f54dbdf08457afefb38afcdec4fa2bb"
 
 [[package]]
 name = "xtask"
-version = "0.6.1"
+version = "0.6.2"
 
 [[package]]
 name = "yoke"

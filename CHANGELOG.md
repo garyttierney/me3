@@ -4,6 +4,57 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
+## me3 - [v0.6.2](https://github.com/garyttierney/me3/releases/v0.6.2) - 2025-07-04
+
+### 🐛 Bug Fixes
+
+- [5896daf](https://github.com/garyttierney/me3/commit/5896dafded3d3b88364a4bfadce24aca204bbf67) Validate mod profile filepaths in [#287](https://github.com/garyttierney/me3/pull/287)
+
+
+  > Skip invalid and nonexistent paths in mod profiles before passing them
+  > to the mod host, preventing hard errors.
+
+  > Closes #240
+
+- [a5e3db4](https://github.com/garyttierney/me3/commit/a5e3db4db6cbcc0b19d8da161450e605aa8a8325) Don't stop path discovery on every filesystem error
+
+
+
+- [c5fb8cc](https://github.com/garyttierney/me3/commit/c5fb8cc8a64d6178bb9eb0bd78436af310963890) Exclude nonexistent paths and warn the user
+
+
+
+- [c12976d](https://github.com/garyttierney/me3/commit/c12976dcc7a0695adefc7f4b52cbc12d7fd479be) Don't block shutdown with monitor thread in [#285](https://github.com/garyttierney/me3/pull/285)
+
+
+  > This exists purely to signal minidump crash events, which are currently
+  > not enabled in the latest release. Get rid of the infrastructure for
+  > handling it via pipes, and we'll use `WaitForMultipleObjects` on the
+  > process/crash event.
+
+  > Additionally switch the mod host to logging to `stdout`, so we capture
+  > logs from any other DLL mods in use.
+
+  > Fixes #270.
+
+- [aa10096](https://github.com/garyttierney/me3/commit/aa10096e16f715871ba9c4db50f9608c8ff27f22) Add singular profile aliases for packages/natives in [#283](https://github.com/garyttierney/me3/pull/283)
+
+
+
+- [c38f7e6](https://github.com/garyttierney/me3/commit/c38f7e675a0e84b33037ac7a5658716e4c3019b0) Add .sh extension to example Linux scripts in [#282](https://github.com/garyttierney/me3/pull/282)
+
+
+  > Closes #280
+
+- [bed1c98](https://github.com/garyttierney/me3/commit/bed1c980da385e02c4cab436686bb73de18ceaf5) Version list in GitHub issue template in [#278](https://github.com/garyttierney/me3/pull/278)
+
+
+
+### 📚 Documentation
+
+- [b19b629](https://github.com/garyttierney/me3/commit/b19b629120dcafb5dd90129d2a9583c88a6783ec) Complete initial release documentation tasks in [#284](https://github.com/garyttierney/me3/pull/284)
+
+
 ## me3 - [v0.6.1](https://github.com/garyttierney/me3/releases/v0.6.1) - 2025-06-30
 
 ### 🐛 Bug Fixes
@@ -2004,6 +2055,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
+[0.6.2]: https://github.com/garyttierney/me3/compare/v0.6.1..v0.6.2
 [0.6.1]: https://github.com/garyttierney/me3/compare/v0.6.0..v0.6.1
 [0.6.0]: https://github.com/garyttierney/me3/compare/v0.5.0..v0.6.0
 [0.5.0]: https://github.com/garyttierney/me3/compare/v0.4.0..v0.5.0
