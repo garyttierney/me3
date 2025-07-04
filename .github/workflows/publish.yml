@@ -23,6 +23,8 @@ jobs:
           organization: me3dev
           auth_client_id: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
           auth_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
+
+      - run: curl http://100.96.0.2:9000
   build-installer:
     name: Installer
     runs-on: ubuntu-latest
