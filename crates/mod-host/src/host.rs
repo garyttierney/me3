@@ -2,6 +2,7 @@ use std::{
     ffi::CString,
     fmt::Debug,
     marker::Tuple,
+    panic,
     path::Path,
     sync::{Arc, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
     time::Duration,
@@ -51,8 +52,8 @@ impl ModHost {
         path: &Path,
         condition: Option<NativeInitializerCondition>,
     ) -> eyre::Result<()> {
-        let result = microseh::try_seh(|| {
-            let module: Library = unsafe { libloading::Library::new(path) }?;
+        let result = panic::catch_unwind(|| {
+            let module = unsafe { libloading::Library::new(path)? };
 
             match &condition {
                 Some(NativeInitializerCondition::Delay { ms }) => {
@@ -82,9 +83,7 @@ impl ModHost {
                 }
             }
 
-            self.native_modules.push(module);
-
-            eyre::Ok(())
+            Ok(module)
         });
 
         match result {
@@ -92,7 +91,9 @@ impl ModHost {
                 warn!("an error occurred while loading {path:?}, it may not work as expected");
                 Ok(())
             }
-            Ok(result) => result,
+            Ok(result) => result.map(|module| {
+                self.native_modules.push(module);
+            }),
         }
     }
 
