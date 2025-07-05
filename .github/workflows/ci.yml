@@ -49,8 +49,8 @@ jobs:
           tool: cargo-llvm-cov,cargo-nextest
       - name: Build | Test
         run: |
-          cargo llvm-cov --workspace --locked nextest
-          cargo llvm-cov --locked report --codecov --output-path codecov.json
+          cargo llvm-cov --target x86_64-pc-windows-gnullvm --workspace --locked nextest
+          cargo llvm-cov --target x86_64-pc-windows-gnullvm --locked report --codecov --output-path codecov.json
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/test-results-action@47f89e9acb64b76debcd5ea40642d25a4adced9f # v1.1.1
