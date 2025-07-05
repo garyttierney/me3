@@ -17,6 +17,7 @@ V1(
         packages: [
             Package {
                 id: "my-mod",
+                enabled: true,
                 path: ModFile(
                     "mod/",
                 ),

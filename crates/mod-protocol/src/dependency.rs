@@ -128,6 +128,7 @@ mod tests {
     ) -> Package {
         Package {
             id: id.to_owned(),
+            enabled: true,
             path: ModFile(PathBuf::from(id)),
             load_after,
             load_before,
