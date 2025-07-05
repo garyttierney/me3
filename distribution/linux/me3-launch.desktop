@@ -9,3 +9,4 @@ Icon=me3
 Terminal=true
 NoDisplay=true
 MimeType=application/x-me3;
+Categories=Game;
