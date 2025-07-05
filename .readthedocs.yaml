@@ -2,13 +2,12 @@ version: 2
 
 build:
   os: "ubuntu-24.04"
+  apt_packages:
+    - pngquant
   tools:
     python: "3"
   jobs:
     pre_install:
-      - pip install mkdocs
-      - pip install git+https://${GITHUB_MKDOCS_INSIDERS_TOKEN}@github.com/garyttierney/mkdocs-material-insiders.git@9.6.15-insiders-4.53.16
-      - pip install mkdocs-git-revision-date-localized-plugin
-      - pip install mkdocs-git-authors-plugin
+      - pip install -r docs/requirements.txt
 mkdocs:
   configuration: mkdocs.yml

@@ -33,6 +33,6 @@ files: [
       # Translation files filter
       # e.g. "/resources/%two_letters_code%/%original_file_name%"
       #
-      "translation": "docs/**/%file_name%.%locale_with_underscore%.md",
+      "translation": "docs/**/%file_name%.%two_letters_code%.md",
     },
   ]
