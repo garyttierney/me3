@@ -81,7 +81,7 @@ path = 'mods/MyAwesomeMod.dll'
 			 - ***Items***
 			 - &#36;ref: [#/definitions/Dependent](./configuration-reference.md#dependent)
 	 - <b id="definitionsnativepropertiesoptional">optional</b>
-		 - *If this native fails to load and this vakye is false, treat it as a critical error.*
+		 - *If this native fails to load and this value is false, treat it as a critical error.*
 		 - Type: `boolean`
 		 - Default: *false*
 	 - <b id="definitionsnativepropertiespath">path</b> `required`
