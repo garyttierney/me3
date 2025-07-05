@@ -27,7 +27,7 @@ runs:
         {
             CL_FLAGS="-Wno-unused-command-line-argument -fuse-ld=lld-link"
 
-            echo "AR_x86_64_pc_windows_gnullvm=llvm-lib"
+            echo "AR_x86_64_pc_windows_gnullvm=llvm-ar"
             echo "CFLAGS_x86_64_pc_windows_gnullvm=$CL_FLAGS"
             echo "CXXFLAGS_x86_64_pc_windows_gnullvm=$CL_FLAGS /EHsc"
             echo "CC_x86_64_pc_windows_gnullvm=clang"
