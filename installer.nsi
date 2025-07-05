@@ -80,7 +80,7 @@
 !macroend
 
 !ifndef TARGET_DIR
-  !define TARGET_DIR "target/x86_64-pc-windows-msvc/release/"
+  !define TARGET_DIR "target/x86_64-pc-windows-gnullvm/release/"
 !endif
 
 !ifndef VERSION
