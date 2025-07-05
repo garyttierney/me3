@@ -29,8 +29,5 @@ windows = { workspace = true, features = [
     "Win32_System_Threading",
 ] }
 
-[build-dependencies]
-winresource = "0.1"
-
 [lints]
 workspace = true
