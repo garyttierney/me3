@@ -29,7 +29,7 @@ pub struct Native {
     /// Path to the DLL. Can be relative to the mod profile.
     pub path: ModFile,
 
-    /// If this native fails to load and this vakye is false, treat it as a critical error.
+    /// If this native fails to load and this value is false, treat it as a critical error.
     #[serde(default = "off")]
     pub optional: bool,
 
