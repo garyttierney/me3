@@ -146,7 +146,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b
         with:
           toolchain: nightly
-          targets: x86_64-pc-windows-msvc
+          targets: x86_64-pc-windows-gnullvm
           components: clippy
 
       - uses: taiki-e/install-action@9ca1734d8940023f074414ee621fd530c4ce10f2 # v2.55.3
@@ -176,5 +176,5 @@ jobs:
         with:
           toolchain: nightly
           components: rustfmt
-          targets: x86_64-pc-windows-msvc
+          targets: x86_64-pc-windows-gnullvm
       - run: cargo +nightly fmt --all --check
