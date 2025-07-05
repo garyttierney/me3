@@ -5,6 +5,7 @@ V1(
         packages: [
             Package {
                 id: "test-pkg",
+                enabled: true,
                 path: ModFile(
                     ".",
                 ),

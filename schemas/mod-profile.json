@@ -171,6 +171,11 @@
       "description": "A package is a source for files that override files within the existing games DVDBND archives.\n It points to a local path containing assets matching the hierarchy they would be served under in\n the DVDBND.",
       "type": "object",
       "properties": {
+        "enabled": {
+          "description": "Enable this package?",
+          "type": "boolean",
+          "default": true
+        },
         "id": {
           "description": "The unique identifier for this package..",
           "type": "string"

@@ -40,6 +40,10 @@ impl ModFile {
     }
 }
 
+fn on() -> bool {
+    true
+}
+
 /// A package is a source for files that override files within the existing games DVDBND archives.
 /// It points to a local path containing assets matching the hierarchy they would be served under in
 /// the DVDBND.
@@ -47,6 +51,10 @@ impl ModFile {
 pub struct Package {
     /// The unique identifier for this package..
     pub(crate) id: String,
+
+    /// Enable this package?
+    #[serde(default = "on")]
+    pub enabled: bool,
 
     /// A path to the source of this package.
     #[serde(alias = "source")]
@@ -70,6 +78,7 @@ impl Package {
                 .to_string_lossy()
                 .into(),
             path: ModFile(path),
+            enabled: true,
             load_after: vec![],
             load_before: vec![],
         }

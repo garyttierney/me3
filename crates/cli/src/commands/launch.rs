@@ -287,8 +287,8 @@ pub fn launch(
         }
     }
 
-    all_packages.retain(exists);
-    all_natives.retain(exists);
+    all_packages.retain(|pkg| pkg.enabled && exists(pkg));
+    all_natives.retain(|native| native.enabled && exists(native));
 
     for supports in profile.supports() {
         profile_supported_games.insert(Game(supports.game));
