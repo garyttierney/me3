@@ -12,27 +12,14 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install WINE + LLVM
+    - name: Install WINE + LLVM + Mingw-w64
       shell: bash
       run: |
         sudo dpkg --add-architecture i386
         wget -qO - https://dl.winehq.org/wine-builds/winehq.key | sudo apt-key add -
         sudo apt-add-repository "deb https://dl.winehq.org/wine-builds/ubuntu $(lsb_release -cs) main"
         sudo apt install --install-recommends winehq-stable lld clang-tools llvm
-
-    - name: Cache MSVC SDK
-      id: cache-xwin
-      uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
-      with:
-        path: ${{ github.workspace }}/xwin
-        key: xwin
-
-    - name: Fetch MSVC SDK
-      if: steps.cache-xwin.outputs.cache-hit != 'true'
-      shell: bash
-      run: |
-        cargo install xwin --locked
-        xwin --accept-license splat --output "${{github.workspace}}/xwin"
+        sudo apt install --no-install-suggests mingw-w64-x86-64-dev
 
     - name: Generate x86_64-pc-windows-gnullvm configuration
       shell: bash
