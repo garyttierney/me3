@@ -116,7 +116,7 @@
           }
         },
         "optional": {
-          "description": "If this native fails to load and this vakye is false, treat it as a critical error.",
+          "description": "If this native fails to load and this value is false, treat it as a critical error.",
           "type": "boolean",
           "default": false
         },
