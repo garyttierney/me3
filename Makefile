@@ -4,7 +4,7 @@ CARGO ?= cargo
 CARGOFLAGS ?= --features=sentry --release
 DESTDIR ?= out
 
-WINDOWS_TRIPLE ?= x86_64-pc-windows-msvc
+WINDOWS_TRIPLE ?= x86_64-pc-windows-gnullvm
 LINUX_TRIPLE ?= x86_64-unknown-linux-gnu
 SOURCE_DATE_EPOCH=$(shell git log -1 --format=%ct)
 COMMIT_ID=$(shell git rev-parse --verify HEAD)
