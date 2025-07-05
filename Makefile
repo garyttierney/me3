@@ -37,7 +37,7 @@ $(DESTDIR)/%.pdf: %.md
 	pandoc -t html $< -o $@
 
 $(DESTDIR)/me3:
-	SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) BUILD_COMMIT_ID=$(COMMIT_ID) $(CARGO) build $(CARGOFLAGS) \
+	SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) BUILD_COMMIT_ID=$(COMMIT_ID) RUST_BACKTRACE=1 $(CARGO) build $(CARGOFLAGS) \
 		--target $(LINUX_TRIPLE) \
 		-Z unstable-options --artifact-dir=$(DESTDIR)/ \
 		-p me3-cli
@@ -46,7 +46,7 @@ $(DESTDIR)/me3_installer.exe: $(WINDOWS_BINARIES) $(DESTDIR)/CHANGELOG.pdf
 	makensis -DTARGET_DIR=$(shell dirname $<)/ installer.nsi -X"OutFile $@"
 
 $(DESTDIR)/me3.exe $(DESTDIR)/me3-launcher.exe $(DESTDIR)/me3_mod_host.dll:
-	SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) BUILD_COMMIT_ID=$(COMMIT_ID) $(CARGO) build $(CARGOFLAGS) \
+	SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) BUILD_COMMIT_ID=$(COMMIT_ID) RUST_BACKTRACE=1 $(CARGO) build $(CARGOFLAGS) \
 		--target $(WINDOWS_TRIPLE) \
 		-Z unstable-options --artifact-dir=$(DESTDIR)/ \
 		-p me3-launcher -p me3-mod-host -p me3-cli
