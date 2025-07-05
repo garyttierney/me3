@@ -4,7 +4,8 @@ CARGO ?= cargo
 CARGOFLAGS ?= --features=sentry --release
 DESTDIR ?= out
 
-WINDOWS_TRIPLE ?= x86_64-pc-windows-msvc
+WINDOWS_TRIPLE ?= x86_64-pc-windows-gnullvm
+WINDOWS_CXX ?= CXX_x86_64_pc_windows_gnullvm=clang CC_x86_64_pc_windows_gnullvm=clang
 LINUX_TRIPLE ?= x86_64-unknown-linux-gnu
 SOURCE_DATE_EPOCH=$(shell git log -1 --format=%ct)
 COMMIT_ID=$(shell git rev-parse --verify HEAD)
@@ -46,7 +47,7 @@ $(DESTDIR)/me3_installer.exe: $(WINDOWS_BINARIES) $(DESTDIR)/CHANGELOG.pdf
 	makensis -DTARGET_DIR=$(shell dirname $<)/ installer.nsi -X"OutFile $@"
 
 $(DESTDIR)/me3.exe $(DESTDIR)/me3-launcher.exe $(DESTDIR)/me3_mod_host.dll:
-	SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) BUILD_COMMIT_ID=$(COMMIT_ID) $(CARGO) build $(CARGOFLAGS) \
+	SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) BUILD_COMMIT_ID=$(COMMIT_ID) $(WINDOWS_CXX) $(CARGO) build $(CARGOFLAGS) \
 		--target $(WINDOWS_TRIPLE) \
 		-Z unstable-options --artifact-dir=$(DESTDIR)/ \
 		-p me3-launcher -p me3-mod-host -p me3-cli
