@@ -40,7 +40,9 @@
 - [License](#license)
 - [Contact](#contact)
 - [Acknowledgments](#acknowledgments)
-- [❤️ Sponsors](#️-sponsors)
+- [Sponsors](#sponsors)
+  - [Sentry](#sentry)
+  - [Crowdin](#crowdin)
 
 <!-- ABOUT THE PROJECT -->
 
@@ -163,14 +165,17 @@ Discussions Board: [https://github.com/garyttierney/me3/discussions](https://git
 - [Skadi](https://twitter.com/Skadi_sbw) - [me3 icon](./distribution/assets/me3.png) artwork
 <!-- markdown-link-check-enable -->
 
-## ❤️ Sponsors
+## Sponsors
 
 We are grateful for the generous support of our sponsors.
 
+### Sentry
 
-|                                                           Sentry                                                            |                                                                                 Crowdin                                                                                  |
-| :-------------------------------------------------------------------------------------------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-| <a href="https://sentry.io/" target="_blank"><img src="assets/sponsors/sentry-wordmark-dark-200x60.png" alt="Sentry" /></a> | <a href="https://crowdin.com/" target="_blank"><img src="https://support.crowdin.com/assets/logos/plate/png/crowdin-logo-with-plate.png" alt="Crowdin" width="200"/></a> |
+<a href="https://sentry.io/" target="_blank"><img src="assets/sponsors/sentry-wordmark-dark-200x60.png" alt="Sentry" /></a>
+
+### Crowdin
+
+<a href="https://crowdin.com/" target="_blank"><img src="https://support.crowdin.com/assets/logos/plate/png/crowdin-logo-with-plate.png" alt="Crowdin" width="200"/></a>
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
