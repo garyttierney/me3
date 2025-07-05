@@ -45,7 +45,7 @@
 
 ## About The Project
 
-me3 is a tool that extends the functionality of FROMSOTWARE games.
+me3 is a tool that extends the functionality of FROMSOFTWARE games.
 
 ### Supported platforms
 
