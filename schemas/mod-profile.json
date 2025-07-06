@@ -17,7 +17,7 @@
     }
   ],
   "$defs": {
-    "Dependent_for_string": {
+    "Dependent": {
       "type": "object",
       "properties": {
         "id": {
@@ -33,7 +33,7 @@
       ]
     },
     "Game": {
-      "description": "Chronologically sorted list of games supported by me3.\n\n Feature gates can use [`Ord`] comparisons between game type constants.",
+      "description": "List of games supported by me3",
       "type": "string",
       "enum": [
         "sekiro",
@@ -43,7 +43,7 @@
       ]
     },
     "ModFile": {
-      "description": "A filesystem path to the contents of a package. May be relative to the [ModProfile] containing\n it.",
+      "description": "A filesystem path to the contents of a package. May be relative to the [ModProfile] containing\nit.",
       "type": "string"
     },
     "ModProfileV1": {
@@ -58,7 +58,7 @@
           }
         },
         "packages": {
-          "description": "A collection of packages containing assets that should be considered for loading\n before the DVDBND.",
+          "description": "A collection of packages containing assets that should be considered for loading\nbefore the DVDBND.",
           "type": "array",
           "default": [],
           "items": {
@@ -105,14 +105,14 @@
           "type": "array",
           "default": [],
           "items": {
-            "$ref": "#/$defs/Dependent_for_string"
+            "$ref": "#/$defs/Dependent"
           }
         },
         "load_before": {
           "type": "array",
           "default": [],
           "items": {
-            "$ref": "#/$defs/Dependent_for_string"
+            "$ref": "#/$defs/Dependent"
           }
         },
         "optional": {
@@ -168,7 +168,7 @@
       ]
     },
     "Package": {
-      "description": "A package is a source for files that override files within the existing games DVDBND archives.\n It points to a local path containing assets matching the hierarchy they would be served under in\n the DVDBND.",
+      "description": "A package is a source for files that override files within the existing games DVDBND archives.\nIt points to a local path containing assets matching the hierarchy they would be served under in\nthe DVDBND.",
       "type": "object",
       "properties": {
         "enabled": {
@@ -185,7 +185,7 @@
           "type": "array",
           "default": [],
           "items": {
-            "$ref": "#/$defs/Dependent_for_string"
+            "$ref": "#/$defs/Dependent"
           }
         },
         "load_before": {
@@ -193,7 +193,7 @@
           "type": "array",
           "default": [],
           "items": {
-            "$ref": "#/$defs/Dependent_for_string"
+            "$ref": "#/$defs/Dependent"
           }
         },
         "path": {

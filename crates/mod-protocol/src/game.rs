@@ -1,29 +1,16 @@
-use std::{error::Error, fmt::Display, path::Path, str::FromStr};
+use std::{fmt::Display, path::Path, str::FromStr};
 
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use schemars::{json_schema, JsonSchema};
+use serde::{de::Error, Deserialize, Serialize};
 
 /// Chronologically sorted list of games supported by me3.
 ///
 /// Feature gates can use [`Ord`] comparisons between game type constants.
-#[derive(
-    Clone, Copy, Debug, Deserialize, Serialize, JsonSchema, PartialEq, Eq, PartialOrd, Ord,
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Game {
-    #[serde(rename = "sekiro")]
-    #[serde(alias = "sdt")]
     Sekiro,
-
-    #[serde(rename = "eldenring")]
-    #[serde(alias = "elden-ring")]
     EldenRing,
-
-    #[serde(rename = "armoredcore6")]
-    #[serde(alias = "ac6")]
     ArmoredCore6,
-
-    #[serde(rename = "nightreign")]
-    #[serde(alias = "nightrein")]
     Nightreign,
 }
 
@@ -122,4 +109,47 @@ impl Display for InvalidGame {
     }
 }
 
-impl Error for InvalidGame {}
+impl std::error::Error for InvalidGame {}
+
+impl Serialize for Game {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.name())
+    }
+}
+
+impl<'de> Deserialize<'de> for Game {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let name = String::deserialize(deserializer)?;
+        Game::from_str(&name).map_err(D::Error::custom)
+    }
+}
+
+impl JsonSchema for Game {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "Game".into()
+    }
+
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        "me3_mod_protocol::game::Game".into()
+    }
+
+    fn json_schema(_generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        use Game::*;
+        json_schema!({
+            "description": "List of games supported by me3",
+            "type": "string",
+            "enum": [
+                Sekiro.name(),
+                EldenRing.name(),
+                ArmoredCore6.name(),
+                Nightreign.name()
+            ]
+        })
+    }
+}
