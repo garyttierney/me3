@@ -102,6 +102,7 @@ plugins:
   - meta
   - search
   - optimize
+  - meta-descriptions
   - git-committers:
       repository: garyttierney/me3
       branch: main
