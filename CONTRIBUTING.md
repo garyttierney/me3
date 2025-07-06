@@ -7,6 +7,7 @@
     - [Live Debugging](#live-debugging)
   - [Formatting and Linting Code](#formatting-and-linting-code)
   - [Code Policy](#code-policy)
+  - [Notes for maintainers](#notes-for-maintainers)
 
 ## Development Workspace Setup
 
@@ -50,3 +51,14 @@ settings in [rustfmt.toml](rustfmt.toml).
 Code contributed to this project should follow the
 [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/checklist.html) as much as
 possible (even if this project is an application instead of a library).
+
+## Notes for maintainers
+
+me3 uses a variety of hosted services, ensure you've been onboarded to the following:
+
+- Cloudflare
+- Google Search Console
+- Google Analytics
+- ReadTheDocs
+- Sentry.io
+- Crowdin.com
