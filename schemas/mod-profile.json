@@ -35,11 +35,41 @@
     "Game": {
       "description": "List of games supported by me3",
       "type": "string",
-      "enum": [
-        "sekiro",
-        "eldenring",
-        "armoredcore6",
-        "nightreign"
+      "oneOf": [
+        {
+          "title": "Sekiro: Shadows Die Twice",
+          "description": "Sekiro: Shadows Die Twice (Steam App ID: 814380)",
+          "enum": [
+            "sekiro",
+            "sdt"
+          ]
+        },
+        {
+          "title": "Elden Ring",
+          "description": "Elden Ring (Steam App ID: 1245620)",
+          "enum": [
+            "eldenring",
+            "er",
+            "elden-ring"
+          ]
+        },
+        {
+          "title": "Armored Core VI: Fires of Rubicon",
+          "description": "Armored Core VI: Fires of Rubicon (Steam App ID: 1888160)",
+          "enum": [
+            "armoredcore6",
+            "ac6"
+          ]
+        },
+        {
+          "title": "Elden Ring Nightreign",
+          "description": "Elden Ring Nightreign (Steam App ID: 2622380)",
+          "enum": [
+            "nightreign",
+            "nr",
+            "nightrein"
+          ]
+        }
       ]
     },
     "ModFile": {

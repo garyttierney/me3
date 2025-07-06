@@ -3,6 +3,7 @@ use std::{
     io::stderr,
     iter,
     path::{Path, PathBuf},
+    slice,
     str::FromStr,
 };
 
@@ -12,6 +13,7 @@ use commands::{profile::ProfileCommands, Commands};
 use directories::ProjectDirs;
 use me3_telemetry::TelemetryConfig;
 use serde::{Deserialize, Serialize};
+use strum::VariantArray;
 use tracing::info;
 
 mod commands;
@@ -44,17 +46,18 @@ mod settings;
 pub use self::settings::Config;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[repr(transparent)]
 pub struct Game(me3_mod_protocol::Game);
 
 impl ValueEnum for Game {
     fn value_variants<'a>() -> &'a [Self] {
-        use me3_mod_protocol::Game as G;
-        &[
-            Game(G::Sekiro),
-            Game(G::EldenRing),
-            Game(G::ArmoredCore6),
-            Game(G::Nightreign),
-        ]
+        // SAFETY: slice of a transparent wrapper type of the same length.
+        unsafe {
+            slice::from_raw_parts(
+                me3_mod_protocol::Game::VARIANTS.as_ptr() as *const Self,
+                me3_mod_protocol::Game::VARIANTS.len(),
+            )
+        }
     }
 
     fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {

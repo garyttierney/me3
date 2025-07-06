@@ -1,12 +1,15 @@
-use std::{fmt::Display, path::Path, str::FromStr};
+use std::{fmt::Display, path::Path};
 
 use schemars::{json_schema, JsonSchema};
 use serde::{de::Error, Deserialize, Serialize};
+use serde_json::json;
+use strum::VariantArray;
+use strum_macros::VariantArray;
 
 /// Chronologically sorted list of games supported by me3.
 ///
 /// Feature gates can use [`Ord`] comparisons between game type constants.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, VariantArray)]
 pub enum Game {
     Sekiro,
     EldenRing,
@@ -26,6 +29,17 @@ impl Game {
         }
     }
 
+    /// The full, official name of a game.
+    pub const fn title(self) -> &'static str {
+        use Game::*;
+        match self {
+            Sekiro => "Sekiro: Shadows Die Twice",
+            EldenRing => "Elden Ring",
+            ArmoredCore6 => "Armored Core VI: Fires of Rubicon",
+            Nightreign => "Elden Ring Nightreign",
+        }
+    }
+
     /// All names and aliases of a game as lowecase strings, including the primary name.
     pub fn possible_names(self) -> &'static [&'static str] {
         use Game::*;
@@ -38,8 +52,16 @@ impl Game {
     }
 
     /// All aliases of a game as lowercase strings, excluding the primary name.
-    pub fn aliases(&self) -> &'static [&'static str] {
+    pub fn aliases(self) -> &'static [&'static str] {
         &self.possible_names()[1..]
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        json!({
+            "description": format!("{} (Steam App ID: {})", self.title(), self.app_id()),
+            "enum": self.possible_names(),
+            "title": self.title()
+        })
     }
 }
 
@@ -49,18 +71,17 @@ impl Display for Game {
     }
 }
 
-impl FromStr for Game {
-    type Err = InvalidGame;
+impl TryFrom<String> for Game {
+    type Error = InvalidGame;
 
-    fn from_str(name: &str) -> Result<Self, Self::Err> {
-        use Game::*;
-        match name.to_ascii_lowercase() {
-            name if Sekiro.possible_names().contains(&&*name) => Ok(Sekiro),
-            name if EldenRing.possible_names().contains(&&*name) => Ok(EldenRing),
-            name if ArmoredCore6.possible_names().contains(&&*name) => Ok(ArmoredCore6),
-            name if Nightreign.possible_names().contains(&&*name) => Ok(Nightreign),
-            name => Err(InvalidGame(name)),
-        }
+    fn try_from(mut name: String) -> Result<Self, Self::Error> {
+        name.make_ascii_lowercase();
+
+        Self::VARIANTS
+            .iter()
+            .copied()
+            .find(|game| game.possible_names().contains(&&*name))
+            .ok_or(InvalidGame(name))
     }
 }
 
@@ -78,14 +99,10 @@ impl Game {
 
     /// Returns a game from its Steam App ID.
     pub fn from_app_id(id: u32) -> Option<Self> {
-        use Game::*;
-        match id {
-            814380 => Some(Sekiro),
-            1245620 => Some(EldenRing),
-            1888160 => Some(ArmoredCore6),
-            2622380 => Some(Nightreign),
-            _ => None,
-        }
+        Self::VARIANTS
+            .iter()
+            .copied()
+            .find(|game| game.app_id() == id)
     }
 
     /// Returns the path to a game's executable in its Steam installation folder.
@@ -126,7 +143,7 @@ impl<'de> Deserialize<'de> for Game {
         D: serde::Deserializer<'de>,
     {
         let name = String::deserialize(deserializer)?;
-        Game::from_str(&name).map_err(D::Error::custom)
+        Game::try_from(name).map_err(D::Error::custom)
     }
 }
 
@@ -140,16 +157,10 @@ impl JsonSchema for Game {
     }
 
     fn json_schema(_generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
-        use Game::*;
         json_schema!({
             "description": "List of games supported by me3",
             "type": "string",
-            "enum": [
-                Sekiro.name(),
-                EldenRing.name(),
-                ArmoredCore6.name(),
-                Nightreign.name()
-            ]
+            "oneOf": Self::VARIANTS.iter().map(Self::to_json).collect::<Vec<_>>()
         })
     }
 }
