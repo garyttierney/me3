@@ -11,7 +11,7 @@ install -Dpm 0644 -t "${datadir}/me3/windows-bin" bin/win64/me3-launcher.exe \
                                                   bin/win64/me3_mod_host.dll
 
 # assuming these files are in /dist inside the tarball
-install -Dpm 0644 -t "${datadir}/applications" dist/me3.desktop
+install -Dpm 0644 -t "${datadir}/applications" dist/me3-launch.desktop
 install -Dpm 0644 -t "${datadir}/mime/packages" dist/me3.xml
 install -Dpm 0644 -t "${datadir}/icons/hicolor/128x128/apps" dist/me3.png
 
