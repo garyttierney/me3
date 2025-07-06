@@ -51,15 +51,18 @@ path = 'mods/MyAwesomeMod.dll'
 
  - Type: `string`
  - The value is restricted to the following:
-	 1. *"elden-ring"*
-	 2. *"sekiro"*
-	 3. *"dark-souls-3"*
+	 1. "elden-ring" *OR* "eldenring"
+	 2. "sekiro" *OR* "sdt"
+	 3. "nightreign" *OR* "nightrein"
+	 4. "armoredcore6" *OR* "ac6"
 
 ### ModFile
 
  - *A filesystem path to the contents of a package. May be relative to the [ModProfile] containing it.*
  - Type: `string`
-***Native***
+
+
+### Native
 
  - Type: `object`
  - ***Properties***

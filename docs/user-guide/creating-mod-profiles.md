@@ -34,7 +34,7 @@ Create a new file (e.g. `myprofile.me3`) in your `Mods` folder with the followin
 profileVersion = "v1"
 
 [[supports]]
-game = "eldenring"
+game = "nightreign"
 
 [[packages]]
 id = "nightmods"
@@ -50,8 +50,7 @@ path = "natives/SkipIntroLogos.dll"
 path = "natives/nightreign_alt_saves.dll"
 ```
 
-This profile declares an asset replacement package named `nightmods` (using all files in the `mod` folder) and lists each `.dll` mod in the `natives` folder. We also declare that our profile supports ELDEN RING so me3 knows the game to configure when use double-click to launch.
-
+This profile declares an asset replacement package named `nightmods` (using all files in the `mod` folder) and lists each `.dll` mod in the `natives` folder. We also declare that our profile supports NIGHTREIGN so me3 knows the game to configure when use double-click to launch.
 
 ## Step 4: Run the profile
 
