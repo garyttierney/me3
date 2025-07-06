@@ -40,7 +40,7 @@ impl Game {
         }
     }
 
-    /// All names and aliases of a game as lowecase strings, including the primary name.
+    /// All names and aliases of a game as lowercase strings, including the primary name.
     pub fn possible_names(self) -> &'static [&'static str] {
         use Game::*;
         match self {
