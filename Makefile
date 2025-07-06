@@ -72,7 +72,7 @@ $(DESTDIR)/me3-windows-amd64.zip: dist-windows
 
 linux_tarball_path := $(abspath $(DESTDIR)/me3-linux-amd64.tar.gz)
 $(DESTDIR)/me3-linux-amd64.tar.gz: dist-linux
-	@(cd "$(DESTDIR)/dist-linux" && tar --mtime="@0" --sort=name --owner=0 --group=0 --numeric-owner -czv -f "$(linux_tarball_path)" ./*)
+	@(cd "$(DESTDIR)/dist-linux" && tar --mtime="@$(SOURCE_DATE_EPOCH)" --sort=name --owner=0 --group=0 --numeric-owner -czv -f "$(linux_tarball_path)" ./*)
 
 dist-windows: dist-common $(WINDOWS_BINARIES)
 	@rm -rf $(DESTDIR)/dist-windows
