@@ -37,7 +37,7 @@
       "type": "string",
       "enum": [
         "sekiro",
-        "elden-ring",
+        "eldenring",
         "armoredcore6",
         "nightreign"
       ]
