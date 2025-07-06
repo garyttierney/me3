@@ -17,7 +17,7 @@
     }
   ],
   "$defs": {
-    "Dependent_for_string": {
+    "Dependent": {
       "type": "object",
       "properties": {
         "id": {
@@ -33,17 +33,47 @@
       ]
     },
     "Game": {
-      "description": "Chronologically sorted list of games supported by me3.\n\n Feature gates can use [`Ord`] comparisons between game type constants.",
+      "description": "List of games supported by me3",
       "type": "string",
-      "enum": [
-        "sekiro",
-        "elden-ring",
-        "armoredcore6",
-        "nightreign"
+      "oneOf": [
+        {
+          "title": "Sekiro: Shadows Die Twice",
+          "description": "Sekiro: Shadows Die Twice (Steam App ID: 814380)",
+          "enum": [
+            "sekiro",
+            "sdt"
+          ]
+        },
+        {
+          "title": "Elden Ring",
+          "description": "Elden Ring (Steam App ID: 1245620)",
+          "enum": [
+            "eldenring",
+            "er",
+            "elden-ring"
+          ]
+        },
+        {
+          "title": "Armored Core VI: Fires of Rubicon",
+          "description": "Armored Core VI: Fires of Rubicon (Steam App ID: 1888160)",
+          "enum": [
+            "armoredcore6",
+            "ac6"
+          ]
+        },
+        {
+          "title": "Elden Ring Nightreign",
+          "description": "Elden Ring Nightreign (Steam App ID: 2622380)",
+          "enum": [
+            "nightreign",
+            "nr",
+            "nightrein"
+          ]
+        }
       ]
     },
     "ModFile": {
-      "description": "A filesystem path to the contents of a package. May be relative to the [ModProfile] containing\n it.",
+      "description": "A filesystem path to the contents of a package. May be relative to the [ModProfile] containing\nit.",
       "type": "string"
     },
     "ModProfileV1": {
@@ -58,7 +88,7 @@
           }
         },
         "packages": {
-          "description": "A collection of packages containing assets that should be considered for loading\n before the DVDBND.",
+          "description": "A collection of packages containing assets that should be considered for loading\nbefore the DVDBND.",
           "type": "array",
           "default": [],
           "items": {
@@ -105,14 +135,14 @@
           "type": "array",
           "default": [],
           "items": {
-            "$ref": "#/$defs/Dependent_for_string"
+            "$ref": "#/$defs/Dependent"
           }
         },
         "load_before": {
           "type": "array",
           "default": [],
           "items": {
-            "$ref": "#/$defs/Dependent_for_string"
+            "$ref": "#/$defs/Dependent"
           }
         },
         "optional": {
@@ -168,7 +198,7 @@
       ]
     },
     "Package": {
-      "description": "A package is a source for files that override files within the existing games DVDBND archives.\n It points to a local path containing assets matching the hierarchy they would be served under in\n the DVDBND.",
+      "description": "A package is a source for files that override files within the existing games DVDBND archives.\nIt points to a local path containing assets matching the hierarchy they would be served under in\nthe DVDBND.",
       "type": "object",
       "properties": {
         "enabled": {
@@ -185,7 +215,7 @@
           "type": "array",
           "default": [],
           "items": {
-            "$ref": "#/$defs/Dependent_for_string"
+            "$ref": "#/$defs/Dependent"
           }
         },
         "load_before": {
@@ -193,7 +223,7 @@
           "type": "array",
           "default": [],
           "items": {
-            "$ref": "#/$defs/Dependent_for_string"
+            "$ref": "#/$defs/Dependent"
           }
         },
         "path": {

@@ -1,4 +1,11 @@
-use std::{error::Error, io::stderr, iter, path::PathBuf, str::FromStr};
+use std::{
+    error::Error,
+    io::stderr,
+    iter,
+    path::{Path, PathBuf},
+    slice,
+    str::FromStr,
+};
 
 use clap::{builder::PossibleValue, ArgAction, Parser, ValueEnum};
 use color_eyre::eyre::eyre;
@@ -6,6 +13,7 @@ use commands::{profile::ProfileCommands, Commands};
 use directories::ProjectDirs;
 use me3_telemetry::TelemetryConfig;
 use serde::{Deserialize, Serialize};
+use strum::VariantArray;
 use tracing::info;
 
 mod commands;
@@ -38,65 +46,36 @@ mod settings;
 pub use self::settings::Config;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[repr(transparent)]
 pub struct Game(me3_mod_protocol::Game);
 
 impl ValueEnum for Game {
     fn value_variants<'a>() -> &'a [Self] {
-        use me3_mod_protocol::Game as G;
-        &[
-            Game(G::Sekiro),
-            Game(G::EldenRing),
-            Game(G::Nightreign),
-            Game(G::ArmoredCore6),
-        ]
+        // SAFETY: slice of a transparent wrapper type of the same length.
+        unsafe {
+            slice::from_raw_parts(
+                me3_mod_protocol::Game::VARIANTS.as_ptr() as *const Self,
+                me3_mod_protocol::Game::VARIANTS.len(),
+            )
+        }
     }
 
     fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {
-        use me3_mod_protocol::Game as G;
-        Some(match self.0 {
-            G::Sekiro => PossibleValue::new("sekiro").alias("sdt"),
-            G::EldenRing => PossibleValue::new("eldenring").aliases(["er", "elden-ring"]),
-            G::Nightreign => PossibleValue::new("nightreign").aliases(["nr", "nightrein"]),
-            G::ArmoredCore6 => PossibleValue::new("armoredcore6").alias("ac6"),
-        })
+        Some(PossibleValue::new(self.0.name()).aliases(self.0.aliases()))
     }
 }
 
 impl Game {
-    pub fn app_id(self) -> u32 {
-        use me3_mod_protocol::Game as G;
-
-        match self.0 {
-            G::Sekiro => 814380,
-            G::EldenRing => 1245620,
-            G::Nightreign => 2622380,
-            G::ArmoredCore6 => 1888160,
-        }
-    }
-
-    pub fn launcher(&self) -> PathBuf {
-        use me3_mod_protocol::Game as G;
-
-        PathBuf::from(match self.0 {
-            G::Sekiro => "sekiro.exe",
-            G::EldenRing => "Game/eldenring.exe",
-            G::Nightreign => "Game/nightreign.exe",
-            G::ArmoredCore6 => "Game/armoredcore6.exe",
-        })
+    fn app_id(self) -> u32 {
+        self.0.app_id()
     }
 
     fn from_app_id(id: u32) -> Option<Self> {
-        use me3_mod_protocol::Game as G;
+        me3_mod_protocol::Game::from_app_id(id).map(Self)
+    }
 
-        let game = match id {
-            814380 => G::Sekiro,
-            1245620 => G::EldenRing,
-            2622380 => G::Nightreign,
-            1888160 => G::ArmoredCore6,
-            _ => return None,
-        };
-
-        Some(Game(game))
+    fn launcher(self) -> &'static Path {
+        self.0.executable()
     }
 }
 
