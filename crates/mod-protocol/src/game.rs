@@ -56,7 +56,7 @@ impl Game {
         &self.possible_names()[1..]
     }
 
-    fn to_json(&self) -> serde_json::Value {
+    fn to_json(self) -> serde_json::Value {
         json!({
             "description": format!("{} (Steam App ID: {})", self.title(), self.app_id()),
             "enum": self.possible_names(),
@@ -160,7 +160,7 @@ impl JsonSchema for Game {
         json_schema!({
             "description": "List of games supported by me3",
             "type": "string",
-            "oneOf": Self::VARIANTS.iter().map(Self::to_json).collect::<Vec<_>>()
+            "oneOf": Self::VARIANTS.iter().copied().map(Self::to_json).collect::<Vec<_>>()
         })
     }
 }
