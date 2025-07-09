@@ -108,6 +108,16 @@ plugins:
       branch: main
       exclude_committers:
         - web-flow
+  - i18n:
+      build_only_locale: !ENV [BUILD_ONLY_LOCALE]
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: zh
+          name: 中国人
+          build: false
   - git-revision-date-localized:
       enable_creation_date: true
 
