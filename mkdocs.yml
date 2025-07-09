@@ -55,6 +55,16 @@ extra_javascript:
   - javascripts/readthedocs.js
 
 extra:
+  alternate:
+    - name: English
+      link: /en/
+      lang: en
+    - name: 中国人
+      link: /zh/
+      lang: zh
+    - name: Polski
+      link: /pl/
+      lang: pl
   analytics:
     provider: google
     property: G-FMPH9RP5EH
