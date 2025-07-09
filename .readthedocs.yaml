@@ -8,6 +8,7 @@ build:
     python: "3"
   jobs:
     pre_install:
-      - pip install -r docs/requirements.txt
+      - '[ -z "$GITHUB_MKDOCS_INSIDERS_TOKEN" ] && pip install -r docs/requirements.txt'
+      - '[ ! -z "$GITHUB_MKDOCS_INSIDERS_TOKEN" ] && pip install -r docs/requirements-insiders.txt'
 mkdocs:
   configuration: mkdocs.yml
