@@ -55,6 +55,16 @@ extra_javascript:
   - javascripts/readthedocs.js
 
 extra:
+  alternate:
+    - name: English
+      link: /en/
+      lang: en
+    - name: 中国人
+      link: /zh/
+      lang: zh
+    - name: Polski
+      link: /pl/
+      lang: pl
   analytics:
     provider: google
     property: G-FMPH9RP5EH
@@ -85,14 +95,14 @@ extra:
       make our documentation better.
 
 nav:
-  - Home: index.md
+  - index.md
   - User guide:
-      - Installation: user-guide/installation.md
-      - Troubleshooting: user-guide/troubleshooting.md
-      - Known issues & FAQ: user-guide/faq.md
+      - user-guide/installation.md
+      - user-guide/troubleshooting.md
+      - user-guide/faq.md
       - Tutorials:
           - user-guide/creating-mod-profiles.md
-  - Mod profile guide: configuration-reference.md
+  - configuration-reference.md
   - Download: https://github.com/garyttierney/me3/releases/latest
   - Changelog: changelog.md
   - Blog:
@@ -108,6 +118,19 @@ plugins:
       branch: main
       exclude_committers:
         - web-flow
+  - i18n:
+      build_only_locale: !ENV [BUILD_ONLY_LOCALE]
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: zh
+          name: 中国人
+          build: false
+        - locale: pl
+          name: Polski
+          build: false
   - git-revision-date-localized:
       enable_creation_date: true
 
