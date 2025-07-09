@@ -23,6 +23,7 @@ mod asset_hooks;
 mod debugger;
 mod deferred;
 mod detour;
+mod filesystem;
 mod host;
 mod native;
 
@@ -93,6 +94,8 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         let mut override_mapping = ArchiveOverrideMapping::new()?;
         override_mapping.scan_directories(packages.iter())?;
         let override_mapping = Arc::new(override_mapping);
+
+        filesystem::attach_override(override_mapping.clone())?;
 
         info!("Host successfully attached");
 

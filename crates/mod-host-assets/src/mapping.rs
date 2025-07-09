@@ -1,11 +1,12 @@
 use std::{
+    borrow::Borrow,
     collections::{HashMap, VecDeque},
     env,
     ffi::OsStr,
     fmt,
     fs::read_dir,
-    iter,
-    os::windows::ffi::OsStrExt,
+    io, iter,
+    os::windows::ffi::OsStrExt as WinOsStrExt,
     path::{Path, PathBuf, StripPrefixError},
 };
 
@@ -15,8 +16,8 @@ use thiserror::Error;
 use tracing::error;
 
 pub struct ArchiveOverrideMapping {
-    map: HashMap<PathBuf, (String, Vec<u16>)>,
-    current_dir: PathBuf,
+    map: HashMap<VfsKey, (String, Box<[u16]>)>,
+    current_dir: VfsKey,
 }
 
 #[derive(Debug, Error)]
@@ -25,7 +26,7 @@ pub enum ArchiveOverrideMappingError {
     InvalidDirectory(PathBuf),
 
     #[error("Could not read directory while discovering override assets {0}")]
-    ReadDir(std::io::Error),
+    ReadDir(io::Error),
 
     #[error("Could not acquire directory entry")]
     StripPrefix(#[from] StripPrefixError),
@@ -33,7 +34,9 @@ pub enum ArchiveOverrideMappingError {
 
 impl ArchiveOverrideMapping {
     pub fn new() -> Result<Self, ArchiveOverrideMappingError> {
-        let current_dir = env::current_dir().map_err(ArchiveOverrideMappingError::ReadDir)?;
+        let current_dir = env::current_dir()
+            .and_then(VfsKey::for_disk_path)
+            .map_err(ArchiveOverrideMappingError::ReadDir)?;
 
         Ok(Self {
             map: HashMap::new(),
@@ -72,6 +75,9 @@ impl ArchiveOverrideMapping {
             ));
         }
 
+        let base_directory_key =
+            VfsKey::for_disk_path(&base_directory).map_err(ArchiveOverrideMappingError::ReadDir)?;
+
         let mut paths_to_scan = VecDeque::from(vec![base_directory.clone()]);
         while let Some(current_path) = paths_to_scan.pop_front() {
             let Ok(entries) = read_dir(&current_path) else {
@@ -85,60 +91,88 @@ impl ArchiveOverrideMapping {
                     continue;
                 }
 
-                let Ok(override_path) = dir_entry.normalize() else {
+                let Ok(vfs_key) = VfsKey::for_asset_path(&dir_entry, &base_directory_key) else {
                     continue;
                 };
 
-                let Ok(vfs_path) = path_to_asset_lookup_key(&base_directory, &override_path) else {
-                    continue;
-                };
+                let as_wide = dir_entry.to_wide_with_nul().into_boxed_slice();
+                let as_string = dir_entry.to_string_with_nul();
 
-                let as_wide = override_path.encode_wide_with_nul().collect();
-
-                self.map.insert(
-                    vfs_path,
-                    (override_path.as_os_str().display().to_string(), as_wide),
-                );
+                self.map.insert(vfs_key, (as_string, as_wide));
             }
         }
 
         Ok(())
     }
 
-    pub fn get_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<(&str, &[u16])> {
-        let from_map = |k: &Path| self.map.get(k).map(|(p, w)| (&**p, &**w));
+    pub fn vfs_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<(&str, &[u16])> {
+        self.get(VfsKey::for_vfs_path(Path::new(&path_str)))
+    }
 
-        if let Ok(norm) = Path::new(&path_str).normalize() {
-            if let Ok(key) = norm.as_path().strip_prefix(&self.current_dir) {
-                return from_map(key);
-            }
-        }
+    pub fn disk_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<(&str, &[u16])> {
+        self.get(VfsKey::for_asset_path(Path::new(&path_str), &self.current_dir).ok()?)
+    }
 
-        from_map(Path::new(split_virtual_root(&path_str)))
+    fn get<P: AsRef<Path>>(&self, key: P) -> Option<(&str, &[u16])> {
+        self.map.get(key.as_ref()).map(|(p, w)| {
+            (
+                &p[..p.len().saturating_sub(1)],
+                &w[..w.len().saturating_sub(1)],
+            )
+        })
     }
 }
 
-/// Turns an asset path into an asset lookup key using the mod's base path.
-fn path_to_asset_lookup_key<P1: AsRef<Path>, P2: AsRef<Path>>(
-    base: P1,
-    path: P2,
-) -> Result<PathBuf, StripPrefixError> {
-    path.as_ref()
-        .strip_prefix(base)
-        .map(|p| p.as_os_str().to_string_lossy().to_lowercase().into())
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+struct VfsKey(PathBuf);
+
+impl VfsKey {
+    /// Turns a disk path into an asset lookup key that includes the root directory.
+    fn for_disk_path<P: AsRef<Path>>(path: P) -> Result<Self, io::Error> {
+        let normalized = path
+            .as_ref()
+            .normalize_virtually()?
+            .components()
+            .map(|c| c.as_os_str().to_string_lossy().to_lowercase())
+            .collect();
+
+        Ok(Self(normalized))
+    }
+
+    /// Turns a vfs path into an asset lookup key that does not include the root directory.
+    fn for_vfs_path<P: AsRef<Path>>(path: P) -> Self {
+        let normalized = path
+            .as_ref()
+            .components()
+            .skip_while(|c| matches!(c.as_os_str().as_encoded_bytes().last(), Some(b':')))
+            .map(|c| c.as_os_str().to_string_lossy().to_lowercase())
+            .collect();
+
+        Self(normalized)
+    }
+
+    /// Turns a disk path into an asset lookup key that does not include the root directory.
+    fn for_asset_path<P: AsRef<Path>>(path: P, base: &Self) -> Result<Self, io::Error> {
+        let Self(normalized) = Self::for_disk_path(path)?;
+
+        let stripped = normalized
+            .strip_prefix(base)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidFilename, e))?;
+
+        Ok(Self(stripped.to_owned()))
+    }
 }
 
-/// Returns the path without its virtual root.
-fn split_virtual_root<S: AsRef<OsStr>>(s: &S) -> &OsStr {
-    let bytes = s.as_ref().as_encoded_bytes();
+impl AsRef<Path> for VfsKey {
+    fn as_ref(&self) -> &Path {
+        &self.0
+    }
+}
 
-    // SAFETY: splitting after a valid ASCII character.
-    bytes
-        .windows(2)
-        .position(|w| w[0] == b':' && (w[1] == b'/' || w[1] == b'\\'))
-        .map_or(s.as_ref(), |i| unsafe {
-            OsStr::from_encoded_bytes_unchecked(&bytes[i + 2..])
-        })
+impl Borrow<Path> for VfsKey {
+    fn borrow(&self) -> &Path {
+        &self.0
+    }
 }
 
 impl fmt::Debug for ArchiveOverrideMapping {
@@ -149,55 +183,65 @@ impl fmt::Debug for ArchiveOverrideMapping {
     }
 }
 
-trait OsStrEncodeExt {
-    fn encode_wide_with_nul(&self) -> impl Iterator<Item = u16>;
+trait OsStrExt {
+    fn to_string_with_nul(&self) -> String;
+    fn to_wide_with_nul(&self) -> Vec<u16>;
 }
 
-impl<T: AsRef<OsStr>> OsStrEncodeExt for T {
-    fn encode_wide_with_nul(&self) -> impl Iterator<Item = u16> {
-        self.as_ref().encode_wide().chain(iter::once(0))
+impl<T: AsRef<OsStr>> OsStrExt for T {
+    fn to_string_with_nul(&self) -> String {
+        let mut string = self.as_ref().to_string_lossy().into_owned();
+        string.push('\0');
+        string
+    }
+
+    fn to_wide_with_nul(&self) -> Vec<u16> {
+        self.as_ref().encode_wide().chain(iter::once(0)).collect()
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::path::{Path, PathBuf};
+    use std::path::Path;
 
-    use crate::mapping::{path_to_asset_lookup_key, ArchiveOverrideMapping};
+    use super::{ArchiveOverrideMapping, VfsKey};
 
     #[test]
     fn asset_path_lookup_keys() {
-        const FAKE_MOD_BASE: &str = "D:/ModBase/";
-        let base_path = PathBuf::from(FAKE_MOD_BASE);
+        const FAKE_MOD_BASE: &str = "D:/ModBase";
+        let base_path = VfsKey::for_disk_path(Path::new(FAKE_MOD_BASE)).unwrap();
 
         assert_eq!(
-            path_to_asset_lookup_key(
-                &base_path,
-                PathBuf::from(format!(
+            VfsKey::for_asset_path(
+                Path::new(&format!(
                     "{FAKE_MOD_BASE}/parts/aet/aet007/aet007_071.tpf.dcx"
                 )),
+                &base_path
             )
-            .unwrap(),
+            .unwrap()
+            .as_ref(),
             Path::new("parts/aet/aet007/aet007_071.tpf.dcx"),
         );
 
         assert_eq!(
-            path_to_asset_lookup_key(
-                &base_path,
-                PathBuf::from(format!(
+            VfsKey::for_asset_path(
+                Path::new(&format!(
                     "{FAKE_MOD_BASE}/hkxbnd/m60_42_36_00/h60_42_36_00_423601.hkx.dcx"
                 )),
+                &base_path
             )
-            .unwrap(),
+            .unwrap()
+            .as_ref(),
             Path::new("hkxbnd/m60_42_36_00/h60_42_36_00_423601.hkx.dcx"),
         );
 
         assert_eq!(
-            path_to_asset_lookup_key(
-                &base_path,
-                PathBuf::from(format!("{FAKE_MOD_BASE}/regulation.bin")),
+            VfsKey::for_asset_path(
+                Path::new(&format!("{FAKE_MOD_BASE}/regulation.bin")),
+                &base_path
             )
-            .unwrap(),
+            .unwrap()
+            .as_ref(),
             Path::new("regulation.bin"),
         );
     }
@@ -211,19 +255,19 @@ mod test {
 
         assert!(
             asset_mapping
-                .get_override("data0:/regulation.bin")
+                .vfs_override("data0:/regulation.bin")
                 .is_some(),
             "override for regulation.bin was not found"
         );
         assert!(
             asset_mapping
-                .get_override("data0:/event/common.emevd.dcx")
+                .vfs_override("data0:/event/common.emevd.dcx")
                 .is_some(),
             "override for event/common.emevd.dcx not found"
         );
         assert!(
             asset_mapping
-                .get_override("data0:/common.emevd.dcx")
+                .vfs_override("data0:/common.emevd.dcx")
                 .is_none(),
             "event/common.emevd.dcx was found incorrectly under the regulation root"
         );

@@ -79,7 +79,7 @@ fn get_override<'a>(
 ) -> Option<(&'a str, &'a [u16])> {
     for prefix in PREFIXES {
         let prefixed = format!("{prefix}/{input}");
-        if let Some(replacement) = mapping.get_override(&prefixed) {
+        if let Some(replacement) = mapping.vfs_override(&prefixed) {
             return Some(replacement);
         }
     }
