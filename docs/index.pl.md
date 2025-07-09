@@ -33,7 +33,7 @@ hide:
 
     **Instalacja ręczna:**
 
-    1. Pobierz [przenośną wersję dla systemu Linux].(https://github.com/garyttierney/me3/releases/latest)
+    1. Pobierz [przenośną wersję dla systemu Linux](https://github.com/garyttierney/me3/releases/latest)
     2. Wypakuj ją do wybranego lokalnego folderu:
        ```bash
        tar -xzf me3-linux-amd64.tar.gz
