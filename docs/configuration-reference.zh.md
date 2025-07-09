@@ -41,4 +41,4 @@ path = 'mods/MyAwesomeMod.dll'
 
 下方提供Mod Profile模式（schema）的渲染效果图示。
 
-\--8<-- "schemas/mod-profile.md"
+--8<-- "schemas/mod-profile.md"

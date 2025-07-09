@@ -4,7 +4,7 @@
 
 ## 运行安装程序
 
-\=== ":fontawesome-brands-windows: Windows"
+=== ":fontawesome-brands-windows: Windows"
 
     在 Windows 上安装 me3 最简单的方法是使用每个版本随附的安装程序。此方法可确保所有必要文件正确放置并配置在您的系统上。
 
@@ -24,7 +24,7 @@
 
     安装向导将指导您完成设置。选择安装位置后，点击"Install"开始复制文件。进度条将显示安装状态，完成后将出现最终屏幕。点击"Finish"以关闭安装程序。
 
-\=== ":fontawesome-brands-linux: Linux"
+=== ":fontawesome-brands-linux: Linux"
 
     me3 为 Linux 提供了一个 shell 脚本安装程序，该程序从 GitHub 下载便携式安装包，将文件解压到正确的位置，可以作为传统的单行安装程序运行：
 

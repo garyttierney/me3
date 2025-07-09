@@ -13,7 +13,7 @@ hide:
 
 ## 安装
 
-\=== ":fontawesome-brands-windows: Windows"
+=== ":fontawesome-brands-windows: Windows"
 
     **一键安装程序：**
 
@@ -24,7 +24,7 @@ hide:
     1. 下载[Windows便携版](https://github.com/garyttierney/me3/releases/latest)
     2. 将其解压到您选择的本地目录（例如，排除在OneDrive或类似软件之外的目录）。
 
-\=== ":fontawesome-brands-linux: Linux / Steam Deck"
+=== ":fontawesome-brands-linux: Linux / Steam Deck"
 
     **一行安装命令：**
     ```bash
@@ -41,7 +41,7 @@ hide:
        ./bin/me3 --windows-binaries-dir ./bin/win64 info
        ```
 
-\=== ":fontawesome-brands-apple: macOS"
+=== ":fontawesome-brands-apple: macOS"
 
     me3 通过 [CrossOver®️](https://www.codeweavers.com/crossover)支持macOS 。按照您的 CrossOver环境中的 Windows 安装步骤。
 
