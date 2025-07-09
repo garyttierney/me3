@@ -1,7 +1,7 @@
 ---
 comments: false
 hide:
-  - nawigacja
+  - navigation
   - toc
 ---
 
