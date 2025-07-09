@@ -12,7 +12,9 @@
     <strong>
     A framework for modifying and instrumenting games.
     <br />
-    <a href="https://me3.readthedocs.io/"><strong>Explore the docs »</strong></a>
+    <a href="https://me3.help/en/latest">Documentation</a> ·
+    <a href="https://me3.help/zh/latest/">文档</a> ·
+    <a href="https://me3.help/pl/latest">Dokumentacja</a>
     <br />
     <br />
     <a href="https://github.com/garyttierney/me3/discussions/categories/bug-reports">Report Bug</a>
