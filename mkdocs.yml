@@ -85,14 +85,14 @@ extra:
       make our documentation better.
 
 nav:
-  - Home: index.md
+  - index.md
   - User guide:
-      - Installation: user-guide/installation.md
-      - Troubleshooting: user-guide/troubleshooting.md
-      - Known issues & FAQ: user-guide/faq.md
+      - user-guide/installation.md
+      - user-guide/troubleshooting.md
+      - user-guide/faq.md
       - Tutorials:
           - user-guide/creating-mod-profiles.md
-  - Mod profile guide: configuration-reference.md
+  - configuration-reference.md
   - Download: https://github.com/garyttierney/me3/releases/latest
   - Changelog: changelog.md
   - Blog:
@@ -117,6 +117,9 @@ plugins:
           build: true
         - locale: zh
           name: 中国人
+          build: false
+        - locale: pl
+          name: Polski
           build: false
   - git-revision-date-localized:
       enable_creation_date: true

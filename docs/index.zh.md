@@ -67,6 +67,6 @@ me3 launch --auto-detect -p eldenring-default
 ## 需要帮助？
 
 - **首次使用？** 请从我们的[用户指南](user-guide/installation.md)开始
-- **有问题？** 检查我们的 [故障排除指南] (user-guide/troubleshooting.md)
+- **有问题？** 检查我们的 [故障排除指南](user-guide/troubleshooting.md)
 - **发现错误？** [报告](https://github.com/garyttierney/me3/discussions/categories/bug-reports)
 - **想要新功能？** [请求](https://github.com/garyttierney/me3/discussions/categories/ideas)
