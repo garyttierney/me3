@@ -128,6 +128,20 @@ plugins:
         - locale: zh
           name: 中文
           build: false
+          site_name: me3 - FROMSOFTWARE mod加载器
+          nav:
+            - index.md
+            - 用户引导:
+                - user-guide/installation.md
+                - user-guide/troubleshooting.md
+                - user-guide/faq.md
+                - 教程:
+                    - user-guide/creating-mod-profiles.md
+            - configuration-reference.md
+            - 下载: https://github.com/garyttierney/me3/releases/latest
+            - 更新日志: changelog.md
+            - 博客:
+                - blog/index.md
         - locale: pl
           name: Polski
           build: false
