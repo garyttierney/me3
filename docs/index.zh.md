@@ -7,7 +7,7 @@ hide:
 
 # 欢迎使用me3
 
-**me<sup>3</sup>** 是一个专为游戏运行时修改而设计的框架，聚焦于ELDEN RING和FROMSOFTWARE的其他游戏。 它是 [Mod Engine 2](https://github.com/soulsmods/ModEngine2) 的继任者。
+**me<sup>3</sup>** 是一个专为游戏运行时修改而设计的框架，专注于艾尔登法环和FROMSOFTWARE的其他游戏。 它是 [Mod Engine 2](https://github.com/soulsmods/ModEngine2) 的继任者。
 
 [下载 :fontawesome-solid-download:](https://github.com/garyttierney/me3/releases/latest){ .md-button .md-button--primary }
 
@@ -67,6 +67,6 @@ me3 launch --auto-detect -p eldenring-default
 ## 需要帮助？
 
 - **首次使用？** 请从我们的[用户指南](user-guide/installation.md)开始
-- **有问题？** 检查我们的 [故障排除指南](user-guide/troubleshooting.md)
+- **有问题？** 检查我们的 [故障排除](user-guide/troubleshooting.md)
 - **发现错误？** [报告](https://github.com/garyttierney/me3/discussions/categories/bug-reports)
 - **想要新功能？** [请求](https://github.com/garyttierney/me3/discussions/categories/ideas)
