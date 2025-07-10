@@ -2,9 +2,9 @@
 
 **Mod Profile（.me3文件）** 告诉me3要加载哪些mod以及如何加载这些mod。 本指南将指导您下载mod，设置本地mod目录，并创建Mod Profile（.me3文件）。
 
-我们将安装下列DLL mod：[Fast Launch](https://www.nexusmods.com/eldenringnightreign/mods/30)[Nightreign Alt Saves](https://www.nexusmods.com/eldenringnightreign/mods/4)[Disable Chromatic Aberration](https://www.nexusmods.com/eldenringnightreign/mods/67)
+我们将安装下列DLL mod：[Fast Launch](https://www.nexusmods.com/eldenringnightreign/mods/30) 、 [Nightreign Alt Saves](https://www.nexusmods.com/eldenringnightreign/mods/4) 和 [Disable Chromatic Aberration](https://www.nexusmods.com/eldenringnightreign/mods/67)
 
-对于内容替换，我们将使用 ：[Fun Is Allowed](https://www.nexusmods.com/eldenringnightreign/mods/49)[Geralt of Rivia over Wylder](https://www.nexusmods.com/eldenringnightreign/mods/63)
+对于内容替换，我们将使用：[Fun Is Allowed](https://www.nexusmods.com/eldenringnightreign/mods/49) 和 [Geralt of Rivia over Wylder](https://www.nexusmods.com/eldenringnightreign/mods/63)
 
 ## 第 1 步：准备您的mod文件夹
 
@@ -13,8 +13,8 @@
 
 ## 第 2 步：添加您的mod
 
-- 将资产文件(例如`regulation.bin`, `parts/`文件夹) 放置在`mod`中。
-- 将`.dll`文件放入`natives`中。
+- 将资产文件(例如`regulation.bin`, `parts/`文件夹) 放入`mod`文件夹中。
+- 将`.dll`文件放入`natives`文件夹中。
 - 为了更容易的管理，您可以在 `mod` 中使用子文件夹，并在您的配置文件中使用独立的 `[[packages]]` 条目作为参考。 这就更容易添加/移除/更新单个mod。
 
 !!! tip "了解路径"
@@ -28,7 +28,7 @@
 
 ## 第 3 步：创建您的Mod Profile（.me3文件）
 
-在你的 "Mods" 文件夹中创建一个具有以下内容的新文件 (例如`myprofile.me3`)：
+在你的 `Mods` 文件夹中创建一个具有以下内容的新文件 (例如`myprofile.me3`)：
 
 ```toml
 profileVersion = "v1"
@@ -50,7 +50,7 @@ path = 'natives/SkipIntroLogos.dll'
 path = 'natives/nightreign_alt_saves.dll'
 ```
 
-此配置文件声明了一个名为 `nightmods` 的游戏资产替换包（使用`mod`文件夹中的所有文件），并列出在`natives`文件夹中个每个`.dll` mod。 我们还声明我们的Mod Profile（.me3文件）支持NIGHTREIGN ，因此me3知道在使用双击启动时要配置的游戏。
+此配置文件声明了一个名为 `nightmods` 的游戏资产替换包（使用`mod`文件夹中的所有文件），并列出在`natives`文件夹中个每个`.dll` mod。 我们还声明我们的Mod Profile（.me3文件）支持nightreign（黑夜君临），因此me3知道在使用双击启动时要配置的游戏。
 
 ## 第 4 步：运行Mod Profile（.me3文件）
 

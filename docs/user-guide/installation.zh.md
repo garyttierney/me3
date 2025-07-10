@@ -1,6 +1,6 @@
 # 安装
 
-本指南提供了安装`me3`的分步说明，这是一个用于FROMSOFTWARE游戏的mod加载器。 在本指南结束时，您的系统上将运行`me3`，并能够使用ELDEN RING的Mod Profile（.me3文件）。
+本指南提供了安装`me3`的分步说明，这是一个用于FROMSOFTWARE游戏的mod加载器。 在本指南结束时，您的系统上将运行`me3`，并能够使用艾尔登法环的Mod Profile（.me3文件）。
 
 ## 运行安装程序
 
@@ -40,14 +40,14 @@
 
 ## 验证安装
 
-me3 默认情况下将为ELDEN RING 创建一组空配置文件（.me3文件）。
+me3 默认情况下将为艾尔登法环创建一个空配置文件（.me3文件）。
 让me3从命令行或双击Windows中的.me3文件启动一个空配置文件，检查安装是否正常工作：
 
 ```shell
 > $ me3 launch --auto-detect -p eldenring-default
 ```
 
-请参阅`me3 launch--help` 以了解`auto-detect` 参数等更多信息。
+请参阅`me3 launch --help` 以了解`--auto-detect` 参数等更多信息。
 
 ## 接下来是什么？
 
