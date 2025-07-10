@@ -1,4 +1,4 @@
-# Tworzenie Profili Modów
+# Tworzenie profili modów
 
 **Profil modów** określa, które mody mają zostać załadowane przez me3 i w jaki sposób. Niniejszy przewodnik opisuje process pobierania modów, konfigurowania lokalnego katalogu modów oraz tworzenia profilu modów.
 
@@ -54,7 +54,7 @@ Ten profil deklaruje pakiet zamiany zasobów o nazwie `nightmods` (używając ws
 
 ## Krok 4: Uruchom profil
 
-Po skonfigurowaniu profilu możesz go uruchomić. Użytkownicy systemu Windows mogą dwukrotnie kliknąć plik `.me3`, aby uruchomić grę z modami, natomiast użytkownicy systemu Linux muszą uruchomić profil za pomocą CLI:
+Po skonfigurowaniu profilu możesz go uruchomić. Użytkownicy systemu Windows mogą dwukrotnie kliknąć plik `.me3`, aby uruchomić grę z modami, natomiast użytkownicy systemu Linux muszą uruchomić profil za pomocą wiersza poleceń:
 
 ```shell
 > $ me3 launch --auto-detect -p myprofile.me3

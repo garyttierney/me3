@@ -5,9 +5,9 @@ hide:
   - toc
 ---
 
-# Witaj w me3
+# Witaj na stronie poświęconej me3
 
-**me<sup>3</sup>** to framework zaprojektowany do modyfikacji gier w czasie rzeczywistym, ze szczególnym uwzględnieniem ELDEN RING i innych tytułów od FROMSOFTWARE. Jest to następca [ModEngine 2](https://github.com/soulsmods/ModEngine2).
+**me<sup>3</sup>** to framework zaprojektowany do modyfikacji gier podczas ich działania, ze szczególnym uwzględnieniem ELDEN RING oraz innych tytułów studia FROMSOFTWARE. Jest następcą [ModEngine 2](https://github.com/soulsmods/ModEngine2).
 
 [Pobierz :fontawesome-solid-download:](https://github.com/garyttierney/me3/releases/latest){ .md-button .md-button--primary }
 
@@ -17,12 +17,12 @@ hide:
 
     **Instalacja jednym kliknięciem:**
 
-    Pobierz najnowszą wersję pliku me3_installer.exe z [GitHub releases](https://github.com/garyttierney/me3/releases/latest) i postępuj zgodnie z kreatorem instalacji.
+    Pobierz najnowszą wersję pliku me3_installer.exe ze strony [GitHub releases](https://github.com/garyttierney/me3/releases/latest) i postępuj zgodnie z kreatorem instalacji.
 
     **Instalacja ręczna:**
 
-    1. Pobierz [przenośną wersję dla systemu Windows].(https://github.com/garyttierney/me3/releases/latest)
-    2. Wypakuj ją do wybranego lokalnego folderu (nie synchronizowanego z OneDrive lub podobnym programme).
+    1. Pobierz [wersję dla systemu Windows](https://github.com/garyttierney/me3/releases/latest).
+    2. Wypakuj ją do wybranego lokalnego folderu (nie synchronizowanego z OneDrive lub podobnym programem).
 
 === ":fontawesome-brands-linux: Linux / Steam Deck"
 
@@ -33,7 +33,7 @@ hide:
 
     **Instalacja ręczna:**
 
-    1. Pobierz [przenośną wersję dla systemu Linux](https://github.com/garyttierney/me3/releases/latest)
+    1. Pobierz [wersję dla systemu Linux](https://github.com/garyttierney/me3/releases/latest).
     2. Wypakuj ją do wybranego lokalnego folderu:
        ```bash
        tar -xzf me3-linux-amd64.tar.gz
@@ -54,7 +54,7 @@ Wybierz swój system operacyjny z zakładek powyżej i postępuj zgodnie z instr
 ### 2. Konfigurowanie profili modów
 
 - [Tworzenie profili modów](user-guide/creating-mod-profiles.md) - Dowiedz się, jak pobierać i konfigurować mody.
-- [Podręcznik konfiguracji](configuration-reference.md) - Pełna lista opcji konfiguracji.
+- [Dokumentacja konfiguracji](configuration-reference.md) - Pełna lista opcji konfiguracji.
 
 ### 3. Uruchom profil moda
 
@@ -66,7 +66,7 @@ me3 launch --auto-detect -p eldenring-default
 
 ## Potrzebujesz pomocy?
 
-- **Jesteś początkującym użytkownikiem?** Zacznij od naszego [przewodnika użytkownika](user-guide/installation.md)
-- **Masz problemy?** Sprawdź nasz [przewodnik rozwiązywania problemów](user-guide/troubleshooting.md)
+- **Jesteś początkującym użytkownikiem?** Zacznij od naszego [Przewodnika użytkownika](user-guide/installation.md)
+- **Napotkałeś problem?** Odwiedź sekcję [Rozwiązywanie problemów](user-guide/troubleshooting.md)
 - **Znalazłeś błąd?** [Zgłoś go](https://github.com/garyttierney/me3/discussions/categories/bug-reports)
-- **Chcesz nową funkcję?** [Zgłoś ją](https://github.com/garyttierney/me3/discussions/categories/ideas)
+- **Masz pomysł na nową funkcję** [Zaproponuj ją](https://github.com/garyttierney/me3/discussions/categories/ideas)
