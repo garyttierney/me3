@@ -142,6 +142,31 @@ plugins:
             - 更新日志: changelog.md
             - 博客:
                 - blog/index.md
+          extra:
+            analytics:
+              provider: google
+              property: G-FMPH9RP5EH
+              feedback:
+                title: 这个页面有帮助吗？
+                ratings:
+                  - icon: material/emoticon-happy-outline
+                    name: 有帮助
+                    data: 1
+                    note: >-
+                      感谢您的反馈！
+                  - icon: material/emoticon-sad-outline
+                    name: 需要改进
+                    data: 0
+                    note: >-
+                      感谢您的反馈！
+            consent:
+              title: Cookie允许
+              actions:
+                - accept
+                - reject
+                - manage
+              description: >-
+                我们使用Cookie来识别您的重复访问和偏好，以及衡量我们文档的有效性以及用户是否找到他们要找的东西。在您同意的情况下，您正在帮助我们使我们的文档更好。
         - locale: pl
           name: Polski
           build: false
