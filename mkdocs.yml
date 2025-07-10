@@ -145,6 +145,20 @@ plugins:
         - locale: pl
           name: Polski
           build: false
+          site_name: me3 – framework do obsługi modów w grach FROMSOFTWARE
+          nav:
+            - index.md
+            - Przewodnik użytkownika:
+                - user-guide/installation.md
+                - user-guide/troubleshooting.md
+                - user-guide/faq.md
+                - Instrukcje: 
+                    - user-guide/creating-mod-profiles.md
+            - configuration-reference.md
+            - Pobierz: https://github.com/garyttierney/me3/releases/latest
+            - Lista zmian: changelog.md
+            - Blog: 
+                - blog/index.md
   - git-revision-date-localized:
       enable_creation_date: true
 

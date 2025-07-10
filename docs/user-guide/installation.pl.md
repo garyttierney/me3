@@ -10,7 +10,7 @@ Ten przewodnik zawiera instrukcje krok po kroku dotyczące instalacji `me3` -  p
 
     <h3>1. Pobierz instalator</h3>
 
-    Najpierw musisz pobrać instalator z oficjalnego źródła. Przejdź do [strony z wydaniami me3 na GitHubie](https://github.com/garyttierney/me3/releases/latest), która zawiera listę wszystkich dostępnych wersji.
+    Zacznij od pobrania instalatora z oficjalnego źródła. Przejdź do strony [GitHub releases](https://github.com/garyttierney/me3/releases/latest), która zawiera listę wszystkich dostępnych wersji.
 
     Po wybraniu wersji poszukaj pliku `me3_installer.exe` w sekcji "Assets" i pobierz go.
 
@@ -22,11 +22,11 @@ Ten przewodnik zawiera instrukcje krok po kroku dotyczące instalacji `me3` -  p
 
     Po zakończeniu pobierania pliku `me3_installer.exe` znajdź go w folderze Pobrane (lub w miejscu, w którym go zapisałeś) i kliknij go dwukrotnie, aby uruchomić kreatora instalacji.
 
-    Kreator instalacji poprowadzi Cię przez process konfiguracji. Po wybraniu miejsca instalacji kliknij "Instaluj", aby rozpocząć kopiowanie plików. Pasek postępu pokaże status instalacji, a po jej zakończeniu pojawi się ekran końcowy. Kliknij "Zakończ", aby zamknąć instalator.
+    Kreator instalacji poprowadzi Cię przez proces konfiguracji. Po wybraniu miejsca instalacji kliknij **Instaluj**, aby rozpocząć kopiowanie plików. Pasek postępu pokaże status instalacji, a po jej zakończeniu pojawi się ekran końcowy. Kliknij "Zakończ", aby zamknąć instalator.
 
 === ":fontawesome-brands-linux: Linux"
 
-    me3 dostarcza instalator w postaci skryptu powłoki dla systemu Linux, który pobiera przenośną wersję programu z GitHuba, rozpakowuje pliki do odpowiednich lokalizacji i może być uruchomiony jako tradycyjny instalator za pomocą jednej linii polecenia:
+    me3 zawiera instalator w postaci skryptu powłoki dla systemu Linux, który pobiera przenośną wersję programu z GitHuba, rozpakowuje pliki do odpowiednich lokalizacji i może być uruchomiony jako tradycyjny instalator za pomocą jednej linii polecenia:
 
     <h3>1. Uruchom skrypt instalatora</h3>
 
@@ -51,4 +51,4 @@ Zobacz `me3 launch --help`, aby uzyskać informacje na temat parametrów `auto-d
 
 ## Co dalej?
 
-Zapoznaj się z [dokumentacją konfiguracji](../configuration-reference.md) i [przewodnikiem konfiguracji profili](./creating-mod-profiles.md), aby dowiedzieć się jak zacząć używać modów z me3.
+Zapoznaj się z [Dokumentacją konfiguracji](../configuration-reference.md) i sekcją [Tworzenie profili modów](./creating-mod-profiles.md), aby dowiedzieć się jak zacząć używać modów z me3.
