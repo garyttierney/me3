@@ -8,13 +8,13 @@ hide:
 
 ## 什么是ModProfile (.me3文件)配置？
 
-**ModProfile 配置** 是一个版本化的 TOML 文件，它告诉me3要加载哪些mod，如何加载，以及它支持的游戏。 它是你的mod设置的一个清单, 列出了游戏资产覆盖包和本地的DLL，带有可选的装载顺序。
+**ModProfile 配置** 是一个版本化的 TOML 文件，它告诉me3要加载哪些mod，如何加载，以及它支持的游戏。它是你的mod设置的一个清单, 列出了游戏资产覆盖包（packages）和本地的DLL（natives），带有可选的加载顺序。
 
-- **如何使用：** me3 读取ModProfile (.me3文件) 以了解需要加载的模组以及顺序。 您可以通过双击它(在Windows中) 或使用 CLI (`me3 launching --profile my-profile.me3`)来启动一个配置文件。
-- **版本化：** `profileVersion`字段确保配置文件在发生破坏性变更后，旧版本配置仍能保持兼容性。
-- **灵活性：** 配置文件支持任意位置存储，可引用相对或绝对路径，并保持对 me3 新功能特性的兼容。
+- **如何使用：** me3 读取ModProfile (.me3文件) 以了解需要加载的模组以及顺序。 您可以通过双击它(在`Windows`中) 或使用 CLI (`me3 launching --profile my-profile.me3`)来启动一个配置文件。
+- **版本化：** `profileVersion`字段确保配置文件的格式在发生破坏性变更后，旧版本配置仍能保持兼容性。
+- **灵活性：** 配置文件（.me3文件）支持任意位置存储，可引用相对路径或绝对路径，并保持对 me3 新功能特性的兼容。
 
-## 配置示例
+## 配置示例（.me3文件）
 
 ```toml
 profileVersion = "v1"
@@ -39,6 +39,6 @@ path = 'mods/MyAwesomeMod.dll'
 
 ## 参考
 
-下方提供Mod Profile模式（schema）的渲染效果图示。
+下方提供Mod Profile（.me3文件）的格式规范。
 
 --8<-- "schemas/mod-profile.zh.md"

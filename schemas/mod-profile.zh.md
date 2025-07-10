@@ -32,7 +32,7 @@ id = "default-eldenring"
 path = 'C:/Users/admin/Desktop/mod'
 ```
 !!! warning "注意事项"
-    配置文件内所有标点符号都为英文，文件路径(比如`path`)需要用**单引号**包裹
+    配置文件内所有标点符号都为英文，文件路径(比如`path`)需要用 **单引号** 包裹
 
 
 ### <a id="Supports"></a>**`Supports`**
@@ -41,12 +41,13 @@ path = 'C:/Users/admin/Desktop/mod'
 - **`since`** *(非必填)*: (暂无实际作用)
 
 ### <a id="Game"></a>**`Game`**
-me3支持的游戏列表
-- **其中之一**
-    - 只狼：(Steam App ID: 814380). 必须其中之一: `["sekiro", "sdt"]`。
-    - 艾尔登法环: (Steam App ID: 1245620). 必须其中之一: `["eldenring", "er", "elden-ring"]`。
-    - 机甲核心6: (Steam App ID: 1888160). 必须其中之一: `["armoredcore6", "ac6"]`。
-    - 黑夜君临: (Steam App ID: 2622380). 必须其中之一: `["nightreign", "nr", "nightrein"]`。
+  me3支持的游戏列表
+
+  - **任选一个**
+    - 只狼：(Steam App ID: 814380). 必须其中一个: `["sekiro", "sdt"]`。
+    - 艾尔登法环: (Steam App ID: 1245620). 必须其中一个: `["eldenring", "er", "elden-ring"]`。
+    - 机甲核心6: (Steam App ID: 1888160). 必须其中一个: `["armoredcore6", "ac6"]`。
+    - 黑夜君临: (Steam App ID: 2622380). 必须其中一个: `["nightreign", "nr", "nightrein"]`。
 
 ### <a id="Native"></a>**`Native`**
 
@@ -60,7 +61,7 @@ me3支持的游戏列表
 
 ### <a id="Package"></a>**`Package`**
 
-游戏资产覆盖包，相当于mod引擎2中的mod文件夹
+  游戏资产覆盖包(相当于mod引擎2中的mod文件夹)
 
 - **`id`** *(必填)*: 覆盖包的唯一名称。
 - **`path`** *(必填)*: 游戏资产覆盖包路径。支持相对路径(相对于.me3文件)和绝对路径。
