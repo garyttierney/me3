@@ -38,16 +38,16 @@ game = "nightreign"
 
 [[packages]]
 id = "nightmods"
-path = "mod"
+path = 'mod'
 
 [[natives]]
-path = "natives/DisableChromaticAberration. ll"
+path = 'natives/DisableChromaticAberration.dll'
 
 [[natives]]
-path = "natives/SkipIntroLogos.dll"
+path = 'natives/SkipIntroLogos.dll'
 
 [[natives]]
-path = "natives/nightreign_alt_saves.dll"
+path = 'natives/nightreign_alt_saves.dll'
 ```
 
 Ten profil deklaruje pakiet zamiany zasobów o nazwie `nightmods` (używając wszystkich plików z folderu `mod`) i wymienia każdy mod `.dll` w folderze `natives`. Deklarujemy również, że nasz profil obsługuje NIGHTREIGN. Dzięki temu me3 wie, którą grę skonfigurować po dwukrotnym kliknięciu w celu uruchomienia.
