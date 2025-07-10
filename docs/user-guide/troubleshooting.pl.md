@@ -17,16 +17,16 @@ Problemy podczas początkowej konfiguracji modów zdarzają się często. Ta sek
 
 Pliki wykonywalne me3 są teraz podpisywane cyfrowo certyfikatem Certum, aby ograniczyć liczbę fałszywych alarmów. Jeśli Twój antywirus oznacza me3:
 
-- Sprawdź, czy pobrane pliki pochodzą z oficjalnych [wydań na GitHubie](https://github.com/garyttierney/me3/releases)
-- Dodaj instalator me3 i katalog instalacyjny me3 do wykluczeń antywirusa
+- Sprawdź, czy pobrane pliki pochodzą ze strony [GitHub releases](https://github.com/garyttierney/me3/releases).
+- Dodaj instalator me3 i katalog instalacyjny me3 do wykluczeń antywirusa.
 
 ### Gra nie uruchamia się
 
-- Upewnij się, że Steam jest uruchomiony przed uruchomieniem me3
-- Dokładnie sprawdź ścieżki wymienione w pliku .me3
-- (Windows) Uruchom (++windows+r++) `me3 info`, aby sprawdzić, czy instalacja przebiegła pomyślnie
-- (Linux) zweryfikuj, czy `windows_binaries_dir` jest ustawiony w pliku konfiguracyjnym (`~/.config/me3`)
+- Upewnij się, że Steam jest uruchomiony przed uruchomieniem me3.
+- Dokładnie sprawdź ścieżki wymienione w pliku .me3.
+- (Windows) Uruchom (++windows+r++) `me3 info`, aby sprawdzić, czy instalacja przebiegła pomyślnie.
+- (Linux) zweryfikuj, czy `windows_binaries_dir` jest ustawiony w pliku konfiguracyjnym (`~/.config/me3`).
 
 ## Nadal występują problemy?
 
-Zgłoś błąd lub poproś o pomoc na [forum dyskusyjnym](https://github.com/garyttierney/me3/discussions/)
+Zgłoś błąd lub poproś o pomoc na [Forum dyskusyjnym](https://github.com/garyttierney/me3/discussions/).
