@@ -38,7 +38,7 @@ game = "nightreign"
 
 [[packages]]
 id = "nightmods"
-source = "mod"
+path = "mod"
 
 [[natives]]
 path = "natives/DisableChromaticAberration. ll"
