@@ -33,22 +33,22 @@ Możesz użyć komendy `me3 launch` do wskazania niestandardowego pliku wykonywa
 ### (Linux) me3 zgłasza błąd krytyczny i nie uruchamia się
 
 !!! bug "Launcher może zawiesić się podczas uruchamiania, jeśli `crash_reporting` nie jest ustawiony w pliku konfiguracyjnym."
-    !!! success "Upewnij się, że plik konfiguracyjny `me3.toml` zawiera `crash_reporting = true` lub `crash_reporting = false`."
+!!! success "Upewnij się, że plik konfiguracyjny `me3.toml` zawiera `crash_reporting = true` lub `crash_reporting = false`."
 
 ### (Steam Deck) Gra nie uruchamia się, gdy jest zainstalowana na karcie SD
 
 !!! bug "me3 nie znajduje prefiksu zgodności dla gier zainstalowanych na karcie SD"
-    !!! success "Przenieś instalację gry do pamięci głównej lub utwórz dowiązanie symboliczne do folderu compat w bibliotece Steam"
+!!! success "Przenieś instalację gry do pamięci głównej lub utwórz dowiązanie symboliczne do folderu compat w bibliotece Steam"
 
 ### me3 jest poddawane kwarantannie przez oprogramowanie antywirusowe
 
 !!! bug "Niektóre programy antywirusowe mogą oznaczać launcher lub hosta modów jako złośliwe oprogramowanie."
-    !!! success "Dodaj wyjątek dla launchera/hosta modów w swoim antywirusie. Pobieraj tylko z oficjalnych źródeł."
+!!! success "Dodaj wyjątek dla launchera/hosta modów w swoim antywirusie. Pobieraj tylko z oficjalnych źródeł."
 
 ### Gra nadal jest uruchomiona w Steam po wyjściu z menu
 
 !!! bug "Procesy gry lub launchera mogą nie zawsze zamykać się prawidłowo"
-    !!! success "Ręcznie zakończ pozostałe procesy gry (np. za pomocą Menedżera zadań w systemie Windows)."
+!!! success "Ręcznie zakończ pozostałe procesy gry (np. za pomocą Menedżera zadań w systemie Windows)."
 
 ---
 

@@ -38,16 +38,16 @@ game = "nightreign"
 
 [[packages]]
 id = "nightmods"
-path = "mod"
+path = 'mod'
 
 [[natives]]
-path = "natives/DisableChromaticAberration.dll"
+path = 'natives/DisableChromaticAberration.dll'
 
 [[natives]]
-path = "natives/SkipIntroLogos.dll"
+path = 'natives/SkipIntroLogos.dll'
 
 [[natives]]
-path = "natives/nightreign_alt_saves.dll"
+path = 'natives/nightreign_alt_saves.dll'
 ```
 
 此配置文件声明了一个名为 `nightmods` 的游戏资产替换包（使用`mod`文件夹中的所有文件），并列出在`natives`文件夹中个每个`.dll` mod。 我们还声明我们的Mod Profile（.me3文件）支持NIGHTREIGN ，因此me3知道在使用双击启动时要配置的游戏。

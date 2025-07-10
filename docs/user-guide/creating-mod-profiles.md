@@ -38,16 +38,16 @@ game = "nightreign"
 
 [[packages]]
 id = "nightmods"
-source = "mod"
+path = 'mod'
 
 [[natives]]
-path = "natives/DisableChromaticAberration.dll"
+path = 'natives/DisableChromaticAberration.dll'
 
 [[natives]]
-path = "natives/SkipIntroLogos.dll"
+path = 'natives/SkipIntroLogos.dll'
 
 [[natives]]
-path = "natives/nightreign_alt_saves.dll"
+path = 'natives/nightreign_alt_saves.dll'
 ```
 
 This profile declares an asset replacement package named `nightmods` (using all files in the `mod` folder) and lists each `.dll` mod in the `natives` folder. We also declare that our profile supports NIGHTREIGN so me3 knows the game to configure when use double-click to launch.
