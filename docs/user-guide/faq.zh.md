@@ -33,22 +33,22 @@ me3 的全局配置文件在 Linux 上是 "$HOME/.config/me3/me3.toml"，在 Win
 ### （Linux）me3死机，无法启动
 
 !!! bug "如果配置文件中没有设置“crash_reporting”，启动程序可能会在启动时死机。"
-    !!! success "确保你的`me3.toml`配置文件包含`crash_reporting=true`或`crash-reporting=false`"
+!!! success "确保你的`me3.toml`配置文件包含`crash_reporting=true`或`crash-reporting=false`"
 
 ### （Steam Deck）将游戏安装到SD卡后，游戏无法启动
 
 !!! bug "me3 无法识别安装在 SD 卡中的游戏的兼容层路径（compatprefix）"
-    !!! success "请将游戏安装目录迁移至主存储器，或在您的 Steam 库中创建指向兼容层目录的符号链接"
+!!! success "请将游戏安装目录迁移至主存储器，或在您的 Steam 库中创建指向兼容层目录的符号链接"
 
 ### me3被杀毒软件隔离
 
 !!! bug "某些防病毒软件可能会将启动器或mod host（me3_mod_host.dll）标记为恶意。"
-    !!! success "在防病毒软件中为启动器/mod host（me3_mod_host.dll）添加白名单。 仅从官方来源下载。"
+!!! success "在防病毒软件中为启动器/mod host（me3_mod_host.dll）添加白名单。 仅从官方来源下载。"
 
 ### 退出菜单后，游戏仍在Steam中运行
 
 !!! bug "游戏或启动器进程可能无法始终实现完全退出"
-    !!! success "手动结束延迟的游戏进程（例如通过Windows上的任务管理器）。"
+!!! success "手动结束延迟的游戏进程（例如通过Windows上的任务管理器）。"
 
 ---
 

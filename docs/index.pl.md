@@ -7,7 +7,7 @@ hide:
 
 # Witaj w me3
 
-**me<sup>3</sup>** to framework zaprojektowany do modyfikacji gier w czasie rzeczywistym, ze szczególnym uwzględnieniem ELDEN RING i innych tytułów od FROMSOFTWARE. Jest to następca [ModEngine 2](https://github.com/garyttierney/me3).
+**me<sup>3</sup>** to framework zaprojektowany do modyfikacji gier w czasie rzeczywistym, ze szczególnym uwzględnieniem ELDEN RING i innych tytułów od FROMSOFTWARE. Jest to następca [ModEngine 2](https://github.com/soulsmods/ModEngine2).
 
 [Pobierz :fontawesome-solid-download:](https://github.com/garyttierney/me3/releases/latest){ .md-button .md-button--primary }
 

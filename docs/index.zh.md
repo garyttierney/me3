@@ -7,7 +7,7 @@ hide:
 
 # 欢迎使用me3
 
-**me<sup>3</sup>** 是一个专为游戏运行时修改而设计的框架，聚焦于ELDEN RING和FROMSOFTWARE的其他游戏。 它是 [Mod Engine 2](https://github.com/garyttierney/me3) 的继任者。
+**me<sup>3</sup>** 是一个专为游戏运行时修改而设计的框架，聚焦于ELDEN RING和FROMSOFTWARE的其他游戏。 它是 [Mod Engine 2](https://github.com/soulsmods/ModEngine2) 的继任者。
 
 [下载 :fontawesome-solid-download:](https://github.com/garyttierney/me3/releases/latest){ .md-button .md-button--primary }
 
