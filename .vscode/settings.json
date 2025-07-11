@@ -7,11 +7,8 @@
       "url": "schemas/mod-profile.json"
     }
   ],
-  "yaml.schemas": {
-    "schemas/mod-profile.json": "*.me3.yaml",
-    "https://json.schemastore.org/github-issue-config.json": "file:///home/gtierney/RustroverProjects/me3/.github/ISSUE_TEMPLATE/config.yml"
-  },
   "evenBetterToml.schema.associations": {
     "^.*\\.me3$": "file://schemas/mod-profile.json"
-  }
+  },
+  "git.alwaysSignOff": true
 }
