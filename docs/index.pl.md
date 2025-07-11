@@ -69,4 +69,4 @@ me3 launch --auto-detect -p eldenring-default
 - **Jesteś początkującym użytkownikiem?** Zacznij od naszego [Przewodnika użytkownika](user-guide/installation.md)
 - **Napotkałeś problem?** Odwiedź sekcję [Rozwiązywanie problemów](user-guide/troubleshooting.md)
 - **Znalazłeś błąd?** [Zgłoś go](https://github.com/garyttierney/me3/discussions/categories/bug-reports)
-- **Masz pomysł na nową funkcję?** [Zaproponuj ją](https://github.com/garyttierney/me3/discussions/categories/ideas)
+- **Masz pomysł na nową funkcję** [Zaproponuj ją](https://github.com/garyttierney/me3/discussions/categories/ideas)
