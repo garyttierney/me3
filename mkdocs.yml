@@ -184,6 +184,31 @@ plugins:
             - Lista zmian: changelog.md
             - Blog: 
                 - blog/index.md
+          extra:
+            analytics:
+              provider: google
+              property: G-FMPH9RP5EH
+              feedback:
+                title: Czy ta strona była pomocna?
+                ratings:
+                  - icon: material/emoticon-happy-outline
+                    name: Ta strona była pomocna
+                    data: 1
+                    note: >-
+                      Dziękujemy za opinię!
+                  - icon: material/emoticon-sad-outline
+                    name: Tę stronę można ulepszyć
+                    data: 0
+                    note: >-
+                      Dziękujemy za opinię!
+            consent:
+              title: Zgoda na pliki cookie
+              actions:
+                - akceptuj
+                - odrzuć
+                - zarządzaj
+              description: >-
+                Wykorzystujemy pliki cookie do rozpoznawania powtarzających się wizyt, zapamiętywania Twoich preferencji, mierzenia skuteczności naszej dokumentacji oraz sprawdzania, czy użytkownicy znajdują poszukiwane informacje. Wyrażając zgodę na pliki cookie, pomagasz nam ulepszać dokumentację.  
   - git-revision-date-localized:
       enable_creation_date: true
 
