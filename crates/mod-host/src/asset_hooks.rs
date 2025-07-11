@@ -139,7 +139,7 @@ fn hook_ebl_utility(
             let expanded = unsafe { device_manager.expand_path(path_cstr.as_wide()) };
 
             if mapping
-                .get_override(OsString::from_wide(&expanded))
+                .vfs_override(OsString::from_wide(&expanded))
                 .is_some()
             {
                 return None;
@@ -175,7 +175,7 @@ fn hook_device_manager(
             let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
 
             let (mapped_path, mapped_override) =
-                mapping.get_override(OsString::from_wide(&expanded))?;
+                mapping.vfs_override(OsString::from_wide(&expanded))?;
 
             info!("override" = mapped_path);
 
@@ -241,7 +241,7 @@ fn hook_set_path(
 
         let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
 
-        let (_, mapped_override) = mapping.get_override(OsString::from_wide(&expanded))?;
+        let (_, mapped_override) = mapping.vfs_override(OsString::from_wide(&expanded))?;
 
         let mut path = path.clone();
         path.replace(mapped_override);
