@@ -204,9 +204,9 @@ plugins:
             consent:
               title: Zgoda na pliki cookie
               actions:
-                - akceptuj
-                - odrzuć
-                - zarządzaj
+                - accept
+                - reject
+                - manage
               description: >-
                 Wykorzystujemy pliki cookie do rozpoznawania powtarzających się wizyt, zapamiętywania Twoich preferencji, mierzenia skuteczności naszej dokumentacji oraz sprawdzania, czy użytkownicy znajdują poszukiwane informacje. Wyrażając zgodę na pliki cookie, pomagasz nam ulepszać dokumentację.  
   - git-revision-date-localized:
