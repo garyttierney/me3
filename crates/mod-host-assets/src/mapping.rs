@@ -96,7 +96,7 @@ impl ArchiveOverrideMapping {
                 };
 
                 let as_wide = dir_entry.to_wide_with_nul().into_boxed_slice();
-                let as_string = dir_entry.to_string_with_nul();
+                let as_string = dir_entry.to_string_lossy().into_owned();
 
                 self.map.insert(vfs_key, (as_string, as_wide));
             }
@@ -114,12 +114,9 @@ impl ArchiveOverrideMapping {
     }
 
     fn get<P: AsRef<Path>>(&self, key: P) -> Option<(&str, &[u16])> {
-        self.map.get(key.as_ref()).map(|(p, w)| {
-            (
-                &p[..p.len().saturating_sub(1)],
-                &w[..w.len().saturating_sub(1)],
-            )
-        })
+        self.map
+            .get(key.as_ref())
+            .map(|(p, w)| (&p[..], &w[..w.len().saturating_sub(1)]))
     }
 }
 
@@ -184,17 +181,10 @@ impl fmt::Debug for ArchiveOverrideMapping {
 }
 
 trait OsStrExt {
-    fn to_string_with_nul(&self) -> String;
     fn to_wide_with_nul(&self) -> Vec<u16>;
 }
 
 impl<T: AsRef<OsStr>> OsStrExt for T {
-    fn to_string_with_nul(&self) -> String {
-        let mut string = self.as_ref().to_string_lossy().into_owned();
-        string.push('\0');
-        string
-    }
-
     fn to_wide_with_nul(&self) -> Vec<u16> {
         self.as_ref().encode_wide().chain(iter::once(0)).collect()
     }
