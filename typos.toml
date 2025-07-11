@@ -1,5 +1,5 @@
 [files]
-extend-exclude = ["CHANGELOG.md", "docs/**/*.pl.md", "docs/**/*.zh.md"]
+extend-exclude = ["mkdocs.yml", "CHANGELOG.md", "docs/**/*.pl.md", "docs/**/*.zh.md"]
 
 [default]
 extend-ignore-words-re = [
