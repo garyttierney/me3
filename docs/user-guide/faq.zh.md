@@ -37,8 +37,8 @@ me3 的全局配置文件在 Linux 上是 `$HOME/.config/me3/me3.toml`，在 Win
 
 ### （Steam Deck）将游戏安装到SD卡后，游戏无法启动
 
-!!! bug "me3 无法识别安装在 SD 卡中的游戏的兼容层路径（compatprefix）"
-!!! success "请将游戏安装目录迁移至主存储器，或在您的 Steam 库中创建指向兼容层目录的符号链接"
+!!! bug "me3 无法找到安装在 SD 卡中游戏的兼容层目录（compatprefix）"
+!!! success "请将游戏安装目录迁移至主存储器，或在您的 Steam 库（library）中创建指向兼容层目录的软链接"
 
 ### me3被杀毒软件隔离
 
