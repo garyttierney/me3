@@ -12,9 +12,11 @@
     <strong>
     A framework for modifying and instrumenting games.
     <br />
-    <a href="https://me3.help/en/latest">Documentation</a>
-    <br />
-    <br />
+    <p align="center">
+  <a href="https://me3.help/en"><img src="https://img.shields.io/badge/Documentation-🇬🇧-darkgrey?style=for-the-badge" alt="English"></a>
+  <a href="https://me3.help/zh"><img src="https://img.shields.io/badge/文档-🇨🇳-darkgrey?style=for-the-badge" alt="文档"></a>
+  <a href="https://me3.help/pl"><img src="https://img.shields.io/badge/Dokumentacja-🇵🇱-darkgrey?style=for-the-badge" alt="Dokumentacja"></a>
+    </p>
     <a href="https://github.com/garyttierney/me3/discussions/categories/bug-reports">Report Bug</a>
     ·
     <a href="https://github.com/garyttierney/me3/discussions/categories/ideas">Request Feature</a>
