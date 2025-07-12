@@ -53,13 +53,10 @@ fn hook_file_init(
 
     debug!("FileStep::STEP_Init" = ?init_fn);
 
-    let hook_span = info_span!("hook");
-
     ModHost::get_attached_mut()
         .hook(init_fn)
+        .with_span(info_span!("hook"))
         .with_closure(move |p1, trampoline| {
-            let _span_guard = hook_span.enter();
-
             let mut device_manager = match locate_device_manager(image_base) {
                 Ok(device_manager) => DlDeviceManager::lock(device_manager),
                 Err(e) => {
@@ -168,9 +165,7 @@ fn hook_device_manager(
     let override_path = {
         let mapping = mapping.clone();
 
-        let hook_span = info_span!("hook");
         move |path: &DlUtf16String| {
-            let _hook_guard = hook_span.enter();
             let path = path.get().ok()?;
             let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
 
@@ -194,6 +189,7 @@ fn hook_device_manager(
 
     ModHost::get_attached_mut()
         .hook(open_disk_file)
+        .with_span(info_span!("hook"))
         .with_closure(move |p1, path, p3, p4, p5, p6, trampoline| {
             let file_operator = if let Some(path) = override_path(unsafe { path.as_ref() }) {
                 unsafe {
@@ -274,13 +270,10 @@ fn try_hook_wwise(
 ) -> Result<(), eyre::Error> {
     let wwise_open_file = unsafe { find_wwise_open_file(image_base)? };
 
-    let hook_span = info_span!("hook");
-
     ModHost::get_attached_mut()
         .hook(wwise_open_file)
+        .with_span(info_span!("hook"))
         .with_closure(move |p1, path, open_mode, p4, p5, p6, trampoline| {
-            let _span_guard = hook_span.enter();
-
             let path_string = unsafe { PCWSTR::from_raw(path).to_string().unwrap() };
             debug!("asset" = path_string);
 

@@ -5,6 +5,7 @@ use closure_ffi::{
     BareFn,
 };
 use retour::Function;
+use tracing::Span;
 
 use crate::{
     detour::{install_detour, Detour, DetourError, UntypedDetour},
@@ -23,6 +24,7 @@ where
     enable_on_install: bool,
     source: Option<HookSource<F>>,
     storage: Option<&'a mut Vec<Arc<UntypedDetour>>>,
+    span: Span,
     target: F,
 }
 
@@ -30,15 +32,18 @@ impl<'a, F> HookInstaller<'a, F>
 where
     F: Function,
 {
+    #[inline]
     pub fn new(storage: Option<&'a mut Vec<Arc<UntypedDetour>>>, target: F) -> Self {
         Self {
             enable_on_install: true,
             source: None,
             storage,
+            span: Span::none(),
             target,
         }
     }
 
+    #[inline]
     #[allow(unused)]
     pub fn with(self, source: F) -> Self {
         Self {
@@ -47,16 +52,19 @@ where
         }
     }
 
-    pub fn with_closure<C>(self, closure: C) -> Self
+    #[inline]
+    pub fn with_closure<C>(mut self, closure: C) -> Self
     where
         C: Fn<<F::Arguments as Append<F>>::Output, Output = F::Output> + 'static,
         F: FnPtr,
         F::Arguments: Append<F>,
         (F::CC, WithAppended<C, F>): FnThunk<F>,
     {
-        let trampoline: &OnceCell<F> = Box::leak(Box::<OnceCell<F>>::default());
+        let span = mem::replace(&mut self.span, Span::none());
 
-        let with_appended = WithAppended::new(closure, trampoline);
+        let trampoline = Box::leak(Box::<OnceCell<F>>::default());
+
+        let with_appended = WithAppended::new(closure, span, trampoline);
 
         let bare: BareFn<_> = with_appended.bare();
 
@@ -66,6 +74,12 @@ where
         }
     }
 
+    #[inline]
+    pub fn with_span(self, span: Span) -> Self {
+        Self { span, ..self }
+    }
+
+    #[inline]
     pub fn install(self) -> Result<Arc<Detour<F>>, DetourError> {
         let mut uninit_trampoline = None;
 

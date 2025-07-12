@@ -4,7 +4,7 @@ use std::{
 };
 
 use eyre::{eyre, OptionExt};
-use tracing::{instrument, Level};
+use tracing::{instrument, Level, Span};
 use windows::{
     core::{s, w},
     Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW},
@@ -22,7 +22,7 @@ static DEFERRED: Mutex<DeferredOnce> = Mutex::new(Some(Vec::new()));
 ///
 /// This implementation hooks `SteamAPI_SteamInit`.
 #[instrument(skip_all, err)]
-pub fn defer_until_init<F>(f: F) -> Result<(), eyre::Error>
+pub fn defer_until_init<F>(span: Span, f: F) -> Result<(), eyre::Error>
 where
     F: FnOnce() + Send + 'static,
 {
@@ -31,7 +31,7 @@ where
     HOOKED_STEAM_INIT.as_ref().map_err(|e| eyre!(e))?;
 
     if let Some(deferred) = &mut *DEFERRED.lock().unwrap() {
-        deferred.push(Box::new(f));
+        deferred.push(Box::new(move || span.in_scope(f)));
 
         Ok(())
     } else {

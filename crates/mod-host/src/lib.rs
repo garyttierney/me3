@@ -10,9 +10,7 @@ use std::{
 };
 
 use me3_env::TelemetryVars;
-use me3_launcher_attach_protocol::{
-    AttachConfig, AttachRequest, AttachResult, Attachment, HostMessage,
-};
+use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, AttachResult, Attachment};
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use me3_telemetry::TelemetryConfig;
 use tracing::{error, info, Span};
@@ -99,13 +97,10 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         info!("Host successfully attached");
 
-        defer_until_init({
-            let current_span = Span::current();
+        defer_until_init(Span::current(), {
             let override_mapping = override_mapping.clone();
 
             move || {
-                let _span_guard = current_span.enter();
-
                 for native in natives {
                     let mut host = ModHost::get_attached_mut();
                     if let Err(e) = host.load_native(&native.path, native.initializer) {
