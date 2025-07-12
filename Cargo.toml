@@ -9,6 +9,7 @@ members = [
   "crates/telemetry",
   "crates/env",
   "crates/xtask",
+  "crates/config",
 ]
 resolver = "2"
 
@@ -23,6 +24,7 @@ unused = "warn"
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
 
 [workspace.lints.clippy]
+collapsible_if = "allow"
 missing_transmute_annotations = "allow"
 
 [workspace.dependencies]
