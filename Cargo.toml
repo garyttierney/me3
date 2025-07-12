@@ -9,7 +9,6 @@ members = [
   "crates/telemetry",
   "crates/env",
   "crates/xtask",
-  "crates/config",
 ]
 resolver = "2"
 

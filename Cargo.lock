@@ -1441,10 +1441,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "me3-config"
-version = "0.6.0-prerelease"
-
-[[package]]
 name = "me3-env"
 version = "0.6.1"
 dependencies = [
