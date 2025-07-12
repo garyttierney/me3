@@ -10,7 +10,7 @@ use me3_mod_protocol::{
 };
 use tracing::{debug, error, warn};
 
-use crate::{output::OutputBuilder, Config, Game};
+use crate::{config::Config, output::OutputBuilder, Game, Options};
 
 #[derive(Subcommand, Debug)]
 #[command(flatten_help = true)]
@@ -59,9 +59,9 @@ pub struct ProfileCreateArgs {
     overwrite: bool,
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(config))]
 pub fn list(config: Config) -> color_eyre::Result<()> {
-    let profile_dir = config.profile_dir.ok_or_else(no_profile_dir)?;
+    let profile_dir = config.profile_dir().ok_or_else(no_profile_dir)?;
 
     debug!("searching in {profile_dir:?} for profiles");
 
@@ -80,7 +80,7 @@ pub fn list(config: Config) -> color_eyre::Result<()> {
     Ok(())
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(config))]
 pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()> {
     let profile_path = if args.file {
         PathBuf::from(args.name)

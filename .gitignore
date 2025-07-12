@@ -39,3 +39,7 @@ dist/
 
 # Python
 *.pyc
+
+# mkdocs
+/.cache/
+/site/
