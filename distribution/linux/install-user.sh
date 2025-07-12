@@ -15,10 +15,13 @@ install -Dpm 0644 -t "${datadir}/applications" dist/me3-launch.desktop
 install -Dpm 0644 -t "${datadir}/mime/packages" dist/me3.xml
 install -Dpm 0644 -t "${datadir}/icons/hicolor/128x128/apps" dist/me3.png
 
-# config file should just be packaged too
 # -e instead of -f because the user could have it symlinked
 if [ ! -e "${confdir}/me3/me3.toml" ]; then
-    install -Dpm 0644 -t "${confdir}/me3" dist/me3.toml
+    mkdir -p "${confdir}/me3"
+    cat >"${confdir}/me3/me3.toml" <<EOF
+crash_reporting = false
+windows_binaries_dir = "${datadir}/me3/windows-bin"
+EOF
 fi
 
 # install example profiles?
