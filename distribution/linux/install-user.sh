@@ -14,8 +14,7 @@ install -Dpm 0644 -t "${datadir}/applications" dist/me3-launch.desktop
 install -Dpm 0644 -t "${datadir}/mime/packages" dist/me3.xml
 install -Dpm 0644 -t "${datadir}/icons/hicolor/128x128/apps" dist/me3.png
 
-# -e instead of -f because the user could have it symlinked
-if [ ! -e "${confdir}/me3/me3.toml" ]; then
+if [ ! -f "${confdir}/me3/me3.toml" ]; then
     mkdir -p "${confdir}/me3"
     cat >"${confdir}/me3/me3.toml" <<EOF
 crash_reporting = false
