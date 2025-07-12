@@ -68,17 +68,13 @@ fn hook_create_file(kb: HMODULE, mapping: Arc<ArchiveOverrideMapping>) -> Result
         )
     };
 
-    let hook_span = info_span!("hook");
-
     ModHost::get_attached_mut()
         .hook(create_file_w)
+        .with_span(info_span!("hook"))
         .with_closure({
             let mapping = mapping.clone();
-            let hook_span = hook_span.clone();
 
             move |p1, p2, p3, p4, p5, p6, p7, trampoline| unsafe {
-                let _span_guard = hook_span.enter();
-
                 if p1.is_null() {
                     return trampoline(p1, p2, p3, p4, p5, p6, p7);
                 }
@@ -99,12 +95,11 @@ fn hook_create_file(kb: HMODULE, mapping: Arc<ArchiveOverrideMapping>) -> Result
 
     ModHost::get_attached_mut()
         .hook(create_file_2)
+        .with_span(info_span!("hook"))
         .with_closure({
             let mapping = mapping.clone();
 
             move |p1, p2, p3, p4, p5, trampoline| unsafe {
-                let _span_guard = hook_span.enter();
-
                 if p1.is_null() {
                     return trampoline(p1, p2, p3, p4, p5);
                 }

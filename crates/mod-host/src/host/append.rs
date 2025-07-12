@@ -5,6 +5,7 @@ use closure_ffi::{
     BareFnAny,
 };
 use seq_macro::seq;
+use tracing::Span;
 
 pub trait Append<T>: Tuple {
     type Output: Tuple;
@@ -39,6 +40,7 @@ where
     Appended: Clone + 'static,
 {
     closure: Closure,
+    span: Span,
     appended: &'static OnceCell<Appended>,
 }
 
@@ -46,8 +48,12 @@ impl<Closure, Appended> WithAppended<Closure, Appended>
 where
     Appended: Clone + 'static,
 {
-    pub fn new(closure: Closure, appended: &'static OnceCell<Appended>) -> Self {
-        Self { closure, appended }
+    pub fn new(closure: Closure, span: Span, appended: &'static OnceCell<Appended>) -> Self {
+        Self {
+            closure,
+            span,
+            appended,
+        }
     }
 
     pub fn bare<'a, B: FnPtr, S: ?Sized>(self) -> BareFnAny<B, S>
@@ -67,7 +73,10 @@ where
 {
     type Output = Ret;
 
+    #[inline]
     extern "rust-call" fn call_once(self, args: Args) -> Self::Output {
+        let _span_guard = self.span.enter();
+
         self.closure.call_once(
             args.append(
                 self.appended
@@ -85,7 +94,10 @@ where
     Args: Tuple + Append<Appended>,
     Appended: Clone + 'static,
 {
+    #[inline]
     extern "rust-call" fn call_mut(&mut self, args: Args) -> Self::Output {
+        let _span_guard = self.span.enter();
+
         self.closure.call_mut(
             args.append(
                 self.appended
@@ -103,7 +115,10 @@ where
     Args: Tuple + Append<Appended>,
     Appended: Clone + 'static,
 {
+    #[inline]
     extern "rust-call" fn call(&self, args: Args) -> Self::Output {
+        let _span_guard = self.span.enter();
+
         self.closure.call(
             args.append(
                 self.appended
