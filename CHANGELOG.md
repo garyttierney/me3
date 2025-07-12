@@ -4,6 +4,170 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
+## me3 - [v0.7.0](https://github.com/garyttierney/me3/releases/v0.7.0) - 2025-07-12
+
+### 🚀 Features
+
+- [3e5fbe6](https://github.com/garyttierney/me3/commit/3e5fbe6b4d34ca2211bc50efd541e715418ad214) Launch .me3 profiles on Linux in [#304](https://github.com/garyttierney/me3/pull/304)
+
+
+  > This allows .me3 profiles to be run by double-clicking on Linux desktop.
+
+  > - Mainly for non-portable installs. `me3` should be in PATH.
+  > - `me3-launch.desktop` should be installed to
+  > `~/.local/share/applications/` (user) or `/usr/share/applications/`
+  > (system).
+  > - `me3.xml` should be installed to `~/.local/share/mime/packages/` or
+  > `/usr/share/mime/packages/`
+  > - `distribution/assets/me3.png` should be installed to
+  > `~/.local/share/icons/hicolor/128x128/apps/` or
+  > `/usr/share/icons/hicolor/128x128/apps/`
+  > - After installing files, may require running `update-desktop-database`
+  > and `update-mime-database`, or restarting your file manager (depends on
+  > DE/FM)
+  > - The desktop file does not show in application launchers / menus; it's
+  > only for associating with the mime file.
+
+
+- [c8f1c55](https://github.com/garyttierney/me3/commit/c8f1c55f1c134d3a5f63e0db56d2ff3ab24f6519) Setup translations for docs site with Crowdin in [#289](https://github.com/garyttierney/me3/pull/289)
+
+
+
+### 🐛 Bug Fixes
+
+- [4aca1c7](https://github.com/garyttierney/me3/commit/4aca1c740217863c60ce35eaa07136137c81b699)  *(host)* Use filesystem hooks in [#330](https://github.com/garyttierney/me3/pull/330)
+
+
+  > During the mod host initialization routine (before loading natives) hook
+  > the following functions:
+
+  > >CreateFileW, CreateFile2, CreateDirectoryW, CreateDirectoryExW,
+  > DeleteFileW
+
+  > This allows for files looked up inside the game directory like mod
+  > configs and other files to be loaded from the corresponding mod
+  > packages.
+
+
+- [89880a0](https://github.com/garyttierney/me3/commit/89880a0adee917587112b546cf090e01022f02b3)  *(linux)* Correctly set mtime of tarball contents in [#308](https://github.com/garyttierney/me3/pull/308)
+
+
+  > Fixes #307
+
+- [050a41d](https://github.com/garyttierney/me3/commit/050a41d3033ea18bdd12dad789e7e7fe00ebe5fc) Respect native.enabled/package.enabled in [#299](https://github.com/garyttierney/me3/pull/299)
+
+
+  > Fixes #298
+
+- [5896daf](https://github.com/garyttierney/me3/commit/5896dafded3d3b88364a4bfadce24aca204bbf67) Validate mod profile filepaths in [#287](https://github.com/garyttierney/me3/pull/287)
+
+
+  > Skip invalid and nonexistent paths in mod profiles before passing them
+  > to the mod host, preventing hard errors.
+
+  > Closes #240
+
+- [a5e3db4](https://github.com/garyttierney/me3/commit/a5e3db4db6cbcc0b19d8da161450e605aa8a8325) Don't stop path discovery on every filesystem error
+
+
+
+- [c5fb8cc](https://github.com/garyttierney/me3/commit/c5fb8cc8a64d6178bb9eb0bd78436af310963890) Exclude nonexistent paths and warn the user
+
+
+
+- [c12976d](https://github.com/garyttierney/me3/commit/c12976dcc7a0695adefc7f4b52cbc12d7fd479be) Don't block shutdown with monitor thread in [#285](https://github.com/garyttierney/me3/pull/285)
+
+
+  > This exists purely to signal minidump crash events, which are currently
+  > not enabled in the latest release. Get rid of the infrastructure for
+  > handling it via pipes, and we'll use `WaitForMultipleObjects` on the
+  > process/crash event.
+
+  > Additionally switch the mod host to logging to `stdout`, so we capture
+  > logs from any other DLL mods in use.
+
+  > Fixes #270.
+
+- [aa10096](https://github.com/garyttierney/me3/commit/aa10096e16f715871ba9c4db50f9608c8ff27f22) Add singular profile aliases for packages/natives in [#283](https://github.com/garyttierney/me3/pull/283)
+
+
+
+- [c38f7e6](https://github.com/garyttierney/me3/commit/c38f7e675a0e84b33037ac7a5658716e4c3019b0) Add .sh extension to example Linux scripts in [#282](https://github.com/garyttierney/me3/pull/282)
+
+
+  > Closes #280
+
+- [bed1c98](https://github.com/garyttierney/me3/commit/bed1c980da385e02c4cab436686bb73de18ceaf5) Version list in GitHub issue template in [#278](https://github.com/garyttierney/me3/pull/278)
+
+
+
+### 📚 Documentation
+
+- [b2d3d76](https://github.com/garyttierney/me3/commit/b2d3d768fd3f43c45fa0cb13bd731d4655973f01)  *(pl)* Localization of cookie consent in [#333](https://github.com/garyttierney/me3/pull/333)
+
+
+
+- [f3409f4](https://github.com/garyttierney/me3/commit/f3409f46e9abeac37b6d9b9dcd094d71f42e6fe5)  *(pl)* L10n refinements and MT corrections in [#326](https://github.com/garyttierney/me3/pull/326)
+
+
+
+- [ed6b486](https://github.com/garyttierney/me3/commit/ed6b486fa0060eca0dc08bfadf5bc84b0a414ec4)  *(zh)* Partial revision of computer terminology in [#329](https://github.com/garyttierney/me3/pull/329)
+
+
+
+- [b2ef03a](https://github.com/garyttierney/me3/commit/b2ef03a6b2052c717e611f7520f8099abaa306ef)  *(zh)* Localize user feedback prompt and cookie consent in [#323](https://github.com/garyttierney/me3/pull/323)
+
+
+
+- [e6a63cf](https://github.com/garyttierney/me3/commit/e6a63cf5068a17b46416a8279a8c8b2a01ebcdb6)  *(zh)* Refine Simplified Chinese translations in [#324](https://github.com/garyttierney/me3/pull/324)
+
+
+
+- [7ef38bd](https://github.com/garyttierney/me3/commit/7ef38bd859fa5548ac6c60972a1c6d45e5f7afce) Fix typos and syntax shifted by l10n in [#320](https://github.com/garyttierney/me3/pull/320)
+
+
+
+- [91a06aa](https://github.com/garyttierney/me3/commit/91a06aaec9635269a5111857dab7f812b6b814b0) Localize navigation to Simplified Chinese in [#322](https://github.com/garyttierney/me3/pull/322)
+
+
+
+- [f3cd704](https://github.com/garyttierney/me3/commit/f3cd704ed059d524e034bbb41cd35ac7c7ebaf21) Translate Mod Profile schema docs in [#321](https://github.com/garyttierney/me3/pull/321)
+
+
+
+- [5e66b88](https://github.com/garyttierney/me3/commit/5e66b88215cf74ced183d4eb0ed0ccce73ab4a37) Chinese (language) not Chinese (nationality) in [#319](https://github.com/garyttierney/me3/pull/319)
+
+
+  > 中国人 = Chinese (nationality)
+  > 中文 = Chinese (language)
+
+
+- [0187c55](https://github.com/garyttierney/me3/commit/0187c554f0b91d80bd0e109aa62707f08c97f6fe) Add Chinese and Polish translations in [#318](https://github.com/garyttierney/me3/pull/318)
+
+
+  > Adds the recent translations contributed by the community to the
+  > documentation site.
+  > A new language selector is available to switch between different
+  > languages.
+
+
+- [1a46c82](https://github.com/garyttierney/me3/commit/1a46c8270ee9fd3de81e14d28394ea9134329677) Add SECURITY.md in [#314](https://github.com/garyttierney/me3/pull/314)
+
+
+
+- [2abb7bb](https://github.com/garyttierney/me3/commit/2abb7bb3adedc475f5c0c0ad8652f6cf1d87f6cd) Fix 'value' typo in natives doc comment in [#297](https://github.com/garyttierney/me3/pull/297)
+
+
+
+- [6ad57b1](https://github.com/garyttierney/me3/commit/6ad57b111b29a537aec9f2ab5c68f44ad2b4c3a0) Fix typo in FROMSOFTWARE in [#295](https://github.com/garyttierney/me3/pull/295)
+
+
+  > Change "FROMSOTWARE" -> "FROMSOFTWARE"
+
+
+- [b19b629](https://github.com/garyttierney/me3/commit/b19b629120dcafb5dd90129d2a9583c88a6783ec) Complete initial release documentation tasks in [#284](https://github.com/garyttierney/me3/pull/284)
+
+
 ## me3 - [v0.6.1](https://github.com/garyttierney/me3/releases/v0.6.1) - 2025-06-30
 
 ### 🐛 Bug Fixes
@@ -2004,6 +2168,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
+[0.7.0]: https://github.com/garyttierney/me3/compare/v0.6.1..v0.7.0
 [0.6.1]: https://github.com/garyttierney/me3/compare/v0.6.0..v0.6.1
 [0.6.0]: https://github.com/garyttierney/me3/compare/v0.5.0..v0.6.0
 [0.5.0]: https://github.com/garyttierney/me3/compare/v0.4.0..v0.5.0
