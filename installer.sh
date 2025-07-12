@@ -311,17 +311,7 @@ main() {
     need_cmd rmdir
     need_cmd tar
 
-    local me3_version
-    local me3_windows_binary_dir
-
     me3_version=${VERSION:-"$INSTALLER_VERSION"}
-
-    if [ "$me3_version" = "prerelease" ]; then
-        warn "installing prerelease version"
-    fi
-
-    me3_windows_binary_dir="${WINDOWS_BINARY_DIR:-$HOME/.local/share/me3/windows-bin}"
-    me3_binary_dir="$HOME/.local/bin"
 
     local _ansi_escapes_are_valid=false
     if [ -t 2 ]; then
@@ -334,66 +324,44 @@ main() {
         fi
     fi
 
-    local _dir
-    if ! _dir="$(ensure mktemp -d)"; then
+    local dir
+    if ! dir="$(ensure mktemp -d)"; then
         # Because the previous command ran in a subshell, we must manually
         # propagate exit status.
         exit 1
     fi
 
-    local _distfile="me3-linux-amd64.tar.gz"
-    say "downloading $_distfile"
-    downloader "https://github.com/garyttierney/me3/releases/download/$me3_version/me3-linux-amd64.tar.gz" "$_dir/$_distfile"
+    local localdistfile="$1"
+    local distfile="me3-linux-amd64.tar.gz"
+    local distfilepath
 
-    if check_cmd gh; then
-        ensure gh attestation verify --owner garyttierney "$_dir/$_distfile" >/dev/null
-        say "successfully verified $_distfile"
-    fi
-
-    local _distdir="$_dir/dist"
-    ensure mkdir -p "$_distdir"
-    ensure tar xf "$_dir/$_distfile" -C "$_distdir"
-
-    ensure mkdir -p "$me3_windows_binary_dir"
-    ensure mkdir -p "$me3_binary_dir"
-
-    ensure mv "$_distdir/bin/me3" "$me3_binary_dir"
-    ensure mv "$_distdir/bin/win64/me3_mod_host.dll" "$me3_windows_binary_dir"
-    ensure mv "$_distdir/bin/win64/me3-launcher.exe" "$me3_windows_binary_dir"
-
-    say "installed me3 to $me3_binary_dir, windows binaries to $me3_windows_binary_dir"
-
-    local _config_home_path="${XDG_CONFIG_HOME:-$HOME/.config}/me3"
-    local _config_path="$_config_home_path/me3.toml"
-
-    if [ ! -f "$_config_path" ]; then
-        ensure mkdir -p "$_config_home_path"
-        say "creating default me3 configuration at $_config_path"
-        ensure cat >"$_config_path" <<EOF
-windows_binaries_dir = "$me3_windows_binary_dir"
-EOF
-        if [ -t 0 ]; then
-            while true; do
-                read -r -p "Enable crash reporting? " yn
-                case $yn in
-                [Yy]*)
-                    echo "crash_reporting = true" >>"$_config_path"
-                    break
-                    ;;
-                [Nn]*) exit ;;
-                *) echo "Please answer yes or no." ;;
-                esac
-            done
-        fi
+    if [ -f "$localdistfile" ]; then
+        distfilepath="$localdistfile"
+        say "using local tarball $localdistfile"
     else
-        warn "configuration file already exists, ensure windows_binaries_dir is set to $me3_windows_binary_dir"
+        distfilepath="$dir/$distfile"
+        say "downloading $distfile"
+        downloader "https://github.com/garyttierney/me3/releases/download/$me3_version/me3-linux-amd64.tar.gz" "$distfilepath"
     fi
+
+    local distdir="$dir/dist"
+    ensure mkdir -p "$distdir"
+    ensure tar vxf "$distfilepath" -C "$distdir"
+    {
+        ensure cd "$distdir"
+        ensure "$distdir/dist/install-user.sh"
+    }
 
     if ! check_cmd me3; then
         say "me3 is not available on PATH, make sure to update your shell profile\nPATH=\"\$PATH:$HOME/.local/bin\""
     fi
 
-    ensure rm -rf "$_dir"
+    datadir=${XDG_DATA_HOME:-$HOME/.local/share}
+
+    check_cmd update-mime-database && update-mime-database "$datadir/mime"
+    check_cmd update-desktop-database && update-desktop-database "$datadir/applications"
+
+    ensure rm -rf "$dir"
 }
 
 set +u

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-me3">
+    <comment xml:lang="en">me3 profile</comment>
+    <icon name="me3"/>
+    <glob pattern="*.me3"/>
+    <sub-class-of type="application/toml"/>
+  </mime-type>
+</mime-info>
