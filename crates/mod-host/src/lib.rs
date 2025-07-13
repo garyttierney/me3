@@ -45,7 +45,7 @@ dll_syringe::payload_procedure! {
 #[cfg(coverage)]
 #[unsafe(no_mangle)]
 #[allow(non_upper_case_globals)]
-static __lvm_profile_runtime: i32 = 1;
+static __llvm_profile_runtime: i32 = 1;
 
 #[cfg(coverage)]
 unsafe extern "C" {
