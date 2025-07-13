@@ -1,4 +1,5 @@
 #![windows_subsystem = "windows"]
+#![feature(windows_process_extensions_main_thread_handle)]
 
 use eyre::Context;
 use me3_env::{LauncherVars, TelemetryVars};
