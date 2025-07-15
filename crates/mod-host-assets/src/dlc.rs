@@ -9,13 +9,13 @@ pub fn mount_dlc_ebl(class_map: &ClassMap) -> Option<MountDlcEbl> {
         mount_dlc_ebl: MountDlcEbl,
     }
 
-    let vtable = class_map
-        .get("CS::CSDlcPlatformImp_forSteam")?
-        .first()?
-        .as_ptr::<Vtable>();
-
-    // SAFETY: vtable pointer in `class_map` is aligned.
-    let mount_dlc_ebl = unsafe { std::ptr::read(&raw const vtable.as_ref()?.mount_dlc_ebl) };
+    let mount_dlc_ebl = unsafe {
+        class_map
+            .get("CS::CSDlcPlatformImp_forSteam")?
+            .first()?
+            .as_ref::<Vtable>()
+            .mount_dlc_ebl
+    };
 
     Some(mount_dlc_ebl)
 }

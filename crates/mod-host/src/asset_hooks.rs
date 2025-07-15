@@ -29,7 +29,7 @@ static VFS: Mutex<VfsMounts> = Mutex::new(VfsMounts::new());
 pub fn attach_override(
     _game: Game,
     exe: Executable,
-    class_map: Arc<ClassMap>,
+    class_map: Arc<ClassMap<'static>>,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     hook_file_init(exe, class_map.clone(), mapping.clone())?;
@@ -48,7 +48,7 @@ pub fn attach_override(
 #[instrument(name = "file_step", skip_all)]
 fn hook_file_init(
     exe: Executable,
-    class_map: Arc<ClassMap>,
+    class_map: Arc<ClassMap<'static>>,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     let init_fn = file_step::find_init_fn(exe)?;

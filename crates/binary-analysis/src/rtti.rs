@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ffi::CStr, ops::Range, ptr};
+use std::{collections::HashMap, ffi::CStr, marker::PhantomData, ops::Range, ptr};
 
 use pelite::pe::{
     msvc::{
@@ -25,10 +25,13 @@ pub enum RttiError {
     Bounds,
 }
 
-pub type ClassMap = HashMap<Box<str>, Box<[UntypedVTable]>>;
+pub type ClassMap<'a> = HashMap<Box<str>, Box<[UntypedVTable<'a>]>>;
 
 #[derive(Clone, Copy, Debug)]
-pub struct UntypedVTable(*const Va);
+pub struct UntypedVTable<'a> {
+    inner: *const Va,
+    _marker: PhantomData<&'a Va>,
+}
 
 #[derive(Clone)]
 pub struct ClassRttiData<'a, P>
@@ -58,7 +61,7 @@ where
     inner: &'a RTTIBaseClassDescriptor,
 }
 
-pub fn classes<'a, P>(program: P) -> Result<ClassMap, RttiError>
+pub fn classes<'a, P>(program: P) -> Result<ClassMap<'a>, RttiError>
 where
     P: Pe<'a> + Send + Sync,
 {
@@ -148,26 +151,36 @@ where
     Ok(map)
 }
 
-impl UntypedVTable {
+impl<'a> UntypedVTable<'a> {
     /// # Safety
     ///
     /// `ptr` must be pointing to the beginning of a vtable,
     /// preceded by a valid complete object locator pointer.
     const unsafe fn new(ptr: *const Va) -> Self {
-        Self(ptr)
+        Self {
+            inner: ptr,
+            _marker: PhantomData,
+        }
     }
 
     pub fn as_ptr<T>(self) -> *const T {
-        self.0.cast()
+        self.inner.cast()
     }
 
-    pub fn col<'a, P>(self, program: P) -> Result<ClassRttiData<'a, P>, pelite::Error>
+    /// # Safety
+    /// 
+    /// The vtable layout must be representible as `T`.
+    pub unsafe fn as_ref<T>(self) -> &'a T {
+        unsafe { *self.as_ptr() }
+    }
+
+    pub fn col<P>(self, program: P) -> Result<ClassRttiData<'a, P>, pelite::Error>
     where
         P: Pe<'a>,
     {
         // SAFETY: safe by contract of `UntypedVTable::new`.
         let col: &RTTICompleteObjectLocator = program
-            .va_to_rva(unsafe { self.0.sub(1).read() })
+            .va_to_rva(unsafe { self.inner.sub(1).read() })
             .and_then(|rva| program.derva(rva))?;
 
         Ok(ClassRttiData {
@@ -258,6 +271,6 @@ where
     }
 }
 
-unsafe impl Send for UntypedVTable {}
+unsafe impl Send for UntypedVTable<'_> {}
 
-unsafe impl Sync for UntypedVTable {}
+unsafe impl Sync for UntypedVTable<'_> {}

@@ -28,13 +28,12 @@ impl EblFileManager {
     {
         class_map
             .get("DLEBL::DLEncryptedBinderLightUtility")
-            .and_then(|vmt| Some(vmt.first()?.as_ptr::<EblUtilityVtable>()))
+            .and_then(|vmt| unsafe { Some(vmt.first()?.as_ref::<EblUtilityVtable>()) })
             .or_else(|| Self::make_ebl_object_from_singleton(program))
-            .and_then(|ptr| unsafe { ptr.as_ref() })
             .map(|vmt| vmt.make_ebl_object)
     }
 
-    fn make_ebl_object_from_singleton<'a, P>(program: P) -> Option<*const EblUtilityVtable>
+    fn make_ebl_object_from_singleton<'a, P>(program: P) -> Option<&'a EblUtilityVtable>
     where
         P: Pe<'a>,
     {
@@ -53,7 +52,9 @@ impl EblFileManager {
                 ptr.read()
             };
 
-            ptr.cast::<*const EblUtilityVtable>().as_ref().copied()
+            ptr.cast::<*const EblUtilityVtable>()
+                .as_ref()
+                .and_then(|ptr| ptr.as_ref())
         }
     }
 }

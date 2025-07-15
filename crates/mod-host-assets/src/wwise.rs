@@ -130,8 +130,7 @@ fn find_wwise_open_file_fn_by_rtti(class_map: &ClassMap) -> Option<WwiseOpenFile
         class_map
             .get("DLMOW::IOHookBlocking")?
             .first()?
-            .as_ptr::<FilePackageLowLevelIOBlockingVtable>()
-            .as_ref()?
+            .as_ref::<FilePackageLowLevelIOBlockingVtable>()
             .open_by_name
     };
 
