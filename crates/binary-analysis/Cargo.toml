@@ -1,8 +1,9 @@
 [package]
 name = "me3-binary-analysis"
 version = "0.6.1"
-repository.workspace = true
 edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
 license.workspace = true
 publish = false
 

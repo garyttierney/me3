@@ -2,6 +2,7 @@
 name = "me3-mod-host"
 version = "0.6.1"
 edition.workspace = true
+rust-version.workspace = true
 repository.workspace = true
 license.workspace = true
 description = "Host DLL providing game extension functionality"

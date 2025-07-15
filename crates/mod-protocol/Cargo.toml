@@ -1,7 +1,8 @@
 [package]
 name = "me3-mod-protocol"
-edition.workspace = true
 version = "0.6.1"
+edition.workspace = true
+rust-version.workspace = true
 repository.workspace = true
 license.workspace = true
 description = "Schema definition for me3 mod profiles"
