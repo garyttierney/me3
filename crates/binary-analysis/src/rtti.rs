@@ -31,7 +31,7 @@ pub type ClassMap = HashMap<Box<str>, Box<[UntypedVTable]>>;
 pub struct UntypedVTable(*const Va);
 
 #[derive(Clone)]
-pub struct ClassCol<'a, P>
+pub struct ClassRttiData<'a, P>
 where
     P: Pe<'a>,
 {
@@ -161,7 +161,7 @@ impl UntypedVTable {
         self.0.cast()
     }
 
-    pub fn col<'a, P>(self, program: P) -> Result<ClassCol<'a, P>, pelite::Error>
+    pub fn col<'a, P>(self, program: P) -> Result<ClassRttiData<'a, P>, pelite::Error>
     where
         P: Pe<'a>,
     {
@@ -170,14 +170,14 @@ impl UntypedVTable {
             .va_to_rva(unsafe { self.0.sub(1).read() })
             .and_then(|rva| program.derva(rva))?;
 
-        Ok(ClassCol {
+        Ok(ClassRttiData {
             program,
             inner: col,
         })
     }
 }
 
-impl<'a, P> ClassCol<'a, P>
+impl<'a, P> ClassRttiData<'a, P>
 where
     P: Pe<'a>,
 {
