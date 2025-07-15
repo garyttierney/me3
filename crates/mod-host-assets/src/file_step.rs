@@ -1,17 +1,20 @@
 use std::{mem, ops::Range, ptr::NonNull};
 
+use me3_binary_analysis::pe;
+use pelite::pe::Pe;
 use regex::bytes::Regex;
 use thiserror::Error;
 
-use crate::pe;
-
 type FileStepInit = unsafe extern "C" fn(usize);
 
-/// # Safety
-/// [`pelite::pe64::PeView::module`] must be safe to call on `image_base`
-pub unsafe fn find_init_fn(image_base: *const u8) -> Result<FileStepInit, FindError> {
-    // SAFETY: must be upheld by caller.
-    let [data, rdata] = unsafe { pe::sections(image_base, [".data", ".rdata"])? };
+pub fn find_init_fn<'a, P>(program: P) -> Result<FileStepInit, FindError>
+where
+    P: Pe<'a>,
+{
+    let [data, rdata] = pe::sections(program, [".data", ".rdata"]).map_err(FindError::Section)?;
+
+    let data = program.get_section_bytes(data)?;
+    let rdata = program.get_section_bytes(rdata)?;
 
     let step_name_re = Regex::new(
         r"(?s-u)(?:\w\x00){0,15}F\x00i\x00l\x00e\x00S\x00t\x00e\x00p\x00:\x00:\x00S\x00T\x00E\x00P\x00_\x00I\x00n\x00i\x00t\x00\x00\x00",
@@ -58,18 +61,12 @@ pub unsafe fn find_init_fn(image_base: *const u8) -> Result<FileStepInit, FindEr
 
 #[derive(Error, Debug)]
 pub enum FindError {
-    #[error("{0}")]
-    PeSection(pe::SectionError),
+    #[error(transparent)]
+    Pe(#[from] pelite::Error),
+    #[error("PE section \"{0}\" is missing")]
+    Section(&'static str),
     #[error("step with name \"FileStep::STEP_Init\" not found")]
     Step,
-    #[error("step method table not found")]
-    Table,
     #[error("step method is null or not found")]
     Method,
-}
-
-impl From<pe::SectionError> for FindError {
-    fn from(value: pe::SectionError) -> Self {
-        FindError::PeSection(value)
-    }
 }

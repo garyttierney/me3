@@ -1,5 +1,5 @@
 [package]
-name = "me3-env"
+name = "me3-binary-analysis"
 version = "0.6.1"
 edition.workspace = true
 rust-version.workspace = true
@@ -8,8 +8,10 @@ license.workspace = true
 publish = false
 
 [dependencies]
-serde = { workspace = true, features = ["derive"] }
-serde_json.workspace = true
+pelite.workspace = true
+rayon.workspace = true
+thiserror.workspace = true
+undname = "2.1"
 
 [lints]
 workspace = true

@@ -1,29 +1,16 @@
 use std::ptr::NonNull;
 
 use from_singleton::FromSingleton;
+use me3_binary_analysis::{pe, rtti::ClassMap};
+use pelite::pe::Pe;
 
-use crate::{
-    alloc::DlStdAllocator,
-    pe,
-    rtti::{find_vmt, FindError},
-};
+use crate::alloc::DlStdAllocator;
 
 #[repr(C)]
 pub struct EblFileManager;
 
-#[derive(Debug)]
-pub struct EblUtilityVtable {
-    pub make_ebl_object: MakeEblObject,
-}
-
 #[repr(C)]
-struct EblUtilityVtableER {
-    _dtor: usize,
-    make_ebl_object: MakeEblObject,
-}
-
-#[repr(C)]
-struct EblUtilityVtableNR {
+struct EblUtilityVtable {
     _dtor: usize,
     make_ebl_object: MakeEblObject,
 }
@@ -35,55 +22,39 @@ type MakeEblObject = unsafe extern "C" fn(
 ) -> Option<NonNull<u8>>;
 
 impl EblFileManager {
-    /// # Safety
-    /// Same as [`find_vmt`].
-    pub unsafe fn make_ebl_object(image_base: *const u8) -> Result<MakeEblObject, FindError> {
-        // SAFETY: Upheld by caller.
-        unsafe {
-            if let Some(make_ebl_object) = Self::make_ebl_object_from_singleton(image_base) {
-                return Ok(make_ebl_object);
-            }
-
-            find_vmt(image_base, "DLEncryptedBinderLightUtility").map(|ptr| {
-                let &EblUtilityVtableER {
-                    make_ebl_object, ..
-                } = ptr.as_ref();
-
-                make_ebl_object
-            })
-        }
+    pub fn make_ebl_object<'a, P>(program: P, class_map: &ClassMap) -> Option<MakeEblObject>
+    where
+        P: Pe<'a>,
+    {
+        class_map
+            .get("DLEBL::DLEncryptedBinderLightUtility")
+            .and_then(|vmt| unsafe { Some(vmt.first()?.as_ref::<EblUtilityVtable>()) })
+            .or_else(|| Self::make_ebl_object_from_singleton(program))
+            .map(|vmt| vmt.make_ebl_object)
     }
 
-    unsafe fn make_ebl_object_from_singleton(image_base: *const u8) -> Option<MakeEblObject> {
+    fn make_ebl_object_from_singleton<'a, P>(program: P) -> Option<&'a EblUtilityVtable>
+    where
+        P: Pe<'a>,
+    {
+        let ptr = from_singleton::address_of::<Self>()?.cast::<*const u8>();
+
+        let rdata = pe::section(program, ".rdata")
+            .ok()
+            .and_then(|s| program.get_section_bytes(s).ok())?;
+
+        // Depending on Dantelion2 version, there may be a vtable for the CSEblFileManager
+        // instance before the EblUtilityVtable pointer.
         unsafe {
-            let ptr = from_singleton::address_of::<Self>()?.cast::<*const u8>();
-
-            let [rdata] = pe::sections(image_base, [".rdata"]).ok()?;
-
-            // Depending on Dantelion2 version, there may be a vtable for the CSEblFileManager
-            // instance before the EblUtilityVtable pointer.
-            if rdata.as_ptr_range().contains(ptr.as_ref()) {
-                let &EblUtilityVtableER {
-                    make_ebl_object, ..
-                } = ptr
-                    .add(1)
-                    .read()
-                    .cast::<*const EblUtilityVtableER>()
-                    .as_ref()?
-                    .as_ref()?;
-
-                Some(make_ebl_object)
+            let ptr = if rdata.as_ptr_range().contains(ptr.as_ref()) {
+                ptr.add(1).read()
             } else {
-                let &EblUtilityVtableNR {
-                    make_ebl_object, ..
-                } = ptr
-                    .read()
-                    .cast::<*const EblUtilityVtableNR>()
-                    .as_ref()?
-                    .as_ref()?;
+                ptr.read()
+            };
 
-                Some(make_ebl_object)
-            }
+            ptr.cast::<*const EblUtilityVtable>()
+                .as_ref()
+                .and_then(|ptr| ptr.as_ref())
         }
     }
 }

@@ -552,6 +552,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam-deque"
+version = "0.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9dd111b7b7f7d55b72c0a6ae361660ee5853c9af73f70c3c2ef6858b950e2e51"
+dependencies = [
+ "crossbeam-epoch",
+ "crossbeam-utils",
+]
+
+[[package]]
+name = "crossbeam-epoch"
+version = "0.9.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b82ac4a3c2ca9c3460964f020e1402edd5753411d7737aa39c3714ad1b5420e"
+dependencies = [
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "crossbeam-utils"
 version = "0.8.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1400,6 +1419,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "me3-binary-analysis"
+version = "0.6.1"
+dependencies = [
+ "pelite",
+ "rayon",
+ "thiserror 2.0.12",
+ "undname",
+]
+
+[[package]]
 name = "me3-cli"
 version = "0.6.1"
 dependencies = [
@@ -1477,11 +1506,13 @@ dependencies = [
  "dll-syringe",
  "eyre",
  "libloading",
+ "me3-binary-analysis",
  "me3-env",
  "me3-launcher-attach-protocol",
  "me3-mod-host-assets",
  "me3-mod-protocol",
  "me3_telemetry",
+ "pelite",
  "retour",
  "seq-macro",
  "serde_json",
@@ -1497,6 +1528,7 @@ version = "0.6.1"
 dependencies = [
  "cxx-stl",
  "from-singleton",
+ "me3-binary-analysis",
  "me3-mod-protocol",
  "normpath",
  "pelite",
@@ -2084,6 +2116,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12a5a2d6c7039059af621472a4389be1215a816df61aa4d531cfe85264aee95f"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "rayon"
+version = "1.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b418a60154510ca1a002a752ca9714984e21e4241e804d32555251faf8b78ffa"
+dependencies = [
+ "either",
+ "rayon-core",
+]
+
+[[package]]
+name = "rayon-core"
+version = "1.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1465873a3dfdaa8ae7cb14b4383657caab0b3e8a0aa9ae8e04b044854c8dfce2"
+dependencies = [
+ "crossbeam-deque",
+ "crossbeam-utils",
 ]
 
 [[package]]

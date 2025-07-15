@@ -6,7 +6,8 @@ use std::{
     sync::{Arc, Mutex, OnceLock},
 };
 
-use eyre::eyre;
+use eyre::{eyre, OptionExt};
+use me3_binary_analysis::rtti::ClassMap;
 use me3_mod_host_assets::{
     dl_device::{self, DlDeviceManager, DlFileOperator, VfsMounts},
     dlc::mount_dlc_ebl,
@@ -18,26 +19,26 @@ use me3_mod_host_assets::{
 };
 use me3_mod_protocol::Game;
 use tracing::{debug, error, info, info_span, instrument, warn};
-use windows::{core::PCWSTR, Win32::System::LibraryLoader::GetModuleHandleW};
+use windows::core::PCWSTR;
 
-use crate::host::ModHost;
+use crate::{executable::Executable, host::ModHost};
 
 static VFS: Mutex<VfsMounts> = Mutex::new(VfsMounts::new());
 
 #[instrument(name = "assets", skip_all)]
 pub fn attach_override(
     _game: Game,
+    exe: Executable,
+    class_map: Arc<ClassMap<'static>>,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
-    let image_base = image_base();
+    hook_file_init(exe, class_map.clone(), mapping.clone())?;
 
-    hook_file_init(image_base, mapping.clone())?;
-
-    if let Err(e) = try_hook_wwise(image_base, mapping.clone()) {
+    if let Err(e) = try_hook_wwise(exe, &class_map, mapping.clone()) {
         debug!("error" = &*e, "skipping Wwise hook");
     }
 
-    if let Err(e) = try_hook_dlc(image_base) {
+    if let Err(e) = try_hook_dlc(exe, &class_map) {
         debug!("error" = &*e, "skipping DLC hook");
     }
 
@@ -46,10 +47,11 @@ pub fn attach_override(
 
 #[instrument(name = "file_step", skip_all)]
 fn hook_file_init(
-    image_base: *const u8,
+    exe: Executable,
+    class_map: Arc<ClassMap<'static>>,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
-    let init_fn = unsafe { file_step::find_init_fn(image_base)? };
+    let init_fn = file_step::find_init_fn(exe)?;
 
     debug!("FileStep::STEP_Init" = ?init_fn);
 
@@ -57,7 +59,7 @@ fn hook_file_init(
         .hook(init_fn)
         .with_span(info_span!("hook"))
         .with_closure(move |p1, trampoline| {
-            let mut device_manager = match locate_device_manager(image_base) {
+            let mut device_manager = match locate_device_manager(exe) {
                 Ok(device_manager) => DlDeviceManager::lock(device_manager),
                 Err(e) => {
                     error!("error" = &*eyre!(e), "failed to locate device manager");
@@ -70,7 +72,7 @@ fn hook_file_init(
                 }
             };
 
-            if let Err(e) = hook_device_manager(image_base, mapping.clone()) {
+            if let Err(e) = hook_device_manager(exe, mapping.clone()) {
                 error!("error" = &*eyre!(e), "failed to hook device manager");
 
                 unsafe {
@@ -96,7 +98,7 @@ fn hook_file_init(
 
                     *vfs = new;
 
-                    if let Err(e) = hook_ebl_utility(image_base, mapping.clone()) {
+                    if let Err(e) = hook_ebl_utility(exe, &class_map, mapping.clone()) {
                         error!("error" = &*e, "failed to apply EBL hooks");
 
                         let vfs = mem::take(&mut *vfs);
@@ -116,12 +118,14 @@ fn hook_file_init(
 
 #[instrument(name = "ebl", skip_all)]
 fn hook_ebl_utility(
-    image_base: *const u8,
+    exe: Executable,
+    class_map: &ClassMap,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
-    let device_manager = locate_device_manager(image_base)?;
+    let device_manager = locate_device_manager(exe)?;
 
-    let make_ebl_object = unsafe { EblFileManager::make_ebl_object(image_base)? };
+    let make_ebl_object =
+        EblFileManager::make_ebl_object(exe, class_map).ok_or_eyre("MakeEblObject not found")?;
 
     debug!(?make_ebl_object);
 
@@ -155,10 +159,10 @@ fn hook_ebl_utility(
 
 #[instrument(name = "device_manager", skip_all)]
 fn hook_device_manager(
-    image_base: *const u8,
+    exe: Executable,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
-    let device_manager = locate_device_manager(image_base)?;
+    let device_manager = locate_device_manager(exe)?;
 
     let open_disk_file = DlDeviceManager::lock(device_manager).open_disk_file();
 
@@ -182,7 +186,7 @@ fn hook_device_manager(
     };
 
     let hook_set_path = move |file_operator: NonNull<DlFileOperator>| {
-        hook_set_path(image_base, file_operator, mapping.clone())
+        hook_set_path(exe, file_operator, mapping.clone())
             .inspect_err(|e| error!("Failed to hook DLFileOperator::SetPath: {e}"))
             .is_ok()
     };
@@ -224,13 +228,13 @@ fn hook_device_manager(
 }
 
 fn hook_set_path(
-    image_base: *const u8,
+    exe: Executable,
     file_operator: NonNull<DlFileOperator>,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     let vtable = unsafe { file_operator.as_ref().as_ref() };
 
-    let device_manager = locate_device_manager(image_base)?;
+    let device_manager = locate_device_manager(exe)?;
 
     let override_path = move |path: &DlUtf16String| {
         let path = path.get().ok()?;
@@ -265,10 +269,12 @@ fn hook_set_path(
 
 #[instrument(name = "wwise", skip_all)]
 fn try_hook_wwise(
-    image_base: *const u8,
+    exe: Executable,
+    class_map: &ClassMap,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
-    let wwise_open_file = unsafe { find_wwise_open_file(image_base)? };
+    let wwise_open_file =
+        find_wwise_open_file(exe, class_map).ok_or_eyre("WwiseOpenFileByName not found")?;
 
     ModHost::get_attached_mut()
         .hook(wwise_open_file)
@@ -305,13 +311,13 @@ fn try_hook_wwise(
 }
 
 #[instrument(name = "dlc", skip_all)]
-fn try_hook_dlc(image_base: *const u8) -> Result<(), eyre::Error> {
-    let mount_dlc_ebl = unsafe { mount_dlc_ebl(image_base)? };
+fn try_hook_dlc(exe: Executable, class_map: &ClassMap) -> Result<(), eyre::Error> {
+    let mount_dlc_ebl = mount_dlc_ebl(class_map).ok_or_eyre("MountDlcEbl not found")?;
 
     ModHost::get_attached_mut()
         .hook(mount_dlc_ebl)
         .with_closure(move |p1, p2, p3, p4, trampoline| {
-            if let Ok(device_manager) = locate_device_manager(image_base) {
+            if let Ok(device_manager) = locate_device_manager(exe) {
                 let mut device_manager = DlDeviceManager::lock(device_manager);
 
                 let snap = device_manager.snapshot();
@@ -349,14 +355,8 @@ fn try_hook_dlc(image_base: *const u8) -> Result<(), eyre::Error> {
     Ok(())
 }
 
-fn image_base() -> *const u8 {
-    unsafe { GetModuleHandleW(PCWSTR::null()) }
-        .expect("GetModuleHandleW failed")
-        .0 as *const u8
-}
-
 fn locate_device_manager(
-    image_base: *const u8,
+    exe: Executable,
 ) -> Result<NonNull<DlDeviceManager>, dl_device::FindError> {
     struct DeviceManager(Result<NonNull<DlDeviceManager>, dl_device::FindError>);
 
@@ -366,7 +366,7 @@ fn locate_device_manager(
     unsafe impl Sync for DeviceManager {}
 
     DEVICE_MANAGER
-        .get_or_init(|| unsafe { DeviceManager(dl_device::find_device_manager(image_base)) })
+        .get_or_init(|| DeviceManager(dl_device::find_device_manager(exe)))
         .0
         .clone()
 }
