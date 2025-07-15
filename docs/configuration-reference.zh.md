@@ -20,12 +20,12 @@ hide:
 profileVersion = "v1"
 
 [[packages]]
-id = "my-col-texture-pack"
+id = "my-cool-texture-pack"
 path = 'mods/MyCoolTexturePack/'
 
 [[packages]]
-id = "my-col-model-pack"
-path = 'mods/MyCoolTexturePack/'
+id = "my-cool-model-pack"
+path = 'mods/MyCoolModelPack/'
 
 [[natives]]
 path = 'mods/MyAwesomeMod.dll'
