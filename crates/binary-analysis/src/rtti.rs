@@ -25,10 +25,10 @@ pub enum RttiError {
     Bounds,
 }
 
-pub type ClassMap = HashMap<Box<str>, Box<[UntypedVmt]>>;
+pub type ClassMap = HashMap<Box<str>, Box<[UntypedVTable]>>;
 
 #[derive(Clone, Copy, Debug)]
-pub struct UntypedVmt(*const Va);
+pub struct UntypedVTable(*const Va);
 
 #[derive(Clone)]
 pub struct ClassCol<'a, P>
@@ -135,7 +135,7 @@ where
 
             let mut vmts = v
                 .into_iter()
-                .map(|pfn| unsafe { UntypedVmt::new(pfn) })
+                .map(|pfn| unsafe { UntypedVTable::new(pfn) })
                 .collect::<Vec<_>>();
 
             // Won't panic - COLs are checked for validity beforehand.
@@ -148,7 +148,7 @@ where
     Ok(map)
 }
 
-impl UntypedVmt {
+impl UntypedVTable {
     /// # Safety
     ///
     /// `ptr` must be pointing to the beginning of a vtable,
@@ -165,7 +165,7 @@ impl UntypedVmt {
     where
         P: Pe<'a>,
     {
-        // SAFETY: safe by contract of `UntypedVmt::new`.
+        // SAFETY: safe by contract of `UntypedVTable::new`.
         let col: &RTTICompleteObjectLocator = program
             .va_to_rva(unsafe { self.0.sub(1).read() })
             .and_then(|rva| program.derva(rva))?;
@@ -258,6 +258,6 @@ where
     }
 }
 
-unsafe impl Send for UntypedVmt {}
+unsafe impl Send for UntypedVTable {}
 
-unsafe impl Sync for UntypedVmt {}
+unsafe impl Sync for UntypedVTable {}
