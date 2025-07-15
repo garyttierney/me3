@@ -25,7 +25,7 @@ path = 'mods/MyCoolTexturePack/'
 
 [[packages]]
 id = "my-col-model-pack"
-path = 'mods/MyCoolTexturePack/'
+path = 'mods/MyCoolModelPack/'
 
 [[natives]]
 path = 'mods/MyAwesomeMod.dll'
