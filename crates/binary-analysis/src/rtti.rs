@@ -169,7 +169,7 @@ impl<'a> UntypedVTable<'a> {
 
     /// # Safety
     /// 
-    /// The vtable layout must be representible as `T`.
+    /// The vtable layout must be representable as `T`.
     pub unsafe fn as_ref<T>(self) -> &'a T {
         unsafe { *self.as_ptr() }
     }
