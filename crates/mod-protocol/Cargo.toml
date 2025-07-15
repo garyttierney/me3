@@ -1,6 +1,6 @@
 [package]
 name = "me3-mod-protocol"
-edition = "2021"
+edition.workspace = true
 version = "0.6.1"
 repository.workspace = true
 license.workspace = true
