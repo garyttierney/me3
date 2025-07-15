@@ -7,6 +7,8 @@ use std::{
 };
 
 use cxx_stl::vec::CxxVec;
+use me3_binary_analysis::pe;
+use pelite::pe::Pe;
 use thiserror::Error;
 use windows::Win32::System::Threading::{
     EnterCriticalSection, LeaveCriticalSection, CRITICAL_SECTION,
@@ -14,7 +16,6 @@ use windows::Win32::System::Threading::{
 
 use crate::{
     alloc::DlStdAllocator,
-    pe,
     string::{DlUtf16String, EncodingError},
 };
 
@@ -96,13 +97,15 @@ pub struct VfsPushGuard<'a> {
     old_len: usize,
 }
 
-/// # Safety
-/// [`pelite::pe64::PeView::module`] must be safe to call on `image_base`
-pub unsafe fn find_device_manager(
-    image_base: *const u8,
-) -> Result<NonNull<DlDeviceManager>, FindError> {
+pub fn find_device_manager<'a, P>(program: P) -> Result<NonNull<DlDeviceManager>, FindError>
+where
+    P: Pe<'a>,
+{
     // SAFETY: must be upheld by caller.
-    let [data, rdata] = unsafe { pe::sections(image_base, [".data", ".rdata"])? };
+    let [data, rdata] = pe::sections(program, [".data", ".rdata"]).map_err(FindError::Section)?;
+
+    let data = program.get_section_bytes(data)?;
+    let rdata = program.get_section_bytes(rdata)?;
 
     const SIZE: usize = mem::size_of::<*const u8>();
     const ALIGNMENT: usize = mem::align_of::<*const u8>();
@@ -123,7 +126,7 @@ pub unsafe fn find_device_manager(
         // SAFETY: pointer is aligned and non-null.
         let manager_ptr = unsafe { data_ptr.cast::<*const DlDeviceManager>().read() };
 
-        if !data_range.contains(&manager_ptr.add(1).cast::<u8>().sub(1))
+        if !data_range.contains(&unsafe { manager_ptr.add(1).cast::<u8>().sub(1) })
             || !data_range.contains(&manager_ptr.cast())
         {
             continue;
@@ -400,16 +403,12 @@ fn is_root_separator(w: &[u16]) -> bool {
 
 #[derive(Clone, Debug, Error)]
 pub enum FindError {
-    #[error("{0}")]
-    PeSection(pe::SectionError),
+    #[error(transparent)]
+    Pe(#[from] pelite::Error),
+    #[error("PE section \"{0}\" is missing")]
+    Section(&'static str),
     #[error("DlDeviceManager instance not found")]
     Instance,
-}
-
-impl From<pe::SectionError> for FindError {
-    fn from(value: pe::SectionError) -> Self {
-        FindError::PeSection(value)
-    }
 }
 
 impl Drop for DlDeviceManagerGuard {

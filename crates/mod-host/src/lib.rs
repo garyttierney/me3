@@ -9,28 +9,31 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
+use me3_binary_analysis::rtti;
 use me3_env::TelemetryVars;
 use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, AttachResult, Attachment};
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
+use me3_mod_protocol::{native::Native, Game};
 use me3_telemetry::TelemetryConfig;
-use tracing::{error, info, Span};
+use tracing::{error, info, warn, Span};
+use windows::Win32::System::SystemServices::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH};
 
-use crate::{debugger::suspend_for_debugger, deferred::defer_until_init, host::ModHost};
+use crate::{
+    debugger::suspend_for_debugger, deferred::defer_until_init, executable::Executable,
+    host::ModHost,
+};
 
 mod asset_hooks;
 mod debugger;
 mod deferred;
 mod detour;
+mod executable;
 mod filesystem;
 mod host;
 mod native;
 
 static INSTANCE: OnceLock<usize> = OnceLock::new();
 static mut TELEMETRY_INSTANCE: OnceLock<me3_telemetry::Telemetry> = OnceLock::new();
-
-/// https://learn.microsoft.com/en-us/windows/win32/dlls/dllmain#parameters
-const DLL_PROCESS_DETACH: u32 = 0;
-const DLL_PROCESS_ATTACH: u32 = 1;
 
 dll_syringe::payload_procedure! {
     fn me_attach(request: AttachRequest) -> AttachResult {
@@ -86,9 +89,11 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     let result = me3_telemetry::with_root_span("host", "attach", move || {
         info!("Beginning host attach");
 
-        let host = ModHost::new();
+        // SAFETY: process is still suspended.
+        let exe = unsafe { Executable::new() };
 
-        host.attach();
+        ModHost::new().attach();
+
         let mut override_mapping = ArchiveOverrideMapping::new()?;
         override_mapping.scan_directories(packages.iter())?;
         let override_mapping = Arc::new(override_mapping);
@@ -101,31 +106,43 @@ fn on_attach(request: AttachRequest) -> AttachResult {
             let override_mapping = override_mapping.clone();
 
             move || {
-                for native in natives {
-                    let mut host = ModHost::get_attached_mut();
-                    if let Err(e) = host.load_native(&native.path, native.initializer) {
-                        error!(
-                            error = &*e,
-                            "failed to load native mod from {:?}", &native.path
-                        )
-                    }
-                }
-
-                if let Err(e) = asset_hooks::attach_override(game, override_mapping) {
-                    error!(
-                        "error" = &*e,
-                        "failed to attach asset override hooks; no files will be overridden"
-                    )
+                if let Err(e) = deferred_attach(game, exe, natives, override_mapping) {
+                    error!("error" = &*e, "deferred attach failed!")
                 }
             }
         })?;
 
-        info!("Deferred asset override hooks");
+        info!("Deferred me3 attach");
 
         Ok(Attachment)
     })?;
 
     Ok(result)
+}
+
+fn deferred_attach(
+    game: Game,
+    exe: Executable,
+    natives: Vec<Native>,
+    override_mapping: Arc<ArchiveOverrideMapping>,
+) -> Result<(), eyre::Error> {
+    let class_map = Arc::new(rtti::classes(exe)?);
+
+    for native in natives {
+        if let Err(e) = ModHost::get_attached_mut().load_native(&native.path, native.initializer) {
+            warn!(
+                error = &*e,
+                path = %native.path.display(),
+                "failed to load native mod",
+            )
+        }
+    }
+
+    asset_hooks::attach_override(game, exe, class_map, override_mapping).map_err(|e| {
+        e.wrap_err("failed to attach asset override hooks; no files will be overridden")
+    })?;
+
+    Ok(())
 }
 
 #[unsafe(no_mangle)]

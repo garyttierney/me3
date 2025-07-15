@@ -15,6 +15,7 @@ pelite = "0.10"
 regex = "1"
 normpath.workspace = true
 thiserror.workspace = true
+me3-binary-analysis.workspace = true
 me3-mod-protocol.workspace = true
 tracing.workspace = true
 

@@ -1,10 +1,10 @@
 use std::mem;
 
+use me3_binary_analysis::rtti::ClassMap;
+use pelite::pe::Pe;
 use regex::bytes::Regex;
-use thiserror::Error;
-use tracing::debug;
 
-use crate::{mapping::ArchiveOverrideMapping, pe, rtti};
+use crate::mapping::ArchiveOverrideMapping;
 
 pub type WwiseOpenFileByName =
     unsafe extern "C" fn(usize, *const u16, u64, usize, usize, usize) -> usize;
@@ -114,38 +114,38 @@ mod test {
     }
 }
 
-/// # Safety
-/// [`pelite::pe64::PeView::module`] must be safe to call on `image_base`
-pub unsafe fn find_wwise_open_file(
-    image_base: *const u8,
-) -> Result<WwiseOpenFileByName, FindError> {
-    let rtti_result = unsafe {
-        find_wwise_open_file_fn_by_rtti(image_base)
-            .inspect_err(|e| debug!("DLMOW::IOHookBlocking RTTI scan error: {e}"))
-    };
-
-    if let Ok(result) = rtti_result {
-        return Ok(result);
+pub fn find_wwise_open_file<'a, P>(program: P, class_map: &ClassMap) -> Option<WwiseOpenFileByName>
+where
+    P: Pe<'a>,
+{
+    if let Some(open_by_name) = find_wwise_open_file_fn_by_rtti(class_map) {
+        Some(open_by_name)
+    } else {
+        find_wwise_open_file_fn_by_scan(program)
     }
-
-    unsafe { find_wwise_open_file_fn_by_scan(image_base) }
 }
 
-unsafe fn find_wwise_open_file_fn_by_rtti(
-    image_base: *const u8,
-) -> Result<WwiseOpenFileByName, FindError> {
+fn find_wwise_open_file_fn_by_rtti(class_map: &ClassMap) -> Option<WwiseOpenFileByName> {
     let open_by_name = unsafe {
-        rtti::find_vmt::<FilePackageLowLevelIOBlockingVtable>(image_base, "DLMOW::IOHookBlocking")
-            .map(|vmt| vmt.as_ref().open_by_name)?
+        class_map
+            .get("DLMOW::IOHookBlocking")?
+            .first()?
+            .as_ptr::<FilePackageLowLevelIOBlockingVtable>()
+            .as_ref()?
+            .open_by_name
     };
 
-    Ok(open_by_name)
+    Some(open_by_name)
 }
 
-unsafe fn find_wwise_open_file_fn_by_scan(
-    image_base: *const u8,
-) -> Result<WwiseOpenFileByName, FindError> {
-    let [text] = unsafe { pe::sections(image_base, [".text"])? };
+fn find_wwise_open_file_fn_by_scan<'a, P>(program: P) -> Option<WwiseOpenFileByName>
+where
+    P: Pe<'a>,
+{
+    let text = program
+        .section_headers()
+        .by_name(".text")
+        .and_then(|s| program.get_section_bytes(s).ok())?;
 
     let open_file_re = Regex::new(
         r"(?s-u)\xe8(.{4})\x83\xf8\x01(?:(?:\x74.)|(?:\x0f\x84.{4}))[\x48-\x4f]\x83[\xc0-\xc7]\x38[\x48-\x4f]\x83(?:(?:\x7d.)|(?:\xbd.{4}))\x08",
@@ -154,44 +154,19 @@ unsafe fn find_wwise_open_file_fn_by_scan(
 
     let call_disp32 = open_file_re
         .captures(text)
-        .and_then(|c| c.iter().nth(1).flatten())
-        .ok_or(FindError::Pattern)?
+        .and_then(|c| c.iter().nth(1).flatten())?
         .as_bytes();
 
     let call_bytes = <[u8; 4]>::try_from(call_disp32).unwrap();
 
-    unsafe {
-        Ok(mem::transmute(
+    let open_by_name = unsafe {
+        mem::transmute(
             call_disp32
                 .as_ptr_range()
                 .end
                 .offset(i32::from_le_bytes(call_bytes) as _),
-        ))
-    }
-}
+        )
+    };
 
-#[derive(Error, Debug)]
-pub enum FindError {
-    #[error("{0}")]
-    Rtti(rtti::FindError),
-    #[error("{0}")]
-    PeSection(pe::SectionError),
-    #[error("Pattern scan returned no matches")]
-    Pattern,
-}
-
-#[derive(Error, Debug)]
-#[error("Function timed out; last error: {0}")]
-pub struct TimeoutError(FindError);
-
-impl From<rtti::FindError> for FindError {
-    fn from(value: rtti::FindError) -> Self {
-        FindError::Rtti(value)
-    }
-}
-
-impl From<pe::SectionError> for FindError {
-    fn from(value: pe::SectionError) -> Self {
-        FindError::PeSection(value)
-    }
+    Some(open_by_name)
 }

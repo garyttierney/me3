@@ -9,6 +9,7 @@ members = [
   "crates/telemetry",
   "crates/env",
   "crates/xtask",
+  "crates/binary-analysis",
 ]
 resolver = "2"
 
@@ -38,6 +39,7 @@ dll-syringe = { version = "0.16", default-features = false, features = ["syringe
 expect-test = "1"
 eyre = { version = "0.6", default-features = false }
 is-terminal = "0.4"
+me3-binary-analysis = { path = "crates/binary-analysis" }
 me3-env = { path = "crates/env" }
 me3-launcher-attach-protocol = { path = "crates/launcher-attach-protocol" }
 me3-mod-host = { path = "crates/mod-host" }

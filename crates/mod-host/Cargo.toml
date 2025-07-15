@@ -21,11 +21,13 @@ crash-handler.workspace = true
 dll-syringe = { workspace = true, features = ["payload-utils"] }
 eyre = { workspace = true, default-features = false, features = ["track-caller"] }
 libloading = "0.8.8"
+me3-binary-analysis.workspace = true
 me3-env.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-host-assets.workspace = true
 me3-mod-protocol.workspace = true
 me3-telemetry.workspace = true
+pelite.workspace = true
 retour = { git = "https://github.com/Hpmason/retour-rs" }
 seq-macro = "0.3.6"
 serde_json.workspace = true
