@@ -171,7 +171,7 @@ impl<'a> UntypedVTable<'a> {
     ///
     /// The vtable layout must be representable as `T`.
     pub unsafe fn as_ref<T>(self) -> &'a T {
-        unsafe { *self.as_ptr() }
+        unsafe { &*self.as_ptr() }
     }
 
     pub fn col<P>(self, program: P) -> Result<ClassRttiData<'a, P>, pelite::Error>
