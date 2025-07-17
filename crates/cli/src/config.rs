@@ -19,8 +19,8 @@ pub use known_paths::KnownDirs;
 #[group(multiple = true)]
 pub struct Options {
     /// Enable crash reporting?
-    #[clap(long, help_heading = "Configuration")]
-    pub(crate) crash_reporting: bool,
+    #[clap(long, help_heading = "Configuration", default_missing_value = "false", num_args=0..=1)]
+    pub(crate) crash_reporting: Option<bool>,
 
     /// Override the path to the me3 profile directory.
     #[clap(long, help_heading = "Configuration", value_hint = clap::ValueHint::DirPath)]
@@ -89,7 +89,7 @@ impl Config {
 impl Options {
     pub fn merge(self, other: Self) -> Self {
         Self {
-            crash_reporting: other.crash_reporting || self.crash_reporting,
+            crash_reporting: other.crash_reporting.or(self.crash_reporting),
             profile_dir: other.profile_dir.or(self.profile_dir),
             steam_dir: other.steam_dir.or(self.steam_dir),
             windows_binaries_dir: other.windows_binaries_dir.or(self.windows_binaries_dir),

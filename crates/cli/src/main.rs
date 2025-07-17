@@ -115,7 +115,7 @@ fn main() {
     };
 
     let telemetry_config = TelemetryConfig::default()
-        .enabled(config.options.crash_reporting)
+        .enabled(config.options.crash_reporting.unwrap_or(false))
         .with_console_writer(stderr);
 
     let _telemetry_guard = me3_telemetry::install(telemetry_config);

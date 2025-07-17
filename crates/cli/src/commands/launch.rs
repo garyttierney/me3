@@ -434,7 +434,7 @@ pub fn launch(config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
     };
 
     let telemetry_vars = TelemetryVars {
-        enabled: config.options.crash_reporting,
+        enabled: config.options.crash_reporting.unwrap_or_default(),
         log_file_path: log_file_path.normalize()?.into_path_buf(),
         monitor_file_path: monitor_log_file.path().normalize()?.into_path_buf(),
         trace_id: me3_telemetry::trace_id(),
