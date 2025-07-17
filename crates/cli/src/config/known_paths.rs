@@ -23,7 +23,7 @@ pub struct KnownDirs {
 
     /// Windows installation directory
     #[cfg(target_os = "windows")]
-    installation: Option<Box<Path>>,
+    pub(crate) installation: Option<Box<Path>>,
 
     project_dirs: Option<ProjectDirs>,
 }
