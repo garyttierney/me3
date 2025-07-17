@@ -125,7 +125,7 @@ impl KnownDirs {
     /// - $EXE_DIR/../../x86_64-pc-windows-msvc/debug/ (Debug binaries only)
     /// - $EXE_DIR/../../x86_64-pc-windows-msvc/release/
     #[cfg(target_os = "linux")]
-    pub fn windows_bin_dirs(&self) -> impl Iterator<Item = PathBuf> {
+    pub fn windows_bin_dirs(&self) -> impl Iterator<Item = Box<Path>> {
         // $GIT_ROOT/target
         let potential_target_dir = self.cwd.join("target");
 
