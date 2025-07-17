@@ -2,12 +2,12 @@ use std::path::PathBuf;
 
 use color_eyre::owo_colors::OwoColorize;
 
-use crate::{output::OutputBuilder, AppInstallInfo, AppPaths, Config};
+use crate::{config::Config, output::OutputBuilder, Options};
 
-fn format_path(path: Option<PathBuf>) -> String {
+fn format_path<P: AsRef<std::path::Path>>(path: Option<P>) -> String {
     match path {
         None => "<none>".red().to_string(),
-        Some(path) => path.to_string_lossy().to_string(),
+        Some(path) => path.as_ref().to_string_lossy().to_string(),
     }
 }
 
@@ -19,36 +19,29 @@ fn format_status(status: bool) -> String {
     }
 }
 
-pub fn info(
-    info: Option<AppInstallInfo>,
-    paths: AppPaths,
-    config: Config,
-) -> color_eyre::Result<()> {
+pub fn info(config: Config) -> color_eyre::Result<()> {
     let mut output = OutputBuilder::new("Configuration");
 
-    output.property("Profile directory", format_path(config.profile_dir.clone()));
-    output.property("Logs directory", format_path(paths.logs_path));
+    output.property("Profile directory", format_path(config.profile_dir()));
+    output.property("Logs directory", format_path(config.log_dir()));
 
-    output.section("Search paths", |builder| {
-        builder.property(
-            "System configuration",
-            format_path(paths.system_config_path),
-        );
-
-        builder.property("User configuration", format_path(paths.user_config_path));
-        builder.property("CLI configuration", format_path(paths.cli_config_path));
-    });
-
-    output.section("Installation", |builder| {
-        builder.property("Status", format_status(info.is_some()));
-
-        if let Some(install) = info {
-            builder.property("Config directory", install.config_path.to_string_lossy());
-            builder.property("Installation prefix", install.prefix.to_string_lossy());
+    output.section("Configuration search paths", |builder| {
+        for (index, item) in config.known_dirs.config_dirs().enumerate() {
+            builder.property(format!("#{index}"), item.to_string_lossy());
         }
     });
 
-    let steam = config.resolve_steam_dir();
+    #[cfg(target_os = "windows")]
+    output.section("Installation", |builder| {
+        let installation = config.known_dirs.installation.clone();
+        builder.property("Status", format_status(installation.is_some()));
+
+        if let Some(install) = installation {
+            builder.property("Installation prefix", install.to_string_lossy());
+        }
+    });
+
+    let steam = config.steam_dir();
 
     output.section("Steam", |builder| {
         builder.property("Status", format_status(steam.is_ok()));
