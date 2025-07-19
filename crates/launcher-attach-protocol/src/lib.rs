@@ -1,6 +1,7 @@
 use std::{
     fmt::Debug,
     io::{Read, Write},
+    path::PathBuf,
 };
 
 use bincode::{error::DecodeError, Decode, Encode};
@@ -23,8 +24,14 @@ pub struct AttachConfig {
     /// An ordered list of packages to be loaded on attach.
     pub packages: Vec<Package>,
 
+    /// Path to the cache directory.
+    pub cache_path: Option<PathBuf>,
+
     /// Suspend the game until a debugger is attached?
     pub suspend: bool,
+
+    /// Cache decrypted BHD files to improve game startup speed?
+    pub boot_boost: bool,
 
     /// Should we avoid checking if Steam is running as part of pre-launch checks?
     pub skip_steam_init: bool,

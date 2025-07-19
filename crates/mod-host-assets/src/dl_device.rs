@@ -10,8 +10,9 @@ use cxx_stl::vec::CxxVec;
 use me3_binary_analysis::pe;
 use pelite::pe::Pe;
 use thiserror::Error;
-use windows::Win32::System::Threading::{
-    EnterCriticalSection, LeaveCriticalSection, CRITICAL_SECTION,
+use windows::{
+    core::PCWSTR,
+    Win32::System::Threading::{EnterCriticalSection, LeaveCriticalSection, CRITICAL_SECTION},
 };
 
 use crate::{
@@ -22,13 +23,13 @@ use crate::{
 #[repr(C)]
 pub struct DlDeviceManager {
     devices: CxxVec<NonNull<DlDevice>, DlStdAllocator>,
-    spis: CxxVec<NonNull<u8>, DlStdAllocator>,
+    spis: CxxVec<NonNull<()>, DlStdAllocator>,
     disk_device: NonNull<DlDevice>,
     virtual_roots: CxxVec<DlVirtualRoot, DlStdAllocator>,
     bnd3_mounts: CxxVec<DlVirtualMount, DlStdAllocator>,
     bnd4_mounts: CxxVec<DlVirtualMount, DlStdAllocator>,
-    bnd3_spi: NonNull<u8>,
-    bnd4_spi: NonNull<u8>,
+    bnd3_spi: NonNull<()>,
+    bnd4_spi: NonNull<()>,
     mutex_vtable: usize,
     critical_section: CRITICAL_SECTION,
     _unke8: bool,
@@ -59,8 +60,8 @@ pub struct DlDeviceManagerGuard {
 type DlDeviceOpen = unsafe extern "C" fn(
     NonNull<DlDevice>,
     path: NonNull<DlUtf16String>,
-    path_cstr: *const u16,
-    NonNull<u8>,
+    path_cstr: PCWSTR,
+    NonNull<()>,
     DlStdAllocator,
     bool,
 ) -> Option<NonNull<DlFileOperator>>;
@@ -94,7 +95,8 @@ pub struct VfsMounts {
 
 pub struct VfsPushGuard<'a> {
     owner: &'a mut DlDeviceManagerGuard,
-    old_len: usize,
+    old_devices_len: usize,
+    old_mounts_len: usize,
 }
 
 pub fn find_device_manager<'a, P>(program: P) -> Result<NonNull<DlDeviceManager>, FindError>
@@ -271,21 +273,35 @@ impl DlDeviceManagerGuard {
             }
         }
 
+        for i in (0..device_manager.devices.len()).rev() {
+            let device = device_manager.devices[i];
+            if removed_mounts.iter().any(|m| m.device == device) {
+                device_manager.devices.remove(i);
+            }
+        }
+
         VfsMounts {
             inner: removed_mounts.into(),
         }
     }
 
-    pub fn push_vfs(&mut self, vfs: &VfsMounts) -> VfsPushGuard<'_> {
+    pub fn push_vfs_mounts(&mut self, vfs: &VfsMounts) -> VfsPushGuard<'_> {
         let device_manager = unsafe { self.inner.as_mut() };
 
-        let old_len = device_manager.bnd4_mounts.len();
+        let old_devices_len = device_manager.devices.len();
+
+        device_manager
+            .devices
+            .extend(vfs.inner.iter().map(|m| m.device));
+
+        let old_mounts_len = device_manager.bnd4_mounts.len();
 
         device_manager.bnd4_mounts.extend(vfs.inner.iter().cloned());
 
         VfsPushGuard {
             owner: self,
-            old_len,
+            old_devices_len,
+            old_mounts_len,
         }
     }
 
@@ -364,8 +380,8 @@ impl VfsMounts {
     pub unsafe fn try_open_file(
         &self,
         path: NonNull<DlUtf16String>,
-        path_cstr: *const u16,
-        container: NonNull<u8>,
+        path_cstr: PCWSTR,
+        container: NonNull<()>,
         allocator: DlStdAllocator,
         is_temp_file: bool,
     ) -> Option<NonNull<DlFileOperator>> {
@@ -390,6 +406,10 @@ impl VfsMounts {
                     )
                 }
             })
+    }
+
+    pub fn devices(&self) -> impl Iterator<Item = NonNull<DlDevice>> {
+        self.inner.iter().map(|m| m.device)
     }
 
     pub fn is_empty(&self) -> bool {
@@ -422,7 +442,17 @@ impl Drop for DlDeviceManagerGuard {
 impl Drop for VfsPushGuard<'_> {
     fn drop(&mut self) {
         unsafe {
-            self.owner.inner.as_mut().bnd4_mounts.truncate(self.old_len);
+            self.owner
+                .inner
+                .as_mut()
+                .devices
+                .truncate(self.old_devices_len);
+
+            self.owner
+                .inner
+                .as_mut()
+                .bnd4_mounts
+                .truncate(self.old_mounts_len);
         }
     }
 }

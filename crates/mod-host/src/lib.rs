@@ -13,7 +13,6 @@ use me3_binary_analysis::rtti;
 use me3_env::TelemetryVars;
 use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, AttachResult, Attachment};
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
-use me3_mod_protocol::{native::Native, Game};
 use me3_telemetry::TelemetryConfig;
 use tracing::{error, info, warn, Span};
 use windows::Win32::System::SystemServices::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH};
@@ -59,15 +58,7 @@ unsafe extern "C" {
 fn on_attach(request: AttachRequest) -> AttachResult {
     me3_telemetry::install_error_handler();
 
-    let AttachRequest {
-        config:
-            AttachConfig {
-                game,
-                natives,
-                packages,
-                ..
-            },
-    } = request;
+    let attach_config = Arc::new(request.config);
 
     let telemetry_vars: TelemetryVars = me3_env::deserialize_from_env()?;
     let telemetry_log_file = OpenOptions::new()
@@ -95,7 +86,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         ModHost::new().attach();
 
         let mut override_mapping = ArchiveOverrideMapping::new()?;
-        override_mapping.scan_directories(packages.iter())?;
+        override_mapping.scan_directories(attach_config.packages.iter())?;
         let override_mapping = Arc::new(override_mapping);
 
         filesystem::attach_override(override_mapping.clone())?;
@@ -106,7 +97,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
             let override_mapping = override_mapping.clone();
 
             move || {
-                if let Err(e) = deferred_attach(game, exe, natives, override_mapping) {
+                if let Err(e) = deferred_attach(attach_config, exe, override_mapping) {
                     error!("error" = &*e, "deferred attach failed!")
                 }
             }
@@ -121,15 +112,14 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 }
 
 fn deferred_attach(
-    game: Game,
+    attach_config: Arc<AttachConfig>,
     exe: Executable,
-    natives: Vec<Native>,
     override_mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     let class_map = Arc::new(rtti::classes(exe)?);
 
-    for native in natives {
-        if let Err(e) = ModHost::get_attached_mut().load_native(&native.path, native.initializer) {
+    for native in &attach_config.natives {
+        if let Err(e) = ModHost::get_attached_mut().load_native(&native.path, &native.initializer) {
             warn!(
                 error = &*e,
                 path = %native.path.display(),
@@ -138,7 +128,7 @@ fn deferred_attach(
         }
     }
 
-    asset_hooks::attach_override(game, exe, class_map, override_mapping).map_err(|e| {
+    asset_hooks::attach_override(attach_config, exe, class_map, override_mapping).map_err(|e| {
         e.wrap_err("failed to attach asset override hooks; no files will be overridden")
     })?;
 

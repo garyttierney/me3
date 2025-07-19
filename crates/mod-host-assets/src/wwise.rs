@@ -3,11 +3,12 @@ use std::mem;
 use me3_binary_analysis::rtti::ClassMap;
 use pelite::pe::Pe;
 use regex::bytes::Regex;
+use windows::core::PCWSTR;
 
 use crate::mapping::ArchiveOverrideMapping;
 
 pub type WwiseOpenFileByName =
-    unsafe extern "C" fn(usize, *const u16, u64, usize, usize, usize) -> usize;
+    unsafe extern "C" fn(usize, PCWSTR, u64, usize, usize, usize) -> usize;
 
 #[repr(C)]
 struct FilePackageLowLevelIOBlockingVtable {

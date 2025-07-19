@@ -15,7 +15,7 @@ mod default;
 ///
 /// Contains a pointer to a `DlAllocator` interface and implements [`GlobalAlloc`].
 #[repr(C)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct DlStdAllocator {
     inner: NonNull<DlAllocator>,
 }

@@ -30,8 +30,10 @@ me3-mod-protocol.workspace = true
 me3-telemetry.workspace = true
 pelite.workspace = true
 retour = { git = "https://github.com/Hpmason/retour-rs" }
+rsa = "0.9"
 seq-macro = "0.3.6"
 serde_json.workspace = true
+tempfile.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 windows = { workspace = true, features = [
@@ -43,6 +45,7 @@ windows = { workspace = true, features = [
     "Win32_System_SystemInformation",
     "Win32_System_Threading",
 ] }
+xxhash-rust = { version = "0.8", features = ["std", "xxh3"] }
 
 [build-dependencies]
 winresource = "0.1"
