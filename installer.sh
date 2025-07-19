@@ -349,7 +349,7 @@ main() {
     ensure tar vxf "$distfilepath" -C "$distdir"
     {
         ensure cd "$distdir"
-        ensure "$distdir/dist/install-user.sh"
+        ensure "$distdir/install-user.sh"
     }
 
     if ! check_cmd me3; then
