@@ -125,5 +125,5 @@ jobs:
           me3 profile create -g er my-new-profile
           me3 profile list
           me3 profile show my-new-profile
-          xdg-mime query default application/x-me3
+          [[ "$(xdg-mime query default application/x-me3)" == "me3-launch.desktop" ]] || exit 1
         shell: bash
