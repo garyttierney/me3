@@ -124,7 +124,11 @@ fn deferred_attach(
                 error = &*e,
                 path = %native.path.display(),
                 "failed to load native mod",
-            )
+            );
+
+            if !native.optional {
+                return Err(e);
+            }
         }
     }
 
