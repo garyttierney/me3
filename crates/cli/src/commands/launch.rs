@@ -1,5 +1,6 @@
 use std::{
     collections::BTreeSet,
+    fmt::Debug,
     fs::{self, File},
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
@@ -27,7 +28,9 @@ use steamlocate::{CompatTool, Library, SteamDir};
 use tempfile::NamedTempFile;
 use tracing::{info, warn};
 
-use crate::{AppPaths, Config, Game};
+use crate::{config::Config, Game, Options};
+
+pub mod launcher;
 
 #[derive(Debug, clap::Args)]
 #[group(required = true, multiple = false)]
@@ -109,10 +112,11 @@ pub struct LaunchArgs {
         )]
     natives: Vec<PathBuf>,
 }
-pub trait Launcher {
+pub trait Launcher: Debug {
     fn into_command(self, launcher: PathBuf) -> color_eyre::Result<Command>;
 }
 
+#[derive(Debug)]
 pub struct DirectLauncher;
 
 impl Launcher for DirectLauncher {
@@ -121,6 +125,7 @@ impl Launcher for DirectLauncher {
     }
 }
 
+#[derive(Debug)]
 pub struct CompatToolLauncher {
     tool: CompatTool,
     steam: SteamDir,
@@ -232,55 +237,11 @@ impl ProfileDetails {
     }
 }
 
-#[tracing::instrument(err, skip(config, paths, bins_dir, args))]
-pub fn launch(
-    config: Config,
-    paths: AppPaths,
-    bins_dir: PathBuf,
-    args: LaunchArgs,
-) -> color_eyre::Result<()> {
-    let mut all_natives = vec![];
-    let mut all_packages = vec![];
-
-    all_packages.extend(
-        args.packages
-            .into_iter()
-            .filter_map(|path| path.normalize().ok())
-            .map(|normalized| Package::new(normalized.into_path_buf())),
-    );
-
-    all_natives.extend(
-        args.natives
-            .into_iter()
-            .filter_map(|path| path.normalize().ok())
-            .map(|normalized| Native::new(normalized.into_path_buf())),
-    );
-
-    let mut profile_supported_games = BTreeSet::new();
-
-    let profile_details = if let Some(profile_name) = args.profile {
-        config
-            .resolve_profile(&profile_name)
-            .and_then(ProfileDetails::from_file)?
-    } else {
-        ProfileDetails::default()
-    };
-
-    let profile = profile_details.profile;
-    let base = profile_details.base_dir;
-    let mut packages = profile.packages();
-    let mut natives = profile.natives();
-
-    packages
-        .iter_mut()
-        .for_each(|pkg| pkg.source_mut().make_absolute(base.as_path()));
-    natives
-        .iter_mut()
-        .for_each(|pkg| pkg.source_mut().make_absolute(base.as_path()));
-
-    all_packages.extend(packages);
-    all_natives.extend(natives);
-
+pub fn generate_attach_config(
+    config: &Config,
+    args: &LaunchArgs,
+    profile_details: &ProfileDetails,
+) -> color_eyre::Result<AttachConfig> {
     fn exists<S: WithPackageSource>(p: &S) -> bool {
         match p.source().try_exists() {
             Ok(true) => true,
@@ -291,10 +252,43 @@ pub fn launch(
         }
     }
 
-    all_packages.retain(|pkg| pkg.enabled && exists(pkg));
-    all_natives.retain(|native| native.enabled && exists(native));
+    let mut all_natives = vec![];
+    let mut all_packages = vec![];
 
-    for supports in profile.supports() {
+    all_packages.extend(
+        args.packages
+            .iter()
+            .filter_map(|path| path.normalize().ok())
+            .map(|normalized| Package::new(normalized.into_path_buf())),
+    );
+
+    all_natives.extend(
+        args.natives
+            .iter()
+            .filter_map(|path| path.normalize().ok())
+            .map(|normalized| Native::new(normalized.into_path_buf())),
+    );
+
+    let profile = &profile_details.profile;
+    let mut packages = profile.packages();
+    let mut natives = profile.natives();
+
+    packages
+        .iter_mut()
+        .filter(|pkg| exists(*pkg))
+        .for_each(|pkg| pkg.source_mut().make_absolute(&profile_details.base_dir));
+    natives
+        .iter_mut()
+        .for_each(|pkg| pkg.source_mut().make_absolute(&profile_details.base_dir));
+
+    all_packages.extend(packages.into_iter().filter(exists));
+    all_natives.extend(natives.into_iter().filter(exists));
+
+    let ordered_natives = sort_dependencies(all_natives)?;
+    let ordered_packages = sort_dependencies(all_packages)?;
+
+    let mut profile_supported_games = BTreeSet::new();
+    for supports in profile_details.profile.supports() {
         profile_supported_games.insert(Game(supports.game));
     }
 
@@ -315,32 +309,56 @@ pub fn launch(
             .ok_or_eyre("unable to determine app ID for game")
     }?;
 
-    let app_id = game.app_id();
-    info!(?game, app_id, "resolved game");
+    Ok(AttachConfig {
+        game: game.into(),
+        packages: ordered_packages,
+        natives: ordered_natives,
+        skip_steam_init: args.skip_steam_init,
+        suspend: args.suspend,
+        boot_boost: args.boot_boost,
+        cache_path: config.cache_dir().map(|path| path.into_path_buf()),
+    })
+}
 
-    let steam_dir = config.resolve_steam_dir();
+#[tracing::instrument(err, skip(config, args))]
+pub fn launch(config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
+    let profile_details = if let Some(profile_name) = &args.profile {
+        config
+            .resolve_profile(profile_name)
+            .and_then(ProfileDetails::from_file)?
+    } else {
+        ProfileDetails::default()
+    };
 
-    let steam_src = config.resolve_steam_dir().and_then(|dir| {
-        dir.find_app(app_id)?
-            .ok_or_eyre("installation for requested game wasn't found")
-    });
+    let attach_config = generate_attach_config(&config, &args, &profile_details)?;
+    let app_id = attach_config.game.app_id();
 
-    let launcher;
+    info!(game=?attach_config.game, app_id, "resolved game");
 
-    let injector_path = bins_dir.join("me3-launcher.exe");
+    let bins_dir = config
+        .windows_binaries_dir()
+        .ok_or_eyre("Can't find location of windows-binaries-dir")?;
+
+    let launcher_path = bins_dir.join("me3-launcher.exe");
+    let dll_path = bins_dir.join("me3_mod_host.dll");
+    let game_exe_path = args.exe.map(color_eyre::eyre::Ok).unwrap_or_else(|| {
+        let steam_dir = config.steam_dir()?;
+        let (app, library) = steam_dir.find_app(app_id)?.ok_or_eyre(
+            "Steam was used to locate the game executable and no game installation was found",
+        )?;
+
+        let game_exe = library
+            .resolve_app_dir(&app)
+            .join(Game(attach_config.game).launcher());
+
+        Ok(game_exe)
+    })?;
 
     let mut injector_command = if cfg!(target_os = "linux") {
-        let steam_dir = steam_dir?;
-        info!(?steam_dir, "found steam dir");
-
-        let (steam_app, steam_library) = steam_src?;
-        info!(name = ?steam_app.name, "found steam app in library");
-
-        launcher = args.exe.unwrap_or_else(|| {
-            steam_library
-                .resolve_app_dir(&steam_app)
-                .join(game.launcher())
-        });
+        let steam_dir = config.steam_dir()?;
+        let (_, steam_library) = steam_dir.find_app(app_id)?.ok_or_eyre(
+            "Steam was used to locate the WINE configuration and no game installation was found",
+        )?;
 
         let compat_tools = steam_dir.compat_tool_mapping()?;
         let app_compat_tool = compat_tools
@@ -349,7 +367,6 @@ pub fn launch(
             .ok_or_eyre("unable to find compat tool for game")?;
 
         info!(?app_compat_tool, "found compat tool for appid");
-
         let launcher = CompatToolLauncher {
             app_id,
             library: steam_library,
@@ -357,49 +374,14 @@ pub fn launch(
             tool: app_compat_tool.clone(),
         };
 
-        launcher.into_command(injector_path)
+        launcher.into_command(launcher_path)
     } else {
-        launcher = if let Some(launcher) = args.exe {
-            launcher
-        } else {
-            let steam_dir = steam_dir?;
-            info!(?steam_dir, "found steam dir");
-
-            let (steam_app, steam_library) = steam_src?;
-            info!(name = ?steam_app.name, "found steam app in library");
-
-            steam_library
-                .resolve_app_dir(&steam_app)
-                .join(game.launcher())
-        };
-
-        DirectLauncher.into_command(injector_path)
+        DirectLauncher.into_command(launcher_path)
     }?;
 
-    info!(?launcher, "found steam app launcher");
-
-    let ordered_natives = sort_dependencies(all_natives)?;
-    let ordered_packages = sort_dependencies(all_packages)?;
-
-    let app_install_path = launcher.parent().map(Path::to_path_buf);
-
-    let attach_config_dir = paths
-        .cache_path
-        .clone()
-        .unwrap_or(app_install_path.unwrap_or_default());
-
+    let attach_config_dir = config.cache_dir().unwrap_or(Box::from(Path::new(".")));
     std::fs::create_dir_all(&attach_config_dir)?;
-
     let attach_config_file = NamedTempFile::new_in(&attach_config_dir)?;
-    let attach_config = AttachConfig {
-        game: game.into(),
-        packages: ordered_packages,
-        natives: ordered_natives,
-        cache_path: paths.cache_path,
-        suspend: args.suspend,
-        boot_boost: args.boot_boost,
-        skip_steam_init: args.skip_steam_init,
-    };
 
     std::fs::write(&attach_config_file, toml::to_string_pretty(&attach_config)?)?;
     info!(?attach_config_file, ?attach_config, "wrote attach config");
@@ -407,9 +389,9 @@ pub fn launch(
     let now = Local::now();
     let log_id = now.format("%Y-%m-%d_%H-%M-%S").to_string();
 
-    let log_folder = paths
-        .logs_path
-        .unwrap_or_default()
+    let log_folder = config
+        .log_dir()
+        .unwrap_or_else(|| PathBuf::from(".").into_boxed_path())
         .join(profile_details.name);
 
     info!(?log_folder, "creating profile log folder");
@@ -439,22 +421,20 @@ pub fn launch(
     let log_file_path = log_folder.join(format!("{log_id}.log"));
     let monitor_log_file = NamedTempFile::with_suffix(".log")?;
 
-    // Ensure log file exits so `normalize()` succeeds on Unix
+    // Ensure log file exists so `normalize()` succeeds on Unix
     let log_file = File::create(&log_file_path)?;
     drop(log_file);
 
     info!(path = ?monitor_log_file.path(), "temporary log file created");
 
-    let dll_path: PathBuf = bins_dir.join("me3_mod_host.dll");
-
     let launcher_vars = LauncherVars {
-        exe: launcher,
+        exe: game_exe_path,
         host_dll: dll_path,
         host_config_path: attach_config_file.path().to_path_buf(),
     };
 
     let telemetry_vars = TelemetryVars {
-        enabled: config.crash_reporting,
+        enabled: config.options.crash_reporting.unwrap_or_default(),
         log_file_path: log_file_path.normalize()?.into_path_buf(),
         monitor_file_path: monitor_log_file.path().normalize()?.into_path_buf(),
         trace_id: me3_telemetry::trace_id(),

@@ -14,7 +14,7 @@ use directories::ProjectDirs;
 use me3_telemetry::TelemetryConfig;
 use serde::{Deserialize, Serialize};
 use strum::VariantArray;
-use tracing::info;
+use tracing::{debug, info};
 
 mod commands;
 pub mod output;
@@ -25,7 +25,7 @@ pub mod output;
 #[command(flatten_help = true)]
 struct Cli {
     #[clap(flatten)]
-    config: Config,
+    config: Options,
 
     /// Disable tracing logs and diagnostics.
     #[clap(short, long, action = ArgAction::SetTrue)]
@@ -42,8 +42,9 @@ struct Cli {
     command: Commands,
 }
 
-mod settings;
-pub use self::settings::Config;
+mod config;
+pub use self::config::Options;
+use crate::config::{Config, KnownDirs};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[repr(transparent)]
@@ -85,124 +86,9 @@ impl From<Game> for me3_mod_protocol::Game {
     }
 }
 
-#[derive(Clone)]
-pub struct AppInstallInfo {
-    prefix: PathBuf,
-    config_path: PathBuf,
-}
-
-#[derive(Default)]
-pub struct AppPaths {
-    system_config_path: Option<PathBuf>,
-    user_config_path: Option<PathBuf>,
-    cli_config_path: Option<PathBuf>,
-    logs_path: Option<PathBuf>,
-    cache_path: Option<PathBuf>,
-}
-
-impl AppPaths {
-    pub fn cache_path<P: Into<PathBuf>>(self, path: Option<P>) -> Self {
-        Self {
-            cache_path: path.map(|p| p.into()),
-            ..self
-        }
-    }
-    pub fn logs_path<P: Into<PathBuf>>(self, path: Option<P>) -> AppPaths {
-        Self {
-            logs_path: path.map(|p| p.into()),
-            ..self
-        }
-    }
-
-    pub fn cli_config<P: Into<PathBuf>>(self, path: Option<P>) -> AppPaths {
-        Self {
-            cli_config_path: path.map(|p| p.into()),
-            ..self
-        }
-    }
-
-    pub fn user_config<P: Into<PathBuf>>(self, path: Option<P>) -> AppPaths {
-        Self {
-            user_config_path: path.map(|p| p.into()),
-            ..self
-        }
-    }
-
-    pub fn system_config<P: Into<PathBuf>>(self, path: Option<P>) -> AppPaths {
-        Self {
-            system_config_path: path.map(|p| p.into()),
-            ..self
-        }
-    }
-}
-
-impl AppInstallInfo {
-    #[cfg(target_os = "linux")]
-    fn try_from_os() -> Result<Self, Box<dyn Error>> {
-        Err(eyre!("unable to detect OS installation on Linux").into())
-    }
-
-    #[cfg(target_os = "windows")]
-    fn try_from_os() -> Result<Self, Box<dyn Error>> {
-        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
-
-        let hklm = RegKey::predef(HKEY_CURRENT_USER);
-        let me3_reg = hklm.open_subkey(r"Software\garyttierney\me3")?;
-        let install_dir_value = me3_reg.get_value::<String, _>("Install_Dir")?;
-        let install_dir = PathBuf::from_str(&install_dir_value)?;
-
-        Ok(AppInstallInfo {
-            prefix: install_dir.clone(),
-            config_path: install_dir.join("config"),
-        })
-    }
-
-    // When running under `cargo run ...`
-    fn try_from_cargo() -> Result<Self, Box<dyn Error>> {
-        if std::env::var("NO_CARGO_DETECTION").is_ok() {
-            return Err(eyre!("Cargo detection was disabled via NO_CARGO_DETECTION=").into());
-        }
-
-        let ws_dir = std::env::var("CARGO_MANIFEST_DIR")?;
-
-        Ok(Self {
-            prefix: ws_dir.clone().into(),
-            config_path: ws_dir.clone().into(),
-        })
-    }
-
-    fn system_config(&self) -> PathBuf {
-        self.config_path.join("me3.toml")
-    }
-}
-
-#[cfg(target_os = "linux")]
-fn bins_dir(config: &Config) -> PathBuf {
-    const DEBUG_TARGET_DIR: &str = "x86_64-unknown-linux-gnu/debug";
-
-    let cli_exe_path = std::env::current_exe().expect("can't find current exe");
-    let cli_exe_dir = cli_exe_path.parent().expect("can't find current exe dir");
-
-    if cli_exe_path.is_symlink() {
-        std::fs::read_link(&cli_exe_path).unwrap()
-    } else if cfg!(debug_assertions) && cli_exe_dir.ends_with(DEBUG_TARGET_DIR) {
-        let target_dir = cli_exe_dir
-            .ancestors()
-            .nth(2)
-            .expect("found cargo workspace, but no target dir");
-
-        target_dir.join("x86_64-pc-windows-msvc/debug")
-    } else {
-        config.windows_binaries_dir.clone().unwrap()
-    }
-}
-
-#[cfg(target_os = "windows")]
-fn bins_dir(_config: &Config) -> PathBuf {
-    let cli_exe_path = std::env::current_exe().expect("can't find current exe");
-    let cli_exe_dir = cli_exe_path.parent().expect("can't find current exe dir");
-
-    cli_exe_dir.to_path_buf()
+pub struct AppContext {
+    config: Options,
+    known_dirs: KnownDirs,
 }
 
 fn main() {
@@ -214,52 +100,25 @@ fn main() {
 
     let cli = Cli::parse();
 
-    let app_install = AppInstallInfo::try_from_cargo()
-        .or_else(|_| AppInstallInfo::try_from_os())
-        .ok();
+    let known_dirs = KnownDirs::default();
+    let config_sources = known_dirs.config_dirs().map(|dir| dir.join("me3.toml"));
 
-    let app_project_dirs = ProjectDirs::from("com.github", "garyttierney", "me3");
-    let app_paths = AppPaths::default()
-        .system_config(app_install.as_ref().map(|info| info.system_config()))
-        .user_config(
-            app_project_dirs
-                .as_ref()
-                .map(|dirs| dirs.config_local_dir().join("me3.toml")),
-        )
-        .cli_config(cli.config_file)
-        .logs_path(
-            app_project_dirs
-                .as_ref()
-                .map(|dirs| dirs.data_local_dir().join("logs"))
-                .or_else(|| std::env::current_dir().ok()),
-        )
-        .cache_path(app_project_dirs.as_ref().map(|dirs| dirs.cache_dir()));
-
-    let system_config_source = app_paths.system_config_path.clone();
-    let user_config_source = app_paths.user_config_path.clone();
-    let cli_config_source = app_paths.cli_config_path.clone();
-    let config_sources = [system_config_source, user_config_source, cli_config_source];
-
-    let mut config = config_sources
-        .into_iter()
-        .flatten()
-        .flat_map(Config::from_file)
+    let options = config_sources
+        .inspect(|path| debug!(?path, "searching for me3.toml in"))
+        .flat_map(Options::from_file)
         .chain(iter::once(cli.config))
-        .fold(Config::default(), |a, b| a.merge(b));
+        .fold(Options::default(), |a, b| a.merge(b));
 
-    if config.profile_dir.is_none() {
-        config.profile_dir = app_project_dirs
-            .as_ref()
-            .map(|dirs| dirs.config_local_dir().join("profiles"));
-    }
-
-    let bins_path = bins_dir(&config);
+    let config = Config {
+        known_dirs,
+        options,
+    };
 
     let telemetry_config = TelemetryConfig::default()
-        .enabled(config.crash_reporting)
+        .enabled(config.options.crash_reporting.unwrap_or(false))
         .with_console_writer(stderr);
 
-    let _telemetry = me3_telemetry::install(telemetry_config);
+    let _telemetry_guard = me3_telemetry::install(telemetry_config);
 
     info!(
         version = env!("CARGO_PKG_VERSION"),
@@ -267,8 +126,8 @@ fn main() {
     );
 
     let result = me3_telemetry::with_root_span("me3", "run command", || match cli.command {
-        Commands::Info => commands::info::info(app_install, app_paths, config),
-        Commands::Launch(args) => commands::launch::launch(config, app_paths, bins_path, args),
+        Commands::Info => commands::info::info(config),
+        Commands::Launch(args) => commands::launch::launch(config, args),
         Commands::Profile(ProfileCommands::Create(args)) => commands::profile::create(config, args),
         Commands::Profile(ProfileCommands::List) => commands::profile::list(config),
         Commands::Profile(ProfileCommands::Show { name }) => commands::profile::show(config, name),
