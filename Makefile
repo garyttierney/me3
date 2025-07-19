@@ -79,7 +79,7 @@ dist-windows: dist-common $(WINDOWS_BINARIES)
 	@mkdir -p $(DESTDIR)/dist-windows/bin
 	@mkdir -p "$(DESTDIR)/dist-windows/eldenring-mods" "$(DESTDIR)/dist-windows/nightreign-mods"
 	@cp -v $(WINDOWS_BINARIES) $(DESTDIR)/dist-windows/bin
-	@cp -v -R distribution/portable/cross-platform/* distribution/portable/windows/* $(DESTDIR)/dist-common/* $(DESTDIR)/dist-windows/
+	@cp -v -R distribution/cross-platform/* distribution/windows/* $(DESTDIR)/dist-common/* $(DESTDIR)/dist-windows/
 
 dist-linux: dist-common $(WINDOWS_BINARIES) $(LINUX_BINARIES)
 	@rm -rf $(DESTDIR)/dist-linux
@@ -87,9 +87,9 @@ dist-linux: dist-common $(WINDOWS_BINARIES) $(LINUX_BINARIES)
 	@mkdir -p "$(DESTDIR)/dist-linux/eldenring-mods" "$(DESTDIR)/dist-linux/nightreign-mods"
 	@cp -v $(LINUX_BINARIES) $(DESTDIR)/dist-linux/bin
 	@cp -v $(WINDOWS_BINARIES) $(DESTDIR)/dist-linux/bin/win64
-	@cp -v -R distribution/portable/cross-platform/* distribution/portable/linux/* $(DESTDIR)/dist-common/* $(DESTDIR)/dist-linux/
-	@cp -v -R distribution/linux/* $(DESTDIR)/dist-linux/dist
-	@cp -v -R distribution/assets/me3.png $(DESTDIR)/dist-linux/dist
+	@cp -v -R distribution/cross-platform/* $(DESTDIR)/dist-linux/
+	@cp -v -R distribution/linux/* $(DESTDIR)/dist-linux/
+	@cp -v -R $(DESTDIR)/dist-common/* $(DESTDIR)/dist-linux/
 
 dist-common: $(DESTDIR)/CHANGELOG.pdf
 	@rm -rf $(DESTDIR)/dist-common
