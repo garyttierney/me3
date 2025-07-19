@@ -87,7 +87,7 @@ jobs:
         with:
           name: me3-artifacts
       - run: ls -R
-      - run: ./me3_installer.exe /S
+      - run: ./out/me3_installer.exe /S
 
       - run: |
           Import-Module "$env:ChocolateyInstall/helpers/chocolateyInstaller.psm1"
@@ -116,7 +116,7 @@ jobs:
         with:
           name: me3-artifacts
       - run: ls -R
-      - run: ./installer.sh me3-linux-amd64.tar.gz
+      - run: chmod +x ./installer.sh; ./installer.sh out/me3-linux-amd64.tar.gz
 
       - run: |
           export PATH="$HOME/.local/bin:$PATH"
@@ -125,4 +125,4 @@ jobs:
           me3 profile create -g er my-new-profile
           me3 profile list
           me3 profile show my-new-profile
-        shell: pwsh
+        shell: bash
