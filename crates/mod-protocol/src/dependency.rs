@@ -119,7 +119,10 @@ mod tests {
     use std::path::PathBuf;
 
     use super::{sort_dependencies, Dependent};
-    use crate::package::{ModFile, Package};
+    use crate::{
+        dependency::Dependency as _,
+        package::{ModFile, Package},
+    };
 
     fn mock_package(
         id: &str,
@@ -127,7 +130,7 @@ mod tests {
         load_before: Vec<Dependent<String>>,
     ) -> Package {
         Package {
-            id: id.to_owned(),
+            id: Some(id.to_owned()),
             enabled: true,
             path: ModFile(PathBuf::from(id)),
             load_after,
@@ -183,9 +186,9 @@ mod tests {
         );
         let sorted_pkgs = sort_dependencies(vec![pkg1, pkg2, pkg3]).expect("failed to sort");
 
-        assert_eq!("pkg2", sorted_pkgs[0].id);
-        assert_eq!("pkg3", sorted_pkgs[1].id);
-        assert_eq!("pkg1", sorted_pkgs[2].id);
+        assert_eq!("pkg2", sorted_pkgs[0].id());
+        assert_eq!("pkg3", sorted_pkgs[1].id());
+        assert_eq!("pkg1", sorted_pkgs[2].id());
     }
 
     #[test]
@@ -203,8 +206,8 @@ mod tests {
         let pkg3 = mock_package("pkg3", vec![], vec![]);
         let sorted_pkgs = sort_dependencies(vec![pkg1, pkg2, pkg3]).expect("failed to sort");
 
-        assert_eq!("pkg2", sorted_pkgs[0].id);
-        assert_eq!("pkg1", sorted_pkgs[1].id);
+        assert_eq!("pkg2", sorted_pkgs[0].id());
+        assert_eq!("pkg1", sorted_pkgs[1].id());
     }
 
     #[test]

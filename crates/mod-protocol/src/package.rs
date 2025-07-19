@@ -50,7 +50,7 @@ fn on() -> bool {
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Package {
     /// The unique identifier for this package..
-    pub(crate) id: String,
+    pub(crate) id: Option<String>,
 
     /// Enable this package?
     #[serde(default = "on")]
@@ -72,11 +72,7 @@ pub struct Package {
 impl Package {
     pub fn new(path: PathBuf) -> Self {
         Self {
-            id: path
-                .file_name()
-                .expect("no name for this package")
-                .to_string_lossy()
-                .into(),
+            id: None,
             path: ModFile(path),
             enabled: true,
             load_after: vec![],
@@ -105,7 +101,9 @@ impl Dependency for Package {
     type UniqueId = String;
 
     fn id(&self) -> Self::UniqueId {
-        self.id.clone()
+        self.id
+            .clone()
+            .unwrap_or_else(|| self.path.to_string_lossy().into())
     }
 
     fn loads_after(&self) -> &[crate::dependency::Dependent<Self::UniqueId>] {
