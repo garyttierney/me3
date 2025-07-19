@@ -64,6 +64,7 @@ jobs:
         with:
           name: me3-artifacts
           path: |
+            installer.sh
             out/me3_installer.exe
             out/me3-windows-amd64.zip
             out/me3-linux-amd64.tar.gz
@@ -86,7 +87,7 @@ jobs:
         with:
           name: me3-artifacts
       - run: ls -R
-      - run: ./me3_installer.exe /S
+      - run: ./out/me3_installer.exe /S
 
       - run: |
           Import-Module "$env:ChocolateyInstall/helpers/chocolateyInstaller.psm1"
@@ -96,3 +97,33 @@ jobs:
           me3.exe profile list
           me3.exe profile show my-new-profile
         shell: pwsh
+
+  test-linux:
+    name: End-to-end tests (Linux)
+    needs:
+      - build-installer
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
+        with:
+          egress-policy: audit
+
+      - name: Download installer
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: me3-artifacts
+      - run: ls -R
+      - run: chmod +x ./installer.sh; ./installer.sh out/me3-linux-amd64.tar.gz
+
+      - run: |
+          export PATH="$HOME/.local/bin:$PATH"
+
+          me3 info
+          me3 profile create -g er my-new-profile
+          me3 profile list
+          me3 profile show my-new-profile
+          [[ "$(xdg-mime query default application/x-me3)" == "me3-launch.desktop" ]] || exit 1
+        shell: bash
