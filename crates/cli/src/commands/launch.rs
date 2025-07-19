@@ -80,7 +80,7 @@ pub struct LaunchArgs {
     #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
     exe: Option<PathBuf>,
 
-    /// Path to a ModProfile configuration file (TOML, JSON, or YAML) or name of a profile
+    /// Path to a ModProfile configuration file (TOML or JSON) or name of a profile
     /// stored in the me3 profile folder ($XDG_CONFIG_HOME/me3).
     #[arg(
             short('p'),
