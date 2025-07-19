@@ -40,9 +40,7 @@ pub fn attach_override(
     class_map: Arc<ClassMap<'static>>,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
-    hook_file_init(exe, class_map.clone(), mapping.clone())?;
-
-    hook_mount_ebl(attach_config, exe)?;
+    hook_file_init(attach_config, exe, class_map.clone(), mapping.clone())?;
 
     if let Err(e) = try_hook_wwise(exe, &class_map, mapping.clone()) {
         debug!("error" = &*e, "skipping Wwise hook");
@@ -53,6 +51,7 @@ pub fn attach_override(
 
 #[instrument(name = "file_step", skip_all)]
 fn hook_file_init(
+    attach_config: Arc<AttachConfig>,
     exe: Executable,
     class_map: Arc<ClassMap<'static>>,
     mapping: Arc<ArchiveOverrideMapping>,
@@ -65,22 +64,18 @@ fn hook_file_init(
         .hook(init_fn)
         .with_span(info_span!("hook"))
         .with_closure(move |p1, trampoline| {
-            if let Err(e) = hook_device_manager(exe, mapping.clone()) {
-                error!("error" = &*eyre!(e), "failed to hook device manager");
-
-                unsafe {
-                    trampoline(p1);
-                }
-
-                return;
-            }
+            let result = hook_device_manager(exe, mapping.clone())
+                .and_then(|_| hook_mount_ebl(attach_config.clone(), exe))
+                .inspect_err(|e| error!("error" = &**e, "failed apply pre-hooks"));
 
             unsafe {
                 trampoline(p1);
             }
 
-            if let Err(e) = hook_ebl_utility(exe, &class_map, mapping.clone()) {
-                error!("error" = &*e, "failed to apply EBL hooks");
+            if result.is_ok()
+                && let Err(e) = hook_ebl_utility(exe, &class_map, mapping.clone())
+            {
+                error!("error" = &*e, "failed to apply post-hooks");
             }
         })
         .install()?;
