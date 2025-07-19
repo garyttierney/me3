@@ -113,6 +113,16 @@ where
         .ok()
         .and_then(|s| program.get_section_bytes(s).ok())?;
 
+    // Matches:
+    // mov    reg,QWORD PTR [rbp+??]
+    // mov    QWORD PTR [rsp+0x28],reg
+    // mov    QWORD PTR [rsp+0x20],reg
+    // mov    r9,QWORD PTR [rip+??]
+    // mov    rdx,reg
+    // mov    rcx,reg
+    // call   MountEbl
+    // movzx  ebx,al
+    // cmp    QWORD PTR [rbp/rsp+??],0x8
     let mount_re = Regex::new(
         r"(?s-u)\x48\x8b\x45.\x48\x89\x44\x24\x28[\x48|\x4c]\x89[\x44\x4c\x54\x5c\x64\x6c\x74\x7c]\x24\x20\x4c\x8b\x0d.{4}[\x48|\x49]\x8b[\xd0-\xd7][\x48|\x49]\x8b[\xc8-\xcf]\xe8(.{4})\x0f\xb6\xd8(?:(?:\x48\x83\x7d.\x08)|(?:\x48\x83\x7c\x24.\x08))\x72."
     )
