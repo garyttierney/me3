@@ -3,7 +3,7 @@
 debug/
 target/
 out/
-dist/
+/dist/
 
 # Windows Binaries
 *.exe

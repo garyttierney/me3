@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=me3 launch
+Comment=Launch .me3 profile
+TryExec=me3
+Exec=me3 launch --auto-detect -p %f
+Icon=me3
+Terminal=true
+NoDisplay=true
+MimeType=application/x-me3;
+Categories=Game;
