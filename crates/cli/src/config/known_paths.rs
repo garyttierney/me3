@@ -77,7 +77,7 @@ impl Default for KnownDirs {
             prefix: Some(Box::from(Path::new("/"))),
             #[cfg(target_os = "windows")]
             installation: find_install_dir().ok(),
-            project_dirs: ProjectDirs::from(PROJECT_QUALIFIER, PROJECT_NAME, PROJECT_ORG),
+            project_dirs: ProjectDirs::from(PROJECT_QUALIFIER, PROJECT_ORG, PROJECT_NAME),
         }
     }
 }
