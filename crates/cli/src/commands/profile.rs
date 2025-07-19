@@ -72,7 +72,16 @@ pub fn list(config: Config) -> color_eyre::Result<()> {
 
     for profile_entry in std::fs::read_dir(profile_dir)? {
         match profile_entry {
-            Ok(profile) => println!("{}", profile.file_name().to_string_lossy()),
+            Ok(profile) if profile.path().extension().is_some_and(|ext| ext == "me3") => {
+                let profile_name = profile
+                    .path()
+                    .file_stem()
+                    .map(|stem| stem.to_owned())
+                    .expect("must have a filename");
+
+                println!("{}", profile_name.to_string_lossy());
+            }
+            Ok(_) => continue,
             Err(e) => warn!(?e, "unable to read entry"),
         }
     }
