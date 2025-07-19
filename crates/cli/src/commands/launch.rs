@@ -1,5 +1,6 @@
 use std::{
     collections::BTreeSet,
+    error::Error,
     fmt::Debug,
     fs::{self, File},
     io::{BufRead, BufReader},
@@ -26,7 +27,7 @@ use me3_mod_protocol::{
 use normpath::PathExt;
 use steamlocate::{CompatTool, Library, SteamDir};
 use tempfile::NamedTempFile;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 use crate::{config::Config, Game, Options};
 
@@ -466,9 +467,11 @@ pub fn launch(config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
             }
 
             let mut line = String::new();
-            log_reader
-                .read_line(&mut line)
-                .expect("failed to read line from logs");
+            let read = log_reader.read_line(&mut line);
+
+            if let Err(e) = read {
+                error!(error = &e as &dyn Error, "couldn't read log line from game");
+            }
 
             if !line.is_empty() {
                 eprint!("{line}");
