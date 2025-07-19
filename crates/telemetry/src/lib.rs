@@ -10,6 +10,7 @@ use tracing_subscriber::{
     EnvFilter,
 };
 
+#[derive(Default)]
 pub struct Telemetry {
     #[cfg(feature = "sentry")]
     client: Option<sentry::ClientInitGuard>,

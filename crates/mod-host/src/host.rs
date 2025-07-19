@@ -50,7 +50,7 @@ impl ModHost {
     pub fn load_native(
         &mut self,
         path: &Path,
-        condition: Option<NativeInitializerCondition>,
+        condition: &Option<NativeInitializerCondition>,
     ) -> eyre::Result<()> {
         let result = panic::catch_unwind(|| {
             let module = unsafe { libloading::Library::new(path)? };

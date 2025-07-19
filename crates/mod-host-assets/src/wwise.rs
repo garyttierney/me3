@@ -3,11 +3,12 @@ use std::mem;
 use me3_binary_analysis::rtti::ClassMap;
 use pelite::pe::Pe;
 use regex::bytes::Regex;
+use windows::core::PCWSTR;
 
 use crate::mapping::ArchiveOverrideMapping;
 
 pub type WwiseOpenFileByName =
-    unsafe extern "C" fn(usize, *const u16, u64, usize, usize, usize) -> usize;
+    unsafe extern "C" fn(usize, PCWSTR, u64, usize, usize, usize) -> usize;
 
 #[repr(C)]
 struct FilePackageLowLevelIOBlockingVtable {
@@ -146,6 +147,12 @@ where
         .by_name(".text")
         .and_then(|s| program.get_section_bytes(s).ok())?;
 
+    // Matches:
+    // call   WwiseOpenFileByName
+    // cmp    eax,0x1
+    // je     ??
+    // add    reg,0x38
+    // cmp    QWORD PTR [rbp+0x0],0x8
     let open_file_re = Regex::new(
         r"(?s-u)\xe8(.{4})\x83\xf8\x01(?:(?:\x74.)|(?:\x0f\x84.{4}))[\x48-\x4f]\x83[\xc0-\xc7]\x38[\x48-\x4f]\x83(?:(?:\x7d.)|(?:\xbd.{4}))\x08",
     )

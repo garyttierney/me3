@@ -16,6 +16,8 @@ where
     let data = program.get_section_bytes(data)?;
     let rdata = program.get_section_bytes(rdata)?;
 
+    // "FileStep" preceded by up to 15 other characters, as a UTF-16 string.
+    // Used to find "SPRJFileStep" or "CSFileStep".
     let step_name_re = Regex::new(
         r"(?s-u)(?:\w\x00){0,15}F\x00i\x00l\x00e\x00S\x00t\x00e\x00p\x00:\x00:\x00S\x00T\x00E\x00P\x00_\x00I\x00n\x00i\x00t\x00\x00\x00",
     )

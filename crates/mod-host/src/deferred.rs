@@ -46,10 +46,8 @@ fn hook_steam_init() -> Result<(), eyre::Error> {
         .with_closure(|trampoline| {
             let result = unsafe { trampoline() };
 
-            if result {
-                if let Some(deferred) = DEFERRED.lock().unwrap().take() {
-                    deferred.into_iter().for_each(|f| f());
-                }
+            if result && let Some(deferred) = DEFERRED.lock().unwrap().take() {
+                deferred.into_iter().for_each(|f| f());
             }
 
             result

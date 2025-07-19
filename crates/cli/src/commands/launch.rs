@@ -67,6 +67,10 @@ pub struct LaunchArgs {
     #[clap(long("suspend"), action = ArgAction::SetTrue)]
     suspend: bool,
 
+    /// Don't cache decrypted BHD files (used to improve game startup speed)?
+    #[clap(long("no-boot-boost"), action = ArgAction::SetFalse)]
+    boot_boost: bool,
+
     /// Skip initializing Steam within the launcher?
     #[clap(long("skip-steam-init"), action = ArgAction::SetTrue)]
     skip_steam_init: bool,
@@ -76,7 +80,7 @@ pub struct LaunchArgs {
     #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
     exe: Option<PathBuf>,
 
-    /// Path to a ModProfile configuration file (TOML, JSON, or YAML) or name of a profile
+    /// Path to a ModProfile configuration file (TOML or JSON) or name of a profile
     /// stored in the me3 profile folder ($XDG_CONFIG_HOME/me3).
     #[arg(
             short('p'),
@@ -381,6 +385,7 @@ pub fn launch(
 
     let attach_config_dir = paths
         .cache_path
+        .clone()
         .unwrap_or(app_install_path.unwrap_or_default());
 
     std::fs::create_dir_all(&attach_config_dir)?;
@@ -390,8 +395,10 @@ pub fn launch(
         game: game.into(),
         packages: ordered_packages,
         natives: ordered_natives,
-        skip_steam_init: args.skip_steam_init,
+        cache_path: paths.cache_path,
         suspend: args.suspend,
+        boot_boost: args.boot_boost,
+        skip_steam_init: args.skip_steam_init,
     };
 
     std::fs::write(&attach_config_file, toml::to_string_pretty(&attach_config)?)?;
