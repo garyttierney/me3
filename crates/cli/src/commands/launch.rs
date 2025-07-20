@@ -1,4 +1,5 @@
 use std::{
+    cell::{LazyCell, OnceCell},
     collections::BTreeSet,
     error::Error,
     fmt::Debug,
@@ -457,14 +458,14 @@ pub fn launch(config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
 
     let monitor_thread = std::thread::spawn(move || {
         let mut log_reader = BufReader::new(monitor_log_file);
+        let mut exit_code = None;
 
         while monitor_thread_running.load(Ordering::SeqCst) {
-            if let Some(_exit_code) = launcher_proc
-                .try_wait()
-                .expect("error while checking status")
-            {
-                break;
-            }
+            exit_code = exit_code.or_else(|| {
+                launcher_proc
+                    .try_wait()
+                    .expect("error while checking status")
+            });
 
             let mut line = String::new();
             let read = log_reader.read_line(&mut line);
@@ -475,6 +476,8 @@ pub fn launch(config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
 
             if !line.is_empty() {
                 eprint!("{line}");
+            } else if exit_code.is_some() {
+                break;
             } else {
                 // Back-off the read loop because read_line() returns EOF.
                 // This needs replaced with a proper pipe.
