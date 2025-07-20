@@ -15,7 +15,7 @@ use std::{
 
 use chrono::Local;
 use clap::{ArgAction, Args};
-use color_eyre::eyre::{eyre, OptionExt};
+use color_eyre::eyre::{eyre, Context, OptionExt};
 use me3_env::{LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{
@@ -223,16 +223,18 @@ impl ProfileDetails {
             .expect("profile was loaded by filename")
             .to_string_lossy();
 
-        let base = path
+        let norm = path
+            .normalize()
+            .wrap_err("failed to normalize mod profile file")?;
+        let parent = norm
             .parent()
-            .and_then(|parent| parent.normalize().ok())
-            .ok_or_eyre("failed to normalize base directory for mod profile")?;
-
+            .unwrap_or_default()
+            .ok_or_eyre("failed to find parent folder of profile file")?;
         let profile = ModProfile::from_file(path)?;
 
         Ok(Self {
             name: name.to_string(),
-            base_dir: base.into_path_buf(),
+            base_dir: parent.as_path().to_owned(),
             profile,
         })
     }
