@@ -98,11 +98,7 @@ impl Options {
     pub fn merge(self, other: Self) -> Self {
         Self {
             crash_reporting: other.crash_reporting.or(self.crash_reporting),
-            game: other
-                .game
-                .into_iter()
-                .chain(self.game)
-                .collect(),
+            game: other.game.into_iter().chain(self.game).collect(),
             profile_dir: other.profile_dir.or(self.profile_dir),
             steam_dir: other.steam_dir.or(self.steam_dir),
             windows_binaries_dir: other.windows_binaries_dir.or(self.windows_binaries_dir),
