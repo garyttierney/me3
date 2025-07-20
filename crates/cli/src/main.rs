@@ -1,16 +1,12 @@
 use std::{
-    error::Error,
     io::stderr,
     iter,
     path::{Path, PathBuf},
     slice,
-    str::FromStr,
 };
 
 use clap::{builder::PossibleValue, ArgAction, Parser, ValueEnum};
-use color_eyre::eyre::eyre;
 use commands::{profile::ProfileCommands, Commands};
-use directories::ProjectDirs;
 use me3_telemetry::TelemetryConfig;
 use serde::{Deserialize, Serialize};
 use strum::VariantArray;
@@ -84,11 +80,6 @@ impl From<Game> for me3_mod_protocol::Game {
     fn from(val: Game) -> Self {
         val.0
     }
-}
-
-pub struct AppContext {
-    config: Options,
-    known_dirs: KnownDirs,
 }
 
 fn main() {

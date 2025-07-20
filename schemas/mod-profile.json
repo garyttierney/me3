@@ -208,7 +208,10 @@
         },
         "id": {
           "description": "The unique identifier for this package..",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "load_after": {
           "description": "A list of package IDs that this package should load after.",
@@ -232,7 +235,6 @@
         }
       },
       "required": [
-        "id",
         "path"
       ]
     },

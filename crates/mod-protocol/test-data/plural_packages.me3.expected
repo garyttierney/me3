@@ -4,7 +4,9 @@ V1(
         natives: [],
         packages: [
             Package {
-                id: "test-pkg",
+                id: Some(
+                    "test-pkg",
+                ),
                 enabled: true,
                 path: ModFile(
                     ".",

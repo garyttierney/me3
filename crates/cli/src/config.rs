@@ -4,7 +4,6 @@ use std::{
 };
 
 use color_eyre::Result;
-use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use steamlocate::SteamDir;
 use tracing::error;
