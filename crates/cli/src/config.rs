@@ -101,7 +101,7 @@ impl Options {
             game: other
                 .game
                 .into_iter()
-                .chain(self.game.into_iter())
+                .chain(self.game)
                 .collect(),
             profile_dir: other.profile_dir.or(self.profile_dir),
             steam_dir: other.steam_dir.or(self.steam_dir),
