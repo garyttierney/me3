@@ -1,13 +1,7 @@
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use color_eyre::Result;
 use directories::ProjectDirs;
-use serde::{Deserialize, Serialize};
-use steamlocate::SteamDir;
-use tracing::error;
 
 #[derive(Debug)]
 pub struct KnownDirs {
