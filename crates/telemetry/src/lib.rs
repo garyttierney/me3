@@ -226,7 +226,6 @@ pub fn install(config: TelemetryConfig) -> Telemetry {
         let filter_layer = log_filter("ME3_CONSOLE_LOG_LEVEL", Level::INFO);
 
         fmt::layer()
-            .with_ansi(true)
             .without_time()
             .with_writer(writer)
             .with_filter(filter_layer)
