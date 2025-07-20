@@ -244,6 +244,7 @@ pub fn install(config: TelemetryConfig) -> Telemetry {
         .with(layer)
         .init();
 
+
     #[cfg(feature = "sentry")]
     let client = {
         use std::str::FromStr;
@@ -281,10 +282,12 @@ pub fn install(config: TelemetryConfig) -> Telemetry {
 
                 integrations.push(Arc::new(PanicIntegration::default()));
             }
+        
+            let is_debug = cfg!(debug_assertions);
 
             sentry::init(sentry::ClientOptions {
-                release: Some(env!("CARGO_PKG_VERSION").into()),
-                debug: cfg!(debug_assertions),
+                release: is_debug.then_some(env!("CARGO_PKG_VERSION").into()),
+                debug: is_debug,
                 traces_sample_rate: 1.0,
                 dsn: sentry_dsn,
                 environment: Some(environment.into()),
