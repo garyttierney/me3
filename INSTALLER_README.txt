@@ -1,4 +1,4 @@
-Check https://me3.readthedocs.io/ for up-to-date documentation me3.
+Check https://me3.help/ for up-to-date documentation on me3.
 
 --
 
