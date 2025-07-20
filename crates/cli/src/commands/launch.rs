@@ -262,14 +262,16 @@ pub fn generate_attach_config(
         args.packages
             .iter()
             .filter_map(|path| path.normalize().ok())
-            .map(|normalized| Package::new(normalized.into_path_buf())),
+            .map(|normalized| Package::new(normalized.into_path_buf()))
+            .filter(exists),
     );
 
     all_natives.extend(
         args.natives
             .iter()
             .filter_map(|path| path.normalize().ok())
-            .map(|normalized| Native::new(normalized.into_path_buf())),
+            .map(|normalized| Native::new(normalized.into_path_buf()))
+            .filter(exists),
     );
 
     let profile = &profile_details.profile;
@@ -278,7 +280,6 @@ pub fn generate_attach_config(
 
     packages
         .iter_mut()
-        .filter(|pkg| exists(*pkg))
         .for_each(|pkg| pkg.source_mut().make_absolute(&profile_details.base_dir));
     natives
         .iter_mut()
