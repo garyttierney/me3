@@ -15,13 +15,18 @@ use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, AttachResult, At
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
 use me3_telemetry::TelemetryConfig;
 use tracing::{error, info, warn, Span};
-use windows::Win32::System::SystemServices::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH};
+use windows::Win32::{
+    Globalization::CP_UTF8,
+    System::{
+        Console::SetConsoleOutputCP,
+        SystemServices::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH},
+    },
+};
 
 use crate::{
     debugger::suspend_for_debugger, deferred::defer_until_init, executable::Executable,
     host::ModHost,
 };
-
 mod asset_hooks;
 mod debugger;
 mod deferred;
@@ -56,6 +61,7 @@ unsafe extern "C" {
 }
 
 fn on_attach(request: AttachRequest) -> AttachResult {
+    let _ = unsafe { SetConsoleOutputCP(CP_UTF8) };
     me3_telemetry::install_error_handler();
 
     let attach_config = Arc::new(request.config);
