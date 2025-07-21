@@ -1526,7 +1526,6 @@ dependencies = [
  "toml",
  "tracing",
  "windows",
- "winresource",
 ]
 
 [[package]]
