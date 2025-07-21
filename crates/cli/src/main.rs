@@ -127,7 +127,7 @@ fn main() {
 
     let result = me3_telemetry::with_root_span("me3", "run command", || match cli.command {
         Commands::Info => commands::info::info(config),
-        Commands::Launch(args) => commands::launch::launch(config, args),
+        Commands::Launch(args) => commands::launch::launch(db, config, args),
         Commands::Profile(ProfileCommands::Create(args)) => commands::profile::create(config, args),
         Commands::Profile(ProfileCommands::List) => commands::profile::list(db),
         Commands::Profile(ProfileCommands::Show { name }) => commands::profile::show(db, name),

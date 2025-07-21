@@ -29,6 +29,15 @@ pub struct Profile {
 }
 
 impl Profile {
+    /// Create a new transient (in-memory) profile with no backing me3 file.
+    pub fn transient() -> Self {
+        Self {
+            name: "transient-profile".to_string(),
+            base_dir: Box::from(Path::new(".")),
+            profile: Default::default(),
+        }
+    }
+
     /// Get the name of this profile. Defaults to the file name without the .me3 extension.
     pub fn name(&self) -> &str {
         &self.name
