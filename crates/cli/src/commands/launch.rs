@@ -59,7 +59,7 @@ pub struct Selector {
     steam_id: Option<u32>,
 }
 
-#[derive(Args, Debug, Serialize, Deserialize)]
+#[derive(Args, Clone, Debug, Serialize, Deserialize)]
 pub struct GameOptions {
     /// Don't cache decrypted BHD files (used to improve game startup speed)?
     #[clap(long("no-boot-boost"), action = ArgAction::SetFalse)]
@@ -73,6 +73,16 @@ pub struct GameOptions {
     /// launcher if not present.
     #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
     pub(crate) exe: Option<PathBuf>,
+}
+
+impl GameOptions {
+    pub fn merge(self, other: Self) -> Self {
+        Self {
+            boot_boost: other.boot_boost.or(self.boot_boost),
+            exe: other.exe.or(self.exe),
+            skip_steam_init: other.skip_steam_init.or(self.skip_steam_init),
+        }
+    }
 }
 
 #[derive(Args, Debug)]
@@ -329,7 +339,7 @@ pub fn generate_attach_config(
 }
 
 #[tracing::instrument(err, skip(config, args))]
-pub fn launch(config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
+pub fn launch(config: Config, mut args: LaunchArgs) -> color_eyre::Result<()> {
     let profile_details = if let Some(profile_name) = &args.profile {
         config
             .resolve_profile(profile_name)
@@ -340,6 +350,10 @@ pub fn launch(config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
 
     let attach_config = generate_attach_config(&config, &args, &profile_details)?;
     let app_id = attach_config.game.app_id();
+
+    if let Some(game_opts) = config.options.game.get(&attach_config.game) {
+        args.game_options = game_opts.clone().merge(args.game_options);
+    }
 
     info!(game=?attach_config.game, app_id, "resolved game");
 
