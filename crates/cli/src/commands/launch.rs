@@ -321,13 +321,13 @@ pub fn generate_attach_config(
         } else {
             profile_supported_games
                 .pop_first()
-                .ok_or_eyre("unable to auto-detect appid of game")
+                .ok_or_eyre("me3 profile lists no supported games")
         }
     } else {
         args.target_selector
             .game
             .or_else(|| args.target_selector.steam_id.and_then(Game::from_app_id))
-            .ok_or_eyre("unable to determine app ID for game")
+            .ok_or_eyre("unable to determine game from name or app ID")
     }?;
 
     Ok(AttachConfig {

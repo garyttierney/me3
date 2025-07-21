@@ -36,6 +36,7 @@ serde_json.workspace = true
 steamlocate.workspace = true
 strum.workspace = true
 tempfile.workspace = true
+thiserror.workspace = true
 toml.workspace = true
 tracing.workspace = true
 
@@ -50,3 +51,6 @@ winresource = "0.1"
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+assert_fs = "1.1.3"

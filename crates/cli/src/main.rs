@@ -13,6 +13,7 @@ use strum::VariantArray;
 use tracing::{debug, info};
 
 mod commands;
+pub mod db;
 pub mod output;
 
 #[derive(Parser)]
@@ -40,7 +41,10 @@ struct Cli {
 
 mod config;
 pub use self::config::Options;
-use crate::config::{Config, KnownDirs};
+use crate::{
+    config::{Config, KnownDirs},
+    db::DbContext,
+};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[repr(transparent)]
@@ -105,9 +109,12 @@ fn main() {
         options,
     };
 
+    let log_file = tempfile::tempfile().unwrap();
+
     let telemetry_config = TelemetryConfig::default()
         .enabled(config.options.crash_reporting.unwrap_or(false))
-        .with_console_writer(stderr);
+        .with_console_writer(stderr)
+        .with_file_writer(log_file);
 
     let _telemetry_guard = me3_telemetry::install(telemetry_config);
 
@@ -116,12 +123,14 @@ fn main() {
         commit_id = option_env!("BUILD_COMMIT_ID").unwrap_or("unknown")
     );
 
+    let db = DbContext::new(&config);
+
     let result = me3_telemetry::with_root_span("me3", "run command", || match cli.command {
         Commands::Info => commands::info::info(config),
         Commands::Launch(args) => commands::launch::launch(config, args),
         Commands::Profile(ProfileCommands::Create(args)) => commands::profile::create(config, args),
-        Commands::Profile(ProfileCommands::List) => commands::profile::list(config),
-        Commands::Profile(ProfileCommands::Show { name }) => commands::profile::show(config, name),
+        Commands::Profile(ProfileCommands::List) => commands::profile::list(db),
+        Commands::Profile(ProfileCommands::Show { name }) => commands::profile::show(db, name),
         #[cfg(target_os = "windows")]
         Commands::AddToPath => commands::windows::add_to_path(),
         #[cfg(target_os = "windows")]

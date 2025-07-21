@@ -8,9 +8,9 @@ use me3_mod_protocol::{
     package::{Package, WithPackageSource},
     ModProfile, Supports,
 };
-use tracing::{debug, error, warn};
+use tracing::{error, warn};
 
-use crate::{config::Config, output::OutputBuilder, Game, Options};
+use crate::{config::Config, db::DbContext, output::OutputBuilder, Game};
 
 #[derive(Subcommand, Debug)]
 #[command(flatten_help = true)]
@@ -59,31 +59,15 @@ pub struct ProfileCreateArgs {
     overwrite: bool,
 }
 
-#[tracing::instrument(skip(config))]
-pub fn list(config: Config) -> color_eyre::Result<()> {
-    let profile_dir = config.profile_dir().ok_or_else(no_profile_dir)?;
+#[tracing::instrument(skip_all)]
+pub fn list(db: DbContext) -> color_eyre::Result<()> {
+    for profile_entry in db.profiles.list() {
+        let profile_name = profile_entry
+            .file_stem()
+            .map(|stem| stem.to_owned())
+            .expect("must have a filename");
 
-    debug!("searching in {profile_dir:?} for profiles");
-
-    if !fs::exists(&profile_dir)? {
-        debug!("profile dir doesn't exist, no profiles");
-        return Ok(());
-    }
-
-    for profile_entry in std::fs::read_dir(profile_dir)? {
-        match profile_entry {
-            Ok(profile) if profile.path().extension().is_some_and(|ext| ext == "me3") => {
-                let profile_name = profile
-                    .path()
-                    .file_stem()
-                    .map(|stem| stem.to_owned())
-                    .expect("must have a filename");
-
-                println!("{}", profile_name.to_string_lossy());
-            }
-            Ok(_) => continue,
-            Err(e) => warn!(?e, "unable to read entry"),
-        }
+        println!("{}", profile_name.to_string_lossy());
     }
 
     Ok(())
@@ -145,22 +129,16 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
     Ok(())
 }
 
-pub fn show(config: Config, name: String) -> color_eyre::Result<()> {
-    let profile_path = config.resolve_profile(&name)?;
-
-    if !std::fs::exists(&profile_path)? {
-        return Err(eyre!("No profile found with this name"));
-    }
-
-    let profile = ModProfile::from_file(&profile_path)?;
+pub fn show(db: DbContext, name: String) -> color_eyre::Result<()> {
+    let profile = db.profiles.load(name)?;
     let mut output = OutputBuilder::new("Mod Profile");
 
-    output.property("Name", name.clone());
-    output.property("Path", profile_path.to_string_lossy());
+    output.property("Name", profile.name());
+    output.property("Path", profile.base_dir().to_string_lossy());
 
     output.section("Supports", |builder| {
-        for supports in profile.supports() {
-            builder.property(format!("{:?}", supports.game), "Supported");
+        if let Some(game) = profile.supported_game() {
+            builder.property(format!("{game:?}"), "Supported");
         }
     });
 
@@ -170,7 +148,8 @@ pub fn show(config: Config, name: String) -> color_eyre::Result<()> {
                 builder.indent(2);
 
                 builder.property("Path", native.source().to_string_lossy());
-                builder.property("Optional", native.optional.to_string())
+                builder.property("Optional", native.optional.to_string());
+                builder.property("Enabled", native.enabled);
             });
         }
     });
@@ -180,6 +159,7 @@ pub fn show(config: Config, name: String) -> color_eyre::Result<()> {
             builder.section(package.id(), |builder| {
                 builder.indent(2);
                 builder.property("Path", package.source().to_string_lossy());
+                builder.property("Enabled", package.enabled);
             });
         }
     });
