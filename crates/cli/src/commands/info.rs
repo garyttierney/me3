@@ -43,7 +43,7 @@ pub fn info(config: Config) -> color_eyre::Result<()> {
 
     output.section("Configuration search paths", |builder| {
         for (index, item) in config.known_dirs.config_dirs().enumerate() {
-            builder.property(format!("#{index}"), item.to_string_lossy());
+            builder.property(format!("{index}"), item.join("me3.toml").to_string_lossy());
         }
     });
 

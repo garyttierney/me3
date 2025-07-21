@@ -29,9 +29,9 @@ impl OutputBuilder {
             output.push_str(&format!("{:indent$}● {header}\n", ""));
         }
 
-        properties.sort_by_key(|(k, _)| k.len());
+        properties.sort_by_key(|(k, _)| std::cmp::Reverse(k.len()));
 
-        for (key, value) in properties.iter().rev() {
+        for (key, value) in properties.iter() {
             output.push_str(&format!(
                 "{:indent$}{key:>width$}: {value}\n",
                 "",
