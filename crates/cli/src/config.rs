@@ -1,14 +1,19 @@
 use std::{
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
 };
 
 use color_eyre::Result;
+use me3_mod_protocol::Game;
 use serde::{Deserialize, Serialize};
 use steamlocate::SteamDir;
 use tracing::error;
 
-use crate::{commands::profile::no_profile_dir, config::known_paths::OptionalPathExt};
+use crate::{
+    commands::{launch::GameOptions, profile::no_profile_dir},
+    config::known_paths::OptionalPathExt,
+};
 
 pub mod known_paths;
 
@@ -32,6 +37,10 @@ pub struct Options {
     /// Path to PE binaries used by Proton (Linux only)
     #[clap(long, help_heading = "Configuration", value_hint = clap::ValueHint::DirPath)]
     pub(crate) windows_binaries_dir: Option<Box<Path>>,
+
+    #[clap(skip)]
+    #[serde(default)]
+    pub(crate) game: BTreeMap<Game, GameOptions>,
 }
 
 pub struct Config {
@@ -89,6 +98,7 @@ impl Options {
     pub fn merge(self, other: Self) -> Self {
         Self {
             crash_reporting: other.crash_reporting.or(self.crash_reporting),
+            game: other.game.into_iter().chain(self.game).collect(),
             profile_dir: other.profile_dir.or(self.profile_dir),
             steam_dir: other.steam_dir.or(self.steam_dir),
             windows_binaries_dir: other.windows_binaries_dir.or(self.windows_binaries_dir),

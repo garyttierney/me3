@@ -153,10 +153,10 @@ impl KnownDirs {
             self.prefix.join("etc/me3"),
             #[cfg(target_os = "windows")]
             self.installation.join("config"),
-            self.cwd.clone(),
             self.project_dirs
                 .as_ref()
                 .map(|proj| Box::from(proj.config_local_dir())),
+            self.cwd.clone(),
         ];
 
         config_dirs.into_iter().flatten()

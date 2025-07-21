@@ -25,6 +25,7 @@ use me3_mod_protocol::{
     ModProfile,
 };
 use normpath::PathExt;
+use serde::{Deserialize, Serialize};
 use steamlocate::{CompatTool, Library, SteamDir};
 use tempfile::NamedTempFile;
 use tracing::{error, info, warn};
@@ -58,10 +59,39 @@ pub struct Selector {
     steam_id: Option<u32>,
 }
 
+#[derive(Args, Clone, Debug, Serialize, Deserialize)]
+pub struct GameOptions {
+    /// Don't cache decrypted BHD files (used to improve game startup speed)?
+    #[clap(long("no-boot-boost"), action = ArgAction::SetFalse)]
+    pub(crate) boot_boost: Option<bool>,
+
+    /// Skip initializing Steam within the launcher?
+    #[clap(long("skip-steam-init"), action = ArgAction::SetTrue)]
+    pub(crate) skip_steam_init: Option<bool>,
+
+    /// An optional path to the game executable to launch with mod support. Uses the default
+    /// launcher if not present.
+    #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
+    pub(crate) exe: Option<PathBuf>,
+}
+
+impl GameOptions {
+    pub fn merge(self, other: Self) -> Self {
+        Self {
+            boot_boost: other.boot_boost.or(self.boot_boost),
+            exe: other.exe.or(self.exe),
+            skip_steam_init: other.skip_steam_init.or(self.skip_steam_init),
+        }
+    }
+}
+
 #[derive(Args, Debug)]
 pub struct LaunchArgs {
     #[clap(flatten)]
     pub target_selector: Selector,
+
+    #[clap(flatten)]
+    game_options: GameOptions,
 
     /// Enable diagnostics for this launch?
     #[clap(short('d'), long("diagnostics"), action = ArgAction::SetTrue)]
@@ -70,19 +100,6 @@ pub struct LaunchArgs {
     /// Suspend the game until a debugger is attached?
     #[clap(long("suspend"), action = ArgAction::SetTrue)]
     suspend: bool,
-
-    /// Don't cache decrypted BHD files (used to improve game startup speed)?
-    #[clap(long("no-boot-boost"), action = ArgAction::SetFalse)]
-    boot_boost: bool,
-
-    /// Skip initializing Steam within the launcher?
-    #[clap(long("skip-steam-init"), action = ArgAction::SetTrue)]
-    skip_steam_init: bool,
-
-    /// An optional path to the game executable to launch with mod support. Uses the default
-    /// launcher if not present.
-    #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
-    exe: Option<PathBuf>,
 
     /// Path to a ModProfile configuration file (TOML or JSON) or name of a profile
     /// stored in the me3 profile folder ($XDG_CONFIG_HOME/me3).
@@ -317,15 +334,15 @@ pub fn generate_attach_config(
         game: game.into(),
         packages: ordered_packages,
         natives: ordered_natives,
-        skip_steam_init: args.skip_steam_init,
+        skip_steam_init: args.game_options.skip_steam_init.unwrap_or(false),
         suspend: args.suspend,
-        boot_boost: args.boot_boost,
+        boot_boost: args.game_options.boot_boost.unwrap_or(true),
         cache_path: config.cache_dir().map(|path| path.into_path_buf()),
     })
 }
 
 #[tracing::instrument(err, skip(config, args))]
-pub fn launch(config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
+pub fn launch(config: Config, mut args: LaunchArgs) -> color_eyre::Result<()> {
     let profile_details = if let Some(profile_name) = &args.profile {
         config
             .resolve_profile(profile_name)
@@ -337,6 +354,10 @@ pub fn launch(config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
     let attach_config = generate_attach_config(&config, &args, &profile_details)?;
     let app_id = attach_config.game.app_id();
 
+    if let Some(game_opts) = config.options.game.get(&attach_config.game) {
+        args.game_options = game_opts.clone().merge(args.game_options);
+    }
+
     info!(game=?attach_config.game, app_id, "resolved game");
 
     let bins_dir = config
@@ -345,18 +366,22 @@ pub fn launch(config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
 
     let launcher_path = bins_dir.join("me3-launcher.exe");
     let dll_path = bins_dir.join("me3_mod_host.dll");
-    let game_exe_path = args.exe.map(color_eyre::eyre::Ok).unwrap_or_else(|| {
-        let steam_dir = config.steam_dir()?;
-        let (app, library) = steam_dir.find_app(app_id)?.ok_or_eyre(
-            "Steam was used to locate the game executable and no game installation was found",
-        )?;
+    let game_exe_path = args
+        .game_options
+        .exe
+        .map(color_eyre::eyre::Ok)
+        .unwrap_or_else(|| {
+            let steam_dir = config.steam_dir()?;
+            let (app, library) = steam_dir.find_app(app_id)?.ok_or_eyre(
+                "Steam was used to locate the game executable and no game installation was found",
+            )?;
 
-        let game_exe = library
-            .resolve_app_dir(&app)
-            .join(Game(attach_config.game).launcher());
+            let game_exe = library
+                .resolve_app_dir(&app)
+                .join(Game(attach_config.game).launcher());
 
-        Ok(game_exe)
-    })?;
+            Ok(game_exe)
+        })?;
 
     let mut injector_command = if cfg!(target_os = "linux") {
         let steam_dir = config.steam_dir()?;
