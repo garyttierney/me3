@@ -9,10 +9,11 @@ description = "Override game assets with local versions"
 publish = false
 
 [dependencies]
-cxx-stl = { version = "3", features = ["msvc2012"] }
-from-singleton = { version = "2", features = ["regex-unicode"] }
+cxx-stl.workspace = true
+from-singleton.workspace = true
 undname = "2.1"
 pelite = "0.10"
+rayon.workspace = true
 regex = "1"
 normpath.workspace = true
 thiserror.workspace = true

@@ -1,7 +1,8 @@
-use std::{mem, ops::Range, ptr::NonNull};
+use std::mem;
 
 use me3_binary_analysis::pe;
 use pelite::pe::Pe;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use regex::bytes::Regex;
 use thiserror::Error;
 
@@ -25,40 +26,29 @@ where
 
     let strings = step_name_re
         .find_iter(rdata)
-        .map(|m| m.as_bytes().as_ptr())
+        .map(|m| m.as_bytes().as_ptr() as usize)
         .collect::<Vec<_>>();
 
     if strings.is_empty() {
         return Err(FindError::Step);
     }
 
-    const SIZE: usize = mem::size_of::<*const u8>();
-    const ALIGNMENT: usize = mem::align_of::<*const u8>();
+    let (_, data_ptrs, _) = unsafe { data.align_to::<usize>() };
 
-    let Range { start, end } = data.as_ptr_range();
+    let step_name_ptr = &raw const *data_ptrs
+        .par_iter()
+        .find_any(|ptr| strings.contains(*ptr))
+        .ok_or(FindError::Step)?;
 
-    let mut data_ptr = start.wrapping_byte_offset(start.align_offset(ALIGNMENT) as isize);
+    unsafe {
+        let fn_ptr = step_name_ptr.wrapping_sub(1).read();
 
-    let data_end = end.wrapping_byte_sub(SIZE);
-
-    while data_ptr < data_end {
-        // SAFETY: pointer is aligned and non-null.
-        let fn_ptr = unsafe { data_ptr.cast::<*mut u8>().read() };
-
-        data_ptr = data_ptr.wrapping_byte_add(SIZE);
-
-        // SAFETY: pointer is aligned and non-null.
-        let name_ptr = unsafe { data_ptr.cast::<*const u8>().read() };
-
-        if strings.contains(&name_ptr) {
-            let fn_ptr = NonNull::new(fn_ptr).ok_or(FindError::Method)?;
-
-            // SAFETY: non-null function pointer conversion.
-            return unsafe { Ok(mem::transmute(fn_ptr.as_ptr())) };
+        if fn_ptr != 0 {
+            Ok(mem::transmute(fn_ptr))
+        } else {
+            Err(FindError::Method)
         }
     }
-
-    Err(FindError::Method)
 }
 
 #[derive(Error, Debug)]

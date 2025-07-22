@@ -27,6 +27,7 @@ use crate::{
     debugger::suspend_for_debugger, deferred::defer_until_init, executable::Executable,
     host::ModHost,
 };
+
 mod asset_hooks;
 mod debugger;
 mod deferred;
@@ -35,6 +36,7 @@ mod executable;
 mod filesystem;
 mod host;
 mod native;
+mod skip_logos;
 
 static INSTANCE: OnceLock<usize> = OnceLock::new();
 static mut TELEMETRY_INSTANCE: OnceLock<me3_telemetry::Telemetry> = OnceLock::new();
@@ -90,6 +92,8 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         let exe = unsafe { Executable::new() };
 
         ModHost::new().attach();
+
+        skip_logos::attach_override(attach_config.clone(), exe)?;
 
         let mut override_mapping = ArchiveOverrideMapping::new()?;
         override_mapping.scan_directories(attach_config.packages.iter())?;

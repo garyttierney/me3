@@ -1,7 +1,7 @@
 use std::{
     borrow::Cow,
     collections::VecDeque,
-    fmt, mem,
+    fmt,
     ops::Range,
     ptr::{self, NonNull},
 };
@@ -9,6 +9,7 @@ use std::{
 use cxx_stl::vec::CxxVec;
 use me3_binary_analysis::pe;
 use pelite::pe::Pe;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use thiserror::Error;
 use windows::{
     core::PCWSTR,
@@ -109,43 +110,32 @@ where
     let data = program.get_section_bytes(data)?;
     let rdata = program.get_section_bytes(rdata)?;
 
-    const SIZE: usize = mem::size_of::<*const u8>();
-    const ALIGNMENT: usize = mem::align_of::<*const u8>();
+    let (_, data_ptrs, _) = unsafe { data.align_to::<usize>() };
 
-    let data_range = data.as_ptr_range();
+    let manager_ptr = data_ptrs.par_iter().find_first(move |ptr| unsafe {
+        let manager_ptr = **ptr as *const DlDeviceManager;
 
-    let Range {
-        start,
-        end: data_end,
-    } = data_range;
+        let data_range = data.as_ptr_range();
 
-    let mut data_ptr =
-        start.wrapping_byte_offset(start.align_offset(ALIGNMENT) as isize - SIZE as isize);
-
-    while data_ptr < data_end {
-        data_ptr = data_ptr.wrapping_byte_add(SIZE);
-
-        // SAFETY: pointer is aligned and non-null.
-        let manager_ptr = unsafe { data_ptr.cast::<*const DlDeviceManager>().read() };
-
-        if !data_range.contains(&unsafe { manager_ptr.add(1).cast::<u8>().sub(1) })
-            || !data_range.contains(&manager_ptr.cast())
+        if !data_range.contains(&manager_ptr.cast())
+            || !data_range.contains(&manager_ptr.add(1).byte_sub(1).cast())
         {
-            continue;
+            return false;
         }
 
-        // SAFETY: pointer is in bounds of ".data".
-        if verify_dl_device_manager_layout(manager_ptr, data_range.clone(), rdata.as_ptr_range()) {
-            return Ok(NonNull::new(manager_ptr as _).unwrap());
-        }
-    }
+        let rdata_range = rdata.as_ptr_range();
 
-    Err(FindError::Instance)
+        verify_dl_device_manager_layout(manager_ptr, data_range, rdata_range)
+    });
+
+    manager_ptr
+        .and_then(|ptr| NonNull::new(*ptr as *mut DlDeviceManager))
+        .ok_or(FindError::Instance)
 }
 
 /// # Safety
 /// `ptr` must be in bounds for all reads.
-fn verify_dl_device_manager_layout(
+unsafe fn verify_dl_device_manager_layout(
     device_manager: *const DlDeviceManager,
     data_range: Range<*const u8>,
     rdata_range: Range<*const u8>,
