@@ -33,6 +33,9 @@ pub struct AttachConfig {
     /// Cache decrypted BHD files to improve game startup speed?
     pub boot_boost: bool,
 
+    /// Skip the intro logos shown on every game launch?
+    pub skip_logos: bool,
+
     /// Should we avoid checking if Steam is running as part of pre-launch checks?
     pub skip_steam_init: bool,
 }

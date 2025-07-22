@@ -36,10 +36,12 @@ color-eyre = { version = "0.6", default-features = false }
 crash-context = "0.6"
 crash-handler = "0.6"
 ctrlc = "3"
+cxx-stl = { version = "4", features = ["msvc2012"] }
 directories = "6"
 dll-syringe = { version = "0.16", default-features = false, features = ["syringe", "rpc"] }
 expect-test = "1"
 eyre = { version = "0.6", default-features = false }
+from-singleton = { version = "2", features = ["regex-unicode"] }
 is-terminal = "0.4"
 me3-binary-analysis = { path = "crates/binary-analysis" }
 me3-env = { path = "crates/env" }

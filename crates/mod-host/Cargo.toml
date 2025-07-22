@@ -19,8 +19,10 @@ crate-type = ["cdylib"]
 closure-ffi = { version = "3.0", features = ["coverage", "std", "tuple_trait"] }
 color-eyre.workspace = true
 crash-handler.workspace = true
+cxx-stl.workspace = true
 dll-syringe = { workspace = true, features = ["payload-utils"] }
 eyre = { workspace = true, default-features = false, features = ["track-caller"] }
+from-singleton.workspace = true
 libloading = "0.8.8"
 me3-binary-analysis.workspace = true
 me3-env.workspace = true
@@ -29,6 +31,8 @@ me3-mod-host-assets.workspace = true
 me3-mod-protocol.workspace = true
 me3-telemetry.workspace = true
 pelite.workspace = true
+regex.workspace = true
+rayon.workspace = true
 retour = { git = "https://github.com/Hpmason/retour-rs" }
 rsa = "0.9"
 seq-macro = "0.3.6"
@@ -37,6 +41,7 @@ tempfile.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 windows = { workspace = true, features = [
+    "Win32_Graphics_Gdi",
     "Win32_Globalization",
     "Win32_Security",
     "Win32_Storage_FileSystem",
@@ -45,6 +50,7 @@ windows = { workspace = true, features = [
     "Win32_System_Memory",
     "Win32_System_SystemInformation",
     "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
 ] }
 xxhash-rust = { version = "0.8", features = ["std", "xxh3"] }
 

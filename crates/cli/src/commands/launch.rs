@@ -64,6 +64,10 @@ pub struct GameOptions {
     #[clap(long("no-boot-boost"), default_missing_value = "true", num_args=0..=1, value_parser = invert_bool())]
     pub(crate) boot_boost: Option<bool>,
 
+    /// Show the intro logos shown on every game launch?
+    #[clap(long("show-logos"), default_missing_value = "true", num_args=0..=1, value_parser = invert_bool())]
+    pub(crate) skip_logos: Option<bool>,
+
     /// Skip initializing Steam within the launcher?
     #[clap(long("skip-steam-init"), default_missing_value = "true", num_args=0..=1)]
     pub(crate) skip_steam_init: Option<bool>,
@@ -82,6 +86,7 @@ impl GameOptions {
     pub fn merge(self, other: Self) -> Self {
         Self {
             boot_boost: other.boot_boost.or(self.boot_boost),
+            skip_logos: other.skip_logos.or(self.skip_logos),
             exe: other.exe.or(self.exe),
             skip_steam_init: other.skip_steam_init.or(self.skip_steam_init),
         }
@@ -259,10 +264,11 @@ pub fn generate_attach_config(
         game: game.into(),
         packages,
         natives,
-        skip_steam_init: opts.skip_steam_init.unwrap_or(false),
+        cache_path: cache_path.map(|path| path.into_path_buf()),
         suspend: suspend_on_attach,
         boot_boost: opts.boot_boost.unwrap_or(true),
-        cache_path: cache_path.map(|path| path.into_path_buf()),
+        skip_logos: opts.skip_logos.unwrap_or(true),
+        skip_steam_init: opts.skip_steam_init.unwrap_or(false),
     })
 }
 
@@ -285,7 +291,7 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
             .or_else(|| args.target_selector.steam_id.and_then(Game::from_app_id))
             .ok_or_eyre("unable to determine game from name or app ID")
     }?;
-    info!(?args.game_options);
+
     let game_options = config
         .options
         .game
@@ -494,6 +500,7 @@ mod tests {
             launch_args.game_options,
             GameOptions {
                 boot_boost: None,
+                skip_logos: None,
                 skip_steam_init: None,
                 exe: None,
             },
@@ -508,6 +515,7 @@ mod tests {
             "-g",
             "er",
             "--no-boot-boost",
+            "--show-logos",
             "--skip-steam-init",
         ]);
 
@@ -519,6 +527,7 @@ mod tests {
             launch_args.game_options,
             GameOptions {
                 boot_boost: Some(false),
+                skip_logos: Some(false),
                 skip_steam_init: Some(true),
                 exe: None,
             },
@@ -533,6 +542,7 @@ mod tests {
             "-g",
             "er",
             "--no-boot-boost=false",
+            "--show-logos=false",
             "--skip-steam-init=false",
         ]);
 
@@ -544,6 +554,7 @@ mod tests {
             launch_args.game_options,
             GameOptions {
                 boot_boost: Some(true),
+                skip_logos: Some(true),
                 skip_steam_init: Some(false),
                 exe: None,
             },
@@ -558,6 +569,7 @@ mod tests {
             "-g",
             "er",
             "--no-boot-boost=true",
+            "--show-logos=true",
             "--skip-steam-init=true",
         ]);
 
@@ -569,6 +581,7 @@ mod tests {
             launch_args.game_options,
             GameOptions {
                 boot_boost: Some(false),
+                skip_logos: Some(false),
                 skip_steam_init: Some(true),
                 exe: None,
             },
