@@ -54,3 +54,4 @@ workspace = true
 
 [dev-dependencies]
 assert_fs = "1.1.3"
+pretty_assertions = "1.4"
