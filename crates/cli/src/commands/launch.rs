@@ -1,5 +1,4 @@
 use std::{
-    collections::BTreeSet,
     error::Error,
     fmt::Debug,
     fs::{self, File},
@@ -15,24 +14,21 @@ use std::{
 
 use chrono::Local;
 use clap::{ArgAction, Args};
-use color_eyre::eyre::{eyre, Context, OptionExt};
+use color_eyre::eyre::{eyre, OptionExt};
 use me3_env::{LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::AttachConfig;
-use me3_mod_protocol::{
-    dependency::sort_dependencies,
-    native::Native,
-    package::{Package, WithPackageSource},
-    ModProfile,
-};
+use me3_mod_protocol::{native::Native, package::Package};
 use normpath::PathExt;
 use serde::{Deserialize, Serialize};
 use steamlocate::{CompatTool, Library, SteamDir};
 use tempfile::NamedTempFile;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
-use crate::{config::Config, Game, Options};
-
-pub mod launcher;
+use crate::{
+    config::Config,
+    db::{profile::Profile, DbContext},
+    Game,
+};
 
 #[derive(Debug, clap::Args)]
 #[group(required = true, multiple = false)]
@@ -59,7 +55,7 @@ pub struct Selector {
     steam_id: Option<u32>,
 }
 
-#[derive(Args, Clone, Debug, Serialize, Deserialize)]
+#[derive(Args, Clone, Debug, Serialize, Deserialize, Default)]
 pub struct GameOptions {
     /// Don't cache decrypted BHD files (used to improve game startup speed)?
     #[clap(long("no-boot-boost"), action = ArgAction::SetFalse)]
@@ -216,158 +212,100 @@ impl Launcher for CompatToolLauncher {
     }
 }
 
-pub struct ProfileDetails {
-    name: String,
-    base_dir: PathBuf,
-    profile: ModProfile,
-}
-
-impl Default for ProfileDetails {
-    fn default() -> Self {
-        Self {
-            name: "transient-profile".to_string(),
-            base_dir: Default::default(),
-            profile: Default::default(),
-        }
-    }
-}
-
-impl ProfileDetails {
-    pub fn from_file<P: AsRef<Path>>(path: P) -> color_eyre::Result<Self> {
-        let path = path.as_ref();
-        let name = path
-            .file_stem()
-            .expect("profile was loaded by filename")
-            .to_string_lossy();
-
-        let norm = path
-            .normalize()
-            .wrap_err("failed to normalize mod profile file")?;
-        let parent = norm
-            .parent()
-            .unwrap_or_default()
-            .ok_or_eyre("failed to find parent folder of profile file")?;
-        let profile = ModProfile::from_file(path)?;
-
-        Ok(Self {
-            name: name.to_string(),
-            base_dir: parent.as_path().to_owned(),
-            profile,
-        })
-    }
-}
-
 pub fn generate_attach_config(
-    config: &Config,
-    args: &LaunchArgs,
-    profile_details: &ProfileDetails,
+    game: Game,
+    opts: &GameOptions,
+    profile: &Profile,
+    extra_natives: &[PathBuf],
+    extra_packages: &[PathBuf],
+    suspend_on_attach: bool,
+    cache_path: Option<Box<Path>>,
 ) -> color_eyre::Result<AttachConfig> {
-    fn exists<S: WithPackageSource>(p: &S) -> bool {
-        match p.source().try_exists() {
-            Ok(true) => true,
-            _ => {
-                warn!(path = %p.source().display(), "specified path does not exist or is inaccessible");
-                false
-            }
+    for path in extra_natives.iter().chain(extra_packages) {
+        if !path.exists() {
+            return Err(eyre!("{path:?} does not exist"));
         }
     }
 
-    let mut all_natives = vec![];
-    let mut all_packages = vec![];
+    let mut natives = vec![];
+    let mut packages = vec![];
 
-    all_packages.extend(
-        args.packages
+    packages.extend(
+        extra_packages
             .iter()
             .filter_map(|path| path.normalize().ok())
-            .map(|normalized| Package::new(normalized.into_path_buf()))
-            .filter(exists),
+            .map(|normalized| Package::new(normalized.into_path_buf())),
     );
 
-    all_natives.extend(
-        args.natives
+    natives.extend(
+        extra_natives
             .iter()
             .filter_map(|path| path.normalize().ok())
-            .map(|normalized| Native::new(normalized.into_path_buf()))
-            .filter(exists),
+            .map(|normalized| Native::new(normalized.into_path_buf())),
     );
 
-    let profile = &profile_details.profile;
-    let mut packages = profile.packages();
-    let mut natives = profile.natives();
+    let (ordered_natives, ordered_packages) = profile.compile()?;
+    packages.extend(ordered_packages);
+    natives.extend(ordered_natives);
 
-    packages
-        .iter_mut()
-        .for_each(|pkg| pkg.source_mut().make_absolute(&profile_details.base_dir));
-    natives
-        .iter_mut()
-        .for_each(|pkg| pkg.source_mut().make_absolute(&profile_details.base_dir));
+    Ok(AttachConfig {
+        game: game.into(),
+        packages,
+        natives,
+        skip_steam_init: opts.skip_steam_init.unwrap_or(false),
+        suspend: suspend_on_attach,
+        boot_boost: opts.boot_boost.unwrap_or(true),
+        cache_path: cache_path.map(|path| path.into_path_buf()),
+    })
+}
 
-    all_packages.extend(packages.into_iter().filter(exists));
-    all_natives.extend(natives.into_iter().filter(exists));
-
-    let ordered_natives = sort_dependencies(all_natives)?;
-    let ordered_packages = sort_dependencies(all_packages)?;
-
-    let mut profile_supported_games = BTreeSet::new();
-    for supports in profile_details.profile.supports() {
-        profile_supported_games.insert(Game(supports.game));
-    }
+#[tracing::instrument(err, skip_all)]
+pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
+    let profile = if let Some(profile_name) = &args.profile {
+        db.profiles.load(profile_name)?
+    } else {
+        Profile::transient()
+    };
 
     let game = if args.target_selector.auto_detect {
-        if profile_supported_games.len() > 1 {
-            Err(eyre!(
-                "profile supports more than one game, unable to auto-detect"
-            ))
-        } else {
-            profile_supported_games
-                .pop_first()
-                .ok_or_eyre("unable to auto-detect appid of game")
-        }
+        profile
+            .supported_game()
+            .map(|g| crate::Game(g))
+            .ok_or_eyre("me3 profile lists no supported games")
     } else {
         args.target_selector
             .game
             .or_else(|| args.target_selector.steam_id.and_then(Game::from_app_id))
-            .ok_or_eyre("unable to determine app ID for game")
+            .ok_or_eyre("unable to determine game from name or app ID")
     }?;
 
-    Ok(AttachConfig {
-        game: game.into(),
-        packages: ordered_packages,
-        natives: ordered_natives,
-        skip_steam_init: args.game_options.skip_steam_init.unwrap_or(false),
-        suspend: args.suspend,
-        boot_boost: args.game_options.boot_boost.unwrap_or(true),
-        cache_path: config.cache_dir().map(|path| path.into_path_buf()),
-    })
-}
+    let game_options = config
+        .options
+        .game
+        .get(&game.0)
+        .cloned()
+        .unwrap_or_default()
+        .merge(args.game_options);
 
-#[tracing::instrument(err, skip(config, args))]
-pub fn launch(config: Config, mut args: LaunchArgs) -> color_eyre::Result<()> {
-    let profile_details = if let Some(profile_name) = &args.profile {
-        config
-            .resolve_profile(profile_name)
-            .and_then(ProfileDetails::from_file)?
-    } else {
-        ProfileDetails::default()
-    };
-
-    let attach_config = generate_attach_config(&config, &args, &profile_details)?;
-    let app_id = attach_config.game.app_id();
-
-    if let Some(game_opts) = config.options.game.get(&attach_config.game) {
-        args.game_options = game_opts.clone().merge(args.game_options);
-    }
-
-    info!(game=?attach_config.game, app_id, "resolved game");
+    info!(?game, ?game_options, "resolved game");
+    let attach_config = generate_attach_config(
+        game,
+        &game_options,
+        &profile,
+        &args.natives,
+        &args.packages,
+        args.suspend,
+        config.cache_dir(),
+    )?;
 
     let bins_dir = config
         .windows_binaries_dir()
         .ok_or_eyre("Can't find location of windows-binaries-dir")?;
 
+    let app_id = game.app_id();
     let launcher_path = bins_dir.join("me3-launcher.exe");
     let dll_path = bins_dir.join("me3_mod_host.dll");
-    let game_exe_path = args
-        .game_options
+    let game_exe_path = game_options
         .exe
         .map(color_eyre::eyre::Ok)
         .unwrap_or_else(|| {
@@ -376,9 +314,7 @@ pub fn launch(config: Config, mut args: LaunchArgs) -> color_eyre::Result<()> {
                 "Steam was used to locate the game executable and no game installation was found",
             )?;
 
-            let game_exe = library
-                .resolve_app_dir(&app)
-                .join(Game(attach_config.game).launcher());
+            let game_exe = library.resolve_app_dir(&app).join(game.launcher());
 
             Ok(game_exe)
         })?;
@@ -421,7 +357,7 @@ pub fn launch(config: Config, mut args: LaunchArgs) -> color_eyre::Result<()> {
     let log_folder = config
         .log_dir()
         .unwrap_or_else(|| PathBuf::from(".").into_boxed_path())
-        .join(profile_details.name);
+        .join(profile.name());
 
     info!(?log_folder, "creating profile log folder");
     fs::create_dir_all(&log_folder)?;

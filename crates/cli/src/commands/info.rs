@@ -1,8 +1,6 @@
-use std::path::PathBuf;
-
 use color_eyre::owo_colors::OwoColorize;
 
-use crate::{config::Config, output::OutputBuilder, Options};
+use crate::{config::Config, output::OutputBuilder};
 
 fn format_path<P: AsRef<std::path::Path>>(path: Option<P>) -> String {
     match path {
