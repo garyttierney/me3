@@ -13,7 +13,10 @@ use std::{
 };
 
 use chrono::Local;
-use clap::{ArgAction, Args};
+use clap::{
+    builder::{BoolValueParser, MapValueParser, TypedValueParser},
+    ArgAction, Args,
+};
 use color_eyre::eyre::{eyre, OptionExt};
 use me3_env::{LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::AttachConfig;
@@ -55,20 +58,24 @@ pub struct Selector {
     steam_id: Option<u32>,
 }
 
-#[derive(Args, Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Args, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
 pub struct GameOptions {
     /// Don't cache decrypted BHD files (used to improve game startup speed)?
-    #[clap(long("no-boot-boost"), action = ArgAction::SetFalse)]
+    #[clap(long("no-boot-boost"), default_missing_value = "true", num_args=0..=1, value_parser = invert_bool())]
     pub(crate) boot_boost: Option<bool>,
 
     /// Skip initializing Steam within the launcher?
-    #[clap(long("skip-steam-init"), action = ArgAction::SetTrue)]
+    #[clap(long("skip-steam-init"), default_missing_value = "true", num_args=0..=1)]
     pub(crate) skip_steam_init: Option<bool>,
 
     /// An optional path to the game executable to launch with mod support. Uses the default
     /// launcher if not present.
     #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
     pub(crate) exe: Option<PathBuf>,
+}
+
+fn invert_bool() -> MapValueParser<BoolValueParser, fn(bool) -> bool> {
+    BoolValueParser::new().map(|v| !v)
 }
 
 impl GameOptions {
@@ -270,7 +277,7 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     let game = if args.target_selector.auto_detect {
         profile
             .supported_game()
-            .map(|g| crate::Game(g))
+            .map(crate::Game)
             .ok_or_eyre("me3 profile lists no supported games")
     } else {
         args.target_selector
@@ -278,7 +285,7 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
             .or_else(|| args.target_selector.steam_id.and_then(Game::from_app_id))
             .ok_or_eyre("unable to determine game from name or app ID")
     }?;
-
+    info!(?args.game_options);
     let game_options = config
         .options
         .game
@@ -464,4 +471,107 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser;
+
+    use crate::{
+        commands::{launch::GameOptions, Commands},
+        Cli,
+    };
+
+    #[test]
+    fn optional_flags_default_to_none() {
+        let cli = Cli::parse_from(&["me3", "launch", "-g", "er"]);
+
+        let Commands::Launch(launch_args) = cli.command else {
+            panic!("me3 launch produced incorrect command");
+        };
+
+        pretty_assertions::assert_eq!(
+            launch_args.game_options,
+            GameOptions {
+                boot_boost: None,
+                skip_steam_init: None,
+                exe: None,
+            },
+        );
+    }
+
+    #[test]
+    fn optional_flags_with_missing_values() {
+        let cli = Cli::parse_from(&[
+            "me3",
+            "launch",
+            "-g",
+            "er",
+            "--no-boot-boost",
+            "--skip-steam-init",
+        ]);
+
+        let Commands::Launch(launch_args) = cli.command else {
+            panic!("me3 launch produced incorrect command");
+        };
+
+        pretty_assertions::assert_eq!(
+            launch_args.game_options,
+            GameOptions {
+                boot_boost: Some(false),
+                skip_steam_init: Some(true),
+                exe: None,
+            },
+        );
+    }
+
+    #[test]
+    fn optional_flags_with_false_values() {
+        let cli = Cli::parse_from(&[
+            "me3",
+            "launch",
+            "-g",
+            "er",
+            "--no-boot-boost=false",
+            "--skip-steam-init=false",
+        ]);
+
+        let Commands::Launch(launch_args) = cli.command else {
+            panic!("me3 launch produced incorrect command");
+        };
+
+        pretty_assertions::assert_eq!(
+            launch_args.game_options,
+            GameOptions {
+                boot_boost: Some(true),
+                skip_steam_init: Some(false),
+                exe: None,
+            },
+        );
+    }
+
+    #[test]
+    fn optional_flags_with_true_values() {
+        let cli = Cli::parse_from(&[
+            "me3",
+            "launch",
+            "-g",
+            "er",
+            "--no-boot-boost=true",
+            "--skip-steam-init=true",
+        ]);
+
+        let Commands::Launch(launch_args) = cli.command else {
+            panic!("me3 launch produced incorrect command");
+        };
+
+        pretty_assertions::assert_eq!(
+            launch_args.game_options,
+            GameOptions {
+                boot_boost: Some(false),
+                skip_steam_init: Some(true),
+                exe: None,
+            },
+        );
+    }
 }
