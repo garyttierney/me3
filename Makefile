@@ -6,8 +6,8 @@ DESTDIR ?= out
 
 WINDOWS_TRIPLE ?= x86_64-pc-windows-msvc
 LINUX_TRIPLE ?= x86_64-unknown-linux-gnu
-SOURCE_DATE_EPOCH=$(shell git log -1 --format=%ct)
-COMMIT_ID=$(shell git rev-parse --verify HEAD)
+SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct)
+COMMIT_ID ?= $(shell git rev-parse --verify HEAD)
 
 SIGNING_CERTIFICATE ?= releng/certificate.pem
 SIGNING_KEY ?= e25a03beabebbaa4b79fe76121540ec059794a60
@@ -33,6 +33,13 @@ clean:
 %.sig: %
 	rm -f $@
 	gpg -o $@ -b $<
+
+$(DESTDIR)/me3.spec: me3.spec.rpkg
+	rpkg spec -p > $(DESTDIR)/me3.spec
+
+$(DESTDIR)/me3-fedora-42-x86_64.rpm: $(DESTDIR)/me3.spec
+	rpkg srpm --outdir $(DESTDIR)
+	mock --enable-network -r fedora-42-x86_64 $(DESTDIR)/me3-$(shell rpmspec -q --qf '%{version}' $(DESTDIR)/me3.spec)-$(shell rpmspec -q --qf '%{release}' $(DESTDIR)/me3.spec).src.rpm
 
 $(DESTDIR)/%.pdf: %.md
 	pandoc -t html $< -o $@

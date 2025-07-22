@@ -1,0 +1,69 @@
+%global debug_package %{nil}
+
+Name:       {{{ git_repo_name }}}
+Version:    {{{ git_repo_version }}}
+Release:    1%{?dist}
+Summary:    Modding framework for FROMSOFTWARE games
+
+License:    Apache-2.0 OR MIT
+URL:        https://me3.help
+VCS:        {{{ git_repo_vcs }}}
+
+Source0: {{{ git_dir_pack }}}
+Source1: vendor.tar.gz
+
+BuildRequires: rust-packaging
+BuildRequires: rust-std-static-x86_64-pc-windows-gnu
+BuildRequires: make
+BuildRequires: gcc
+BuildRequires: binutils
+BuildRequires: mingw64-binutils
+BuildRequires: mingw64-crt
+BuildRequires: mingw64-gcc
+BuildRequires: mingw64-libstdc++
+BuildRequires: mingw64-cpp
+BuildRequires: mingw64-headers
+BuildRequires: mingw64-filesystem
+BuildRequires: nasm
+BuildRequires: git
+BuildRequires: lld
+
+%description
+This is a test package.
+
+%prep
+{{{ git_repo_setup_macro source_indices=0,1 }}}
+cat > .cargo/config.toml <<EOF
+[build]
+target = "x86_64-pc-windows-gnu"
+
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/Hpmason/retour-rs"]
+git = "https://github.com/Hpmason/retour-rs"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "../vendor"
+EOF
+
+%build
+unset LDFLAGS CC CFLAGS RUSTFLAGS
+export RUSTFLAGS="-g"
+export SOURCE_DATE_EPOCH=0
+export RUSTC_BOOTSTRAP=1
+export WINDOWS_TRIPLE="x86_64-pc-windows-gnu"
+export COMMIT_ID="abc123"
+make out/me3 out/me3-launcher.exe out/me3_mod_host.dll
+	
+%install	
+install -Dpm 0755 -t "%{buildroot}%{_bindir}" out/me3
+install -Dpm 0755 -t "%{buildroot}%{_libdir}/me3/x86_64-windows" out/me3-launcher.exe out/me3_mod_host.dll
+
+%files	
+%{_bindir}/me3
+%{_libdir}/me3/x86_64-windows/me3-launcher.exe
+%{_libdir}/me3/x86_64-windows/me3_mod_host.dll
+
+%changelog
