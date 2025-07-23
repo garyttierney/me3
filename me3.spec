@@ -8,7 +8,14 @@ Summary:    Modding framework for FROMSOFTWARE games
 License:    Apache-2.0 OR MIT
 URL:        https://me3.help
 
-Source0: https://github.com/garyttierney/me3/archive/refs/tags/v%{version}.tar.gz
+%if %{undefined branch} && %{undefined commit}
+Source0:        https://github.com/garyttierney/me3/archive/v%{version}/%{name}-%{version}.tar.gz
+%elif %{defined branch}
+Source0:        https://github.com/garyttierney/me3/archive/refs/heads/%{branch}.tar.gz
+%elif %{defined commit}
+Source0:        https://github.com/garyttierney/me3/archive/%{commit}/%{name}-%{commit}.tar.gz
+%endif
+
 Source1: vendor.tar.gz
 
 BuildRequires: rust-packaging
