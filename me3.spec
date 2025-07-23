@@ -46,7 +46,7 @@ replace-with = "vendored-sources"
 EOF}
 
 %prep
-%setup -T -b 0 -b 1 -q -n me3
+%setup -T -b 0 -c -n %{name}-%{version}
 
 %build
 %cargo_prep -v vendor
