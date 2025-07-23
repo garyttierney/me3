@@ -124,14 +124,17 @@ impl KnownDirs {
         let potential_target_dir = self.cwd.join("target");
 
         let windows_bin_dirs = [
-            self.prefix.join("usr/lib/me3/x86_64-windows"),
+            self.prefix.join("usr/lib64/me3/x86_64-windows"),
             self.project_dirs
                 .as_ref()
                 .map(|dirs| dirs.data_local_dir().join("windows-bin").into_boxed_path()),
             self.exe_dir.join("win64"), // Portable distribution
             #[cfg(debug_assertions)]
             potential_target_dir.join("x86_64-pc-windows-msvc/debug"),
+            #[cfg(debug_assertions)]
+            potential_target_dir.join("x86_64-pc-windows-gnu/debug"),
             potential_target_dir.join("x86_64-pc-windows-msvc/release"),
+            potential_target_dir.join("x86_64-pc-windows-gnu/release"),
         ];
 
         windows_bin_dirs.into_iter().flatten()
