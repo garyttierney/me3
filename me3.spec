@@ -32,6 +32,7 @@ BuildRequires: mingw64-headers
 BuildRequires: mingw64-filesystem
 BuildRequires: git
 BuildRequires: cargo-rpm-macros >= 24
+BuildRequires: rust >= 1.88.0
 
 %description
 me3 is a mod loader for FROMSOFTWARE games
