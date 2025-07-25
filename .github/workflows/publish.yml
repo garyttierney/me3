@@ -108,6 +108,7 @@ jobs:
               -H "Authorization: Bearer ${GITHUB_TOKEN}" \
               -H "X-Signing-Pin: ${{ secrets.ME3_SIGNING_PIN }}" \
               -H "X-Signing-Key: e25a03beabebbaa4b79fe76121540ec059794a60" \
+              -H "Content-Type: application/vnd.microsoft.portable-executable" \
               -d "@$exe" --output "$exe.signed" \
               https://irithyll.me3.help
           done
