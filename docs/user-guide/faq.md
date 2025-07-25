@@ -30,11 +30,6 @@ The `me3 launch` command can be used to point to a custom game executable. For e
 
 ## Known Issues
 
-### (Linux) me3 panics and fails to start
-
-!!! bug "The launcher may panic on startup if `crash_reporting` is not set in your config file."
-!!! success "Ensure your `me3.toml` configuration file includes `crash_reporting = true` or `crash_reporting = false`."
-
 ### (Steam Deck) Game won't launch when game is installed to an SD card
 
 !!! bug "me3 fails to find the compatprefix for games installed to an SD card"
