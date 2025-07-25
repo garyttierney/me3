@@ -69,6 +69,48 @@ jobs:
             out/me3-windows-amd64.zip
             out/me3-linux-amd64.tar.gz
 
+  sign-artifacts:
+    name: Sign artifacts
+    needs:
+      - build-installer
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      id-token: write
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+
+      - name: Download installer
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: me3-artifacts
+
+      - name: Get OIDC token
+        id: get-oidc-token
+        run: |
+          TOKEN=$(curl -sSL -X GET "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=irithyll.me3.help" \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" | jq -r '.value')
+
+          echo "value=$TOKEN" >> "$GITHUB_OUTPUT"
+      - name: Sign executables
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
+          GITHUB_TOKEN: ${{ steps.get-oidc-token.outputs.value }}        
+        run: |
+          for exe in out/*.exe out/*.dll; do
+            curl -v --fail-with-body -X POST \
+              -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
+              -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -H "X-Signing-Pin: ${{ secrets.ME3_SIGNING_PIN }}" \
+              -H "X-Signing-Key: e25a03beabebbaa4b79fe76121540ec059794a60" \
+              -d "@$exe" --output "$exe.signed" \
+              https://irithyll.me3.help
+          done
   test-windows:
     name: End-to-end tests (Windows)
     needs:
