@@ -30,7 +30,7 @@ runs:
       run: |
         for exe in $FILES; do
           echo "Signing $exe"
-          curl -v --fail-with-body -X POST \
+          curl -v --fail-with-body --compressed \
             -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
             -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
