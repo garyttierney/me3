@@ -64,7 +64,7 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       - name: Sign installer
-        uses: ./github/actions/sign-authenticode
+        uses: ./.github/actions/sign-authenticode
         with:
           files: out/me3_installer.exe
           cloudflare_client_id: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
