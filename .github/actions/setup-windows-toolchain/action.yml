@@ -12,13 +12,10 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install WINE + LLVM
+    - name: Install LLVM
       shell: bash
       run: |
-        sudo dpkg --add-architecture i386
-        wget -qO - https://dl.winehq.org/wine-builds/winehq.key | sudo apt-key add -
-        sudo apt-add-repository "deb https://dl.winehq.org/wine-builds/ubuntu $(lsb_release -cs) main"
-        sudo apt install --install-recommends winehq-stable lld clang-tools llvm
+        sudo apt install --install-recommends lld clang-tools llvm
 
     - name: Cache MSVC SDK
       id: cache-xwin
@@ -57,7 +54,6 @@ runs:
             "-Lnative=${{ github.workspace }}/xwin/sdk/lib/ucrt/x86_64",
             "-C",
             "target-feature=+crt-static",
-            "--cfg", "windows_raw_dylib",
             "--cfg", "windows_debugger_visualizer"
         ]
         EOF
