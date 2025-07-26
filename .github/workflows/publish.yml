@@ -55,6 +55,7 @@ jobs:
           files: out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll
           cloudflare_client_id: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
           cloudflare_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
+          signing_pin: ${{ secrets.ME3_SIGNING_PIN }}
         # if: github.event_name == 'push'
 
       - name: Create distributions and installer
@@ -69,6 +70,7 @@ jobs:
           files: out/me3_installer.exe
           cloudflare_client_id: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
           cloudflare_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
+          signing_pin: ${{ secrets.ME3_SIGNING_PIN }}
         # if: github.event_name == 'push'
 
       - uses: actions/attest-build-provenance@v2

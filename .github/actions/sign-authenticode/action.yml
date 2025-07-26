@@ -5,7 +5,7 @@ inputs:
     description: "OAuth2 client ID for Cloudflare Zero Trust Access"
   cloudflare_client_secret:
     description: "OAuth2 client secret for Cloudflare Zero Trust Access"
-  signing-pin:
+  signing_pin:
     description: "HSM authentication PUK"
   files: # id of input
     description: "Space delimited list of files to sign"
@@ -26,6 +26,7 @@ runs:
         CF_ACCESS_CLIENT_ID: ${{ inputs.cloudflare_client_id }}
         CF_ACCESS_CLIENT_SECRET: ${{ inputs.cloudflare_client_secret }}
         GITHUB_TOKEN: ${{ steps.get-oidc-token.outputs.value }}
+        SIGNING_PIN: ${{ inputs.signing_pin }}
         FILES: ${{ inputs.files }}
       run: |
         for exe in $FILES; do
@@ -34,7 +35,7 @@ runs:
             -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
             -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-            -H "X-Signing-Pin: ${{ inputs.signing-pin }}" \
+            -H "X-Signing-Pin: $SIGNING_PIN" \
             -H "X-Signing-Key: e25a03beabebbaa4b79fe76121540ec059794a60" \
             -H "Content-Type: application/vnd.microsoft.portable-executable" \
             --data-binary "@$exe" --output "$exe.signed" \
