@@ -23,7 +23,7 @@ runs:
 
     - name: Sign executables
       env:
-        CF_ACCESS_CLIENT_ID: ${{ inputs.cloudclare_client_id }}
+        CF_ACCESS_CLIENT_ID: ${{ inputs.cloudflare_client_id }}
         CF_ACCESS_CLIENT_SECRET: ${{ inputs.cloudflare_client_secret }}
         GITHUB_TOKEN: ${{ steps.get-oidc-token.outputs.value }}
         FILES: ${{ inputs.files }}
