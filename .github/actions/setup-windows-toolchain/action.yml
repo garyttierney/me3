@@ -15,7 +15,7 @@ runs:
     - name: Install LLVM
       shell: bash
       run: |
-        sudo apt install --install-recommends lld clang-tools llvm pandoc wkhtmltopdf
+        sudo apt install --install-recommends lld clang-tools llvm wkhtmltopdf nsis
 
     - name: Cache MSVC SDK
       id: cache-xwin
