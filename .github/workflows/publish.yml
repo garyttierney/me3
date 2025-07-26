@@ -102,6 +102,7 @@ jobs:
           GITHUB_TOKEN: ${{ steps.get-oidc-token.outputs.value }}        
         run: |
           for exe in out/*.exe out/*.dll; do
+            echo "Signing $exe"
             curl -v --fail-with-body -X POST \
               -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
               -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
@@ -109,7 +110,7 @@ jobs:
               -H "X-Signing-Pin: ${{ secrets.ME3_SIGNING_PIN }}" \
               -H "X-Signing-Key: e25a03beabebbaa4b79fe76121540ec059794a60" \
               -H "Content-Type: application/vnd.microsoft.portable-executable" \
-              -d "@$exe" --output "$exe.signed" \
+              --data-binary "@$exe" --output "$exe.signed" \
               https://irithyll.me3.help
           done
   test-windows:
