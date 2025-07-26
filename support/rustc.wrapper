@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+set -eu
+
+# First argument is the path to the real rustc
+RUSTC="$1"
+shift
+
+# Store original path information
+CURRENT_DIR=$(pwd)
+CARGO_HOME=${CARGO_HOME:-"${HOME}/.cargo"}
+RUSTUP_HOME=${RUSTUP_HOME:-"${HOME}/.rustup"}
+
+# Execute rustc with the fixed flags
+exec "${RUSTC}" \
+  -Cforce-frame-pointers=yes \
+  --remap-path-prefix="${CURRENT_DIR}"=/build \
+  --remap-path-prefix="${CARGO_HOME}"=/cargo \
+  --remap-path-prefix="${RUSTUP_HOME}"=/rust \
+  -Cdebuginfo=2 \
+  -Ccodegen-units=1 \
+  -Cstrip=none \
+  "$@"

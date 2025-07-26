@@ -18,11 +18,11 @@ jobs:
   build-installer:
     name: Installer
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.get_version.outputs.version}}
     permissions:
       contents: read
       actions: write
+      id-token: write
+      attestations: write
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
@@ -35,29 +35,43 @@ jobs:
           toolchain: nightly
           targets: x86_64-pc-windows-msvc,x86_64-unknown-linux-musl
       - uses: ./.github/actions/setup-windows-toolchain
-      - name: Install musl-tools
-        run: sudo apt-get install --yes musl-tools
       - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2.8.0
         with:
           shared-key: me3-build
           save-if: ${{ github.event_name == 'push' }}
-      - name: Install NSIS + wkhtmltopdf
-        run: |
-          sudo apt-get install nsis wkhtmltopdf
-      - name: Install pandoc
-        uses: pandoc/actions/setup@86321b6dd4675f5014c611e05088e10d4939e09e # v1.1.1
-        with:
-          version: 2.19
-      - run: |
-          echo "version=$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)" >> $GITHUB_OUTPUT
-        id: get_version
-        shell: bash
 
-      - name: Create distributions
+      - name: Build binaries
+        run: |
+          make -j2 out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll out/me3
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Sign binaries
+        uses: ./.github/actions/sign-authenticode
+        with:
+          files: out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll
+          cloudflare_client_id: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
+          cloudflare_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
+      - name: Create distributions and installer
         run: |
           make all
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Sign installer
+        uses: ./github/actions/sign-authenticode
+        with:
+          files: out/me3_installer.exe
+          cloudflare_client_id: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
+          cloudflare_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
+          
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            installer.sh
+            out/me3_installer.exe
+            out/me3-windows-amd64.zip
+            out/me3-linux-amd64.tar.gz
 
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -69,50 +83,6 @@ jobs:
             out/me3-windows-amd64.zip
             out/me3-linux-amd64.tar.gz
 
-  sign-artifacts:
-    name: Sign artifacts
-    needs:
-      - build-installer
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      id-token: write
-    steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
-        with:
-          egress-policy: audit
-
-      - name: Download installer
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: me3-artifacts
-
-      - name: Get OIDC token
-        id: get-oidc-token
-        run: |
-          TOKEN=$(curl -sSL -X GET "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=irithyll.me3.help" \
-            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" | jq -r '.value')
-
-          echo "value=$TOKEN" >> "$GITHUB_OUTPUT"
-      - name: Sign executables
-        env:
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
-          GITHUB_TOKEN: ${{ steps.get-oidc-token.outputs.value }}        
-        run: |
-          for exe in out/*.exe out/*.dll; do
-            echo "Signing $exe"
-            curl -v --fail-with-body -X POST \
-              -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
-              -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
-              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-              -H "X-Signing-Pin: ${{ secrets.ME3_SIGNING_PIN }}" \
-              -H "X-Signing-Key: e25a03beabebbaa4b79fe76121540ec059794a60" \
-              -H "Content-Type: application/vnd.microsoft.portable-executable" \
-              --data-binary "@$exe" --output "$exe.signed" \
-              https://irithyll.me3.help
-          done
   test-windows:
     name: End-to-end tests (Windows)
     needs:
