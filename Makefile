@@ -1,4 +1,4 @@
-.PHONY: all clean
+.PHONY: all clean dist-linux dist-windows
 .DELETE_ON_ERROR:
 .ONESHELL:
 SHELL := /bin/bash
@@ -57,15 +57,15 @@ $(DESTDIR)/me3_mod_host.dll:
 $(DESTDIR)/me3_installer.exe: $(windows_binaries) $(DESTDIR)/CHANGELOG.pdf
 	makensis -DTARGET_DIR=$(shell dirname $<)/ installer.nsi -X"OutFile $@"
 
-$(DESTDIR)/me3-windows-amd64.zip: $(DESTDIR)/dist-windows
+$(DESTDIR)/me3-windows-amd64.zip: dist-windows
 	cd "$(DESTDIR)/dist-windows"
 	zip -r "$(windows_zip_path)" ./*
 
-$(DESTDIR)/me3-linux-amd64.tar.gz: $(DESTDIR)/dist-linux
+$(DESTDIR)/me3-linux-amd64.tar.gz: dist-linux
 	cd "$(DESTDIR)/dist-linux"
 	tar --mtime="@$(SOURCE_DATE_EPOCH)" --sort=name --owner=0 --group=0 --numeric-owner -czv -f "$(linux_tarball_path)" ./*
 
-$(DESTDIR)/dist-windows: $(windows_binaries) $(DESTDIR)/CHANGELOG.pdf
+dist-windows: $(windows_binaries) $(DESTDIR)/CHANGELOG.pdf
 	install -d "$(DESTDIR)/dist-windows/eldenring-mods" "$(DESTDIR)/dist-linux/nightreign-mods"
 	install -D -t "$(DESTDIR)/dist-windows/bin" $(windows_binaries)
 	install -Dm 0755 -t "$(DESTDIR)/dist-linux" \
@@ -76,7 +76,7 @@ $(DESTDIR)/dist-windows: $(windows_binaries) $(DESTDIR)/CHANGELOG.pdf
 		$(DESTDIR)/CHANGELOG.pdf \
 		$(license_files)
 
-$(DESTDIR)/dist-linux: $(windows_binaries) $(DESTDIR)/me3 $(DESTDIR)/CHANGELOG.pdf
+dist-linux: $(windows_binaries) $(DESTDIR)/me3 $(DESTDIR)/CHANGELOG.pdf
 	mkdir -p "$(DESTDIR)/dist-linux/eldenring-mods" "$(DESTDIR)/dist-linux/nightreign-mods"
 	install -Dm 0755 -t "$(DESTDIR)/dist-linux/bin" $(DESTDIR)/me3
 	install -Dm 0755 -t "$(DESTDIR)/dist-linux/bin/win64" $(windows_binaries)

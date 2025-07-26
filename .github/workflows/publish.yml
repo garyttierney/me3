@@ -45,7 +45,7 @@ jobs:
           version: 2.19
       - name: Build binaries
         run: |
-          make -j2 out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll out/me3
+          make -j4 out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll out/me3
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
