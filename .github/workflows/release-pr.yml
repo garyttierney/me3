@@ -76,7 +76,7 @@ jobs:
         run: |
             # Bump Cargo workspace crates
             cargo set-version "${NEXT_VERSION:1}" # strip the leading 'v'
-            cargo update --locked
+            cargo update --workspace
 
             # Update version in Linux installer
             sed -i "s/INSTALLER_VERSION=.*/INSTALLER_VERSION=$NEXT_VERSION/" installer.sh
