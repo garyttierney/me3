@@ -38,6 +38,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      id-token: write
+      attestations: write
     runs-on: ubuntu-latest
     steps:
       - name: Harden the runner (Audit all outbound calls)
