@@ -122,6 +122,7 @@ jobs:
           signing_pin: ${{ secrets.ME3_SIGNING_PIN }}
 
       - uses: actions/attest-build-provenance@v2
+        id: attestation
         with:
           subject-path: |
             installer.sh
@@ -143,12 +144,14 @@ jobs:
           commit=$(git rev-parse --verify HEAD)
           release_notes=$(NEWS="$news" VERSION="$NEXT_VERSION" CHANGES="$changelog" envsubst <releng/RELEASE_NOTES.md)
 
+          mv "${{ steps.attestation.outputs.bundle-path }}" "out/attestations.intoto.jsonl"
           git push origin "HEAD:refs/heads/release-$NEXT_VERSION" --force
           gh release create --target "$commit" -n "$release_notes" --draft "$NEXT_VERSION" \
             'installer.sh#installer.sh (Installer for Linux)' \
             'out/me3_installer.exe#me3_installer.exe (Installer for Windows)' \
             'out/me3-windows-amd64.zip#me3-windows-amd64.zip (Portable distribution for Windows)' \
-            'out/me3-linux-amd64.tar.gz#me3-linux-amd64.tar.gz (Portable distribution for Linux)'
+            'out/me3-linux-amd64.tar.gz#me3-linux-amd64.tar.gz (Portable distribution for Linux)' \
+            'out/attestations.intoto.jsonl'
 
           if ! gh pr view "release-$NEXT_VERSION"; then
             gh pr create -B main --title "chore: Release $NEXT_VERSION" -b "$changelog" --head "release-$NEXT_VERSION"
