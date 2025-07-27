@@ -32,9 +32,10 @@ jobs:
           tool: git-cliff
       - id: get-versions
         run: |
+          set -x
           echo "current_version=v$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)" >> "$GITHUB_OUTPUT"
           echo "next_version=$(git cliff --bumped-version)" >> "$GITHUB_OUTPUT"  
-          
+        
   create-release-draft:
     needs:
       - plan
@@ -45,6 +46,7 @@ jobs:
       id-token: write
       attestations: write
     runs-on: ubuntu-latest
+    if: ${{ needs.plan.outputs.current_version != needs.plan.outputs.next_version }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
@@ -73,7 +75,7 @@ jobs:
       - name: Bump versions
         run: |
             # Bump Cargo workspace crates
-            cargo set-version "$NEXT_VERSION"
+            cargo set-version "${NEXT_VERSION:1}" # strip the leading 'v'
             cargo update --locked
 
             # Update version in Linux installer
