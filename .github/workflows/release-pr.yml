@@ -139,10 +139,11 @@ jobs:
 
       - name: Create release draft
         run: | # shell
-          changelog=$(git cliff --strip=all --tag="$NEXT_VERSION")
+          pr_changelog=$(git cliff --strip=all  --unreleased)
+          release_changelog=$(git cliff --strip=all  --unreleased --tag="$NEXT_VERSION")
           news=$(awk "NR == 1, /^## $NEXT_VERSION/ { next }; /^## / { exit }; { print }" <NEWS.md)
           commit=$(git rev-parse --verify HEAD)
-          release_notes=$(NEWS="$news" VERSION="$NEXT_VERSION" CHANGES="$changelog" envsubst <releng/RELEASE_NOTES.md)
+          release_notes=$(NEWS="$news" VERSION="$NEXT_VERSION" CHANGES="$release_changelog" envsubst <releng/RELEASE_NOTES.md)
 
           mv "${{ steps.attestation.outputs.bundle-path }}" "out/attestations.intoto.jsonl"
           git push origin "HEAD:refs/heads/release-$NEXT_VERSION" --force
@@ -154,9 +155,9 @@ jobs:
             'out/attestations.intoto.jsonl'
 
           if ! gh pr view "release-$NEXT_VERSION"; then
-            gh pr create -B main --title "chore: Release $NEXT_VERSION" -b "$changelog" --head "release-$NEXT_VERSION"
+            gh pr create -B main --title "chore: Release $NEXT_VERSION" -b "$pr_changelog" --head "release-$NEXT_VERSION"
           else
-            gh pr edit "release-$NEXT_VERSION" -b "$changelog"
+            gh pr edit "release-$NEXT_VERSION" -b "$pr_changelog"
           fi
         env:
           NEXT_VERSION: ${{ needs.plan.outputs.next_version }}
