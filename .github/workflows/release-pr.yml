@@ -150,10 +150,10 @@ jobs:
             'out/me3-windows-amd64.zip#me3-windows-amd64.zip (Portable distribution for Windows)' \
             'out/me3-linux-amd64.tar.gz#me3-linux-amd64.tar.gz (Portable distribution for Linux)'
 
-          if ! gh pr view "release-$_next_version"; then
+          if ! gh pr view "release-$NEXT_VERSION"; then
             gh pr create -B main --title "chore: Release $NEXT_VERSION" -b "$changelog" --head "release-$NEXT_VERSION"
           else
-            gh pr edit "release-$_next_version" -b "$changelog"
+            gh pr edit "release-$NEXT_VERSION" -b "$changelog"
           fi
         env:
           NEXT_VERSION: ${{ needs.plan.outputs.next_version }}
