@@ -90,21 +90,20 @@ jobs:
             git commit -am "chore: Release $NEXT_VERSION"
         env:
           NEXT_VERSION: ${{ needs.plan.outputs.next_version }}
-        if: github.event_name == 'push'
+
       - name: Build binaries
         run: |
           make -j4 out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll out/me3
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
-      # - name: Sign binaries
-      #   uses: ./.github/actions/sign-authenticode
-      #   with:
-      #     files: out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll
-      #     cloudflare_client_id: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
-      #     cloudflare_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
-      #     signing_pin: ${{ secrets.ME3_SIGNING_PIN }}
-      #     if: github.event_name == 'push'
+      - name: Sign binaries
+        uses: ./.github/actions/sign-authenticode
+        with:
+          files: out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll
+          cloudflare_client_id: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
+          cloudflare_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
+          signing_pin: ${{ secrets.ME3_SIGNING_PIN }}
 
       - name: Create distributions and installer
         run: |
@@ -112,14 +111,13 @@ jobs:
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
-      # - name: Sign installer
-      #   uses: ./.github/actions/sign-authenticode
-      #   with:
-      #     files: out/me3_installer.exe
-      #     cloudflare_client_id: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
-      #     cloudflare_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
-      #     signing_pin: ${{ secrets.ME3_SIGNING_PIN }}
-      #     if: github.event_name == 'push'
+      - name: Sign installer
+        uses: ./.github/actions/sign-authenticode
+        with:
+          files: out/me3_installer.exe
+          cloudflare_client_id: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
+          cloudflare_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
+          signing_pin: ${{ secrets.ME3_SIGNING_PIN }}
 
       - uses: actions/attest-build-provenance@v2
         with:
@@ -159,3 +157,4 @@ jobs:
           NEXT_VERSION: ${{ needs.plan.outputs.next_version }}
           GITHUB_TOKEN: ${{ secrets.PUSH_TOKEN }}
           GH_TOKEN: ${{ secrets.PUSH_TOKEN }}
+        shell: /usr/bin/bash -euo pipefail {0}
