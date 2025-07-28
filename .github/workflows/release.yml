@@ -137,6 +137,10 @@ jobs:
         with:
           threshold: "1s"
 
+      - name: Create zip file of PDBs
+        run: |
+          find out -name '*.pdb' -print | zip -j out/me3-debug-info.zip -@ 
+
       - name: Create release draft
         run: | # shell
           pr_changelog=$(git cliff --strip=all  --unreleased)
@@ -152,6 +156,7 @@ jobs:
             'out/me3_installer.exe#me3_installer.exe (Installer for Windows)' \
             'out/me3-windows-amd64.zip#me3-windows-amd64.zip (Portable distribution for Windows)' \
             'out/me3-linux-amd64.tar.gz#me3-linux-amd64.tar.gz (Portable distribution for Linux)' \
+            'out/me3-debug-info.zip#me3-debug-info.zip (PDBs)' \
             'out/attestations.intoto.jsonl'
 
           if ! gh pr view "release-$NEXT_VERSION"; then

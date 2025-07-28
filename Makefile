@@ -44,6 +44,7 @@ $(DESTDIR)/CHANGELOG.pdf: CHANGELOG.md
 
 $(DESTDIR)/me3:
 	$(call cargo_build,$(linux_target_triple),me3-cli)
+	strip $(DESTDIR)/me3
 
 $(DESTDIR)/me3.exe:
 	$(call cargo_build,$(windows_target_triple),me3-cli)
