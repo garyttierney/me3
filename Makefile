@@ -71,7 +71,7 @@ $(DESTDIR)/me3-linux-amd64.tar.gz: dist-linux
 dist-windows: $(windows_binaries) $(DESTDIR)/CHANGELOG.pdf
 	install -d "$(DESTDIR)/dist-windows/eldenring-mods" "$(DESTDIR)/dist-linux/nightreign-mods"
 	install -D -t "$(DESTDIR)/dist-windows/bin" $(windows_binaries)
-	install -Dm 0755 -t "$(DESTDIR)/dist-linux" \
+	install -Dm 0755 -t "$(DESTDIR)/dist-windows" \
 		distribution/windows/launch-eldenring-mods.bat \
 		distribution/windows/launch-nightreign-mods.bat \
 		distribution/cross-platform/eldenring-default.me3 \
