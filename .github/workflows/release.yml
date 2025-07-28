@@ -137,9 +137,9 @@ jobs:
         with:
           threshold: "1s"
 
-      - name: Create zip file of PDBs
+      - name: Create zip file of debug info
         run: |
-          find out -name '*.pdb' -print | zip -j out/me3-debug-info.zip -@ 
+          find out -name '*.pdb' -or -name '*.debug' -print | zip -j out/me3-debug-info.zip -@ 
 
       - name: Create release draft
         run: | # shell

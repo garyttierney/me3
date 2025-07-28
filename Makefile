@@ -42,9 +42,11 @@ cargo_build = SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
 $(DESTDIR)/CHANGELOG.pdf: CHANGELOG.md
 	pandoc -t html $< -o $@
 
-$(DESTDIR)/me3:
+$(DESTDIR)/me3 $(DESTDIR)/me3.debug:
 	$(call cargo_build,$(linux_target_triple),me3-cli)
-	strip $(DESTDIR)/me3
+	objcopy --only-keep-debug out/me3 out/me3.debug
+	objcopy --strip-debug out/me3
+	objcopy --add-gnu-debuglink=out/me3.debug out/me3
 
 $(DESTDIR)/me3.exe:
 	$(call cargo_build,$(windows_target_triple),me3-cli)

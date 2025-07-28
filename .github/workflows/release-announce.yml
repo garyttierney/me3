@@ -28,7 +28,7 @@ jobs:
 
       - name: Extract PDBs
         run: |
-          unzip -j me3-debug-info.zip '*.pdb' -d pdbs
+          unzip -j me3-debug-info.zip -d debug-info
 
       - name: Setup Sentry CLI
         uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b # v2.0.0
@@ -49,4 +49,4 @@ jobs:
           finalize: true
       - name: Upload debug symbols to sentry
         run: |
-          sentry-cli debug-files upload -o modengine -p me3 pdbs/
+          sentry-cli debug-files upload -o modengine -p me3 debug-info/
