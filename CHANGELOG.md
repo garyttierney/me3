@@ -4,6 +4,332 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
+## me3 - [v0.7.0](https://github.com/garyttierney/me3/releases/v0.7.0) - 2025-07-28
+
+### 🚀 Features
+
+- [a14c35d](https://github.com/garyttierney/me3/commit/a14c35dad41a5dbac7509e18a4771ad0b26fa149)  *(host)* Skip logos in [#372](https://github.com/garyttierney/me3/pull/372)
+
+
+  > - Removed white screen when launching FromSoftware games.
+  > - Added an option (on by default) to skip the logos shown on startup and
+  > when returning to the main menu. Use the `--show-logos` switch for `me3
+  > launch` or the `skip_logos` key in "me3.toml" to override:
+  > ```toml
+  > [game.eldenring]
+  > skip_logos = false
+  > ```
+
+
+- [866ddc3](https://github.com/garyttierney/me3/commit/866ddc3363138b7574fd3c8a2e14fde1d3f8e35b)  *(host)* BootBoost for supported games in [#354](https://github.com/garyttierney/me3/pull/354)
+
+
+  > File archives in all games me3 supports are split into headers (.bhd)
+  > and data (.bdt). The headers have a layer of RSA encryption applied to
+  > them to prevent tampering, and are decrypted every time a game is ran.
+  > This takes a signifant amount of time (1-10 seconds) and CPU resources.
+
+  > Inspired by [BootBoost](https://github.com/JKAnderson/BootBoost), me3
+  > can now cache the decrypted archives and serve them to the game without
+  > having to undo any encryption, speeding up the time it takes to get to
+  > the start screen.
+
+  > To disable this feature, pass `--no-boot-boost` to `me3 launch`.
+
+  > Closes #144
+
+- [40ace32](https://github.com/garyttierney/me3/commit/40ace32f214bef57abd2820449fb8c5523ed3887)  *(host)* Speed up game boot by caching decrypted BHDs
+
+
+
+- [a6d3b77](https://github.com/garyttierney/me3/commit/a6d3b77134bf89e53d60764c7e2677abe44e4098) Publish Fedora RPMs via OBS in [#374](https://github.com/garyttierney/me3/pull/374)
+
+
+  > Repositories are available for F42/rawhide at https://build.opensuse.org/package/show/home:gtierney/me3. These are experimental packages that are subject to breaking changes.
+
+
+- [c211b54](https://github.com/garyttierney/me3/commit/c211b545d45b0424c6b28790e530dffe909f917e) Support configuring launch options in me3.toml in [#364](https://github.com/garyttierney/me3/pull/364)
+
+
+  > Previously launching a me3 profile with modified launch options required
+  > using the command-line or making changes to the system-wide me3 profile
+  > association. Now we support launch options in me3.toml under the
+  > `[game]` table, for example, to turn off boot boost and configure the
+  > executable for ELDEN RING:
+
+  > ```
+  > [game.eldenring]
+  > exe = "test.exe"
+  > boot_boost = false
+  > ```
+
+  > ---------
+
+
+- [3e5fbe6](https://github.com/garyttierney/me3/commit/3e5fbe6b4d34ca2211bc50efd541e715418ad214) Launch .me3 profiles on Linux in [#304](https://github.com/garyttierney/me3/pull/304)
+
+
+  > This allows .me3 profiles to be run by double-clicking on Linux desktop.
+
+  > - Mainly for non-portable installs. `me3` should be in PATH.
+  > - `me3-launch.desktop` should be installed to
+  > `~/.local/share/applications/` (user) or `/usr/share/applications/`
+  > (system).
+  > - `me3.xml` should be installed to `~/.local/share/mime/packages/` or
+  > `/usr/share/mime/packages/`
+  > - `distribution/assets/me3.png` should be installed to
+  > `~/.local/share/icons/hicolor/128x128/apps/` or
+  > `/usr/share/icons/hicolor/128x128/apps/`
+  > - After installing files, may require running `update-desktop-database`
+  > and `update-mime-database`, or restarting your file manager (depends on
+  > DE/FM)
+  > - The desktop file does not show in application launchers / menus; it's
+  > only for associating with the mime file.
+
+
+- [c8f1c55](https://github.com/garyttierney/me3/commit/c8f1c55f1c134d3a5f63e0db56d2ff3ab24f6519) Setup translations for docs site with Crowdin in [#289](https://github.com/garyttierney/me3/pull/289)
+
+
+
+### 🐛 Bug Fixes
+
+- [8ca16b4](https://github.com/garyttierney/me3/commit/8ca16b4c49d42280242e57452e70c0249e9e3f7d)  *(cli)* Handling of optional args on the command line in [#371](https://github.com/garyttierney/me3/pull/371)
+
+
+
+- [57a401b](https://github.com/garyttierney/me3/commit/57a401b1e3fade1ea90871941a69dacb9e1b61f4)  *(cli)* Print all incoming logs to console after launcher terminates in [#363](https://github.com/garyttierney/me3/pull/363)
+
+
+
+- [4aca1c7](https://github.com/garyttierney/me3/commit/4aca1c740217863c60ce35eaa07136137c81b699)  *(host)* Use filesystem hooks in [#330](https://github.com/garyttierney/me3/pull/330)
+
+
+  > During the mod host initialization routine (before loading natives) hook
+  > the following functions:
+
+  > >CreateFileW, CreateFile2, CreateDirectoryW, CreateDirectoryExW,
+  > DeleteFileW
+
+  > This allows for files looked up inside the game directory like mod
+  > configs and other files to be loaded from the corresponding mod
+  > packages.
+
+
+- [3066483](https://github.com/garyttierney/me3/commit/30664839c273cd005879dbbf95afeddb043e595c)  *(linux)* Don't create default config in [#379](https://github.com/garyttierney/me3/pull/379)
+
+
+  > Redundant after #336
+
+
+- [89880a0](https://github.com/garyttierney/me3/commit/89880a0adee917587112b546cf090e01022f02b3)  *(linux)* Correctly set mtime of tarball contents in [#308](https://github.com/garyttierney/me3/pull/308)
+
+
+  > Fixes #307
+
+- [b461934](https://github.com/garyttierney/me3/commit/b46193484765d90ed87f8379a3a3313d88e4d0d3) Pre-launch package/native existence checks in [#366](https://github.com/garyttierney/me3/pull/366)
+
+
+
+- [1fc441e](https://github.com/garyttierney/me3/commit/1fc441e976dc9f12ff8194b1ee5c9136dfe5c49d) Launch path normalization in [#365](https://github.com/garyttierney/me3/pull/365)
+
+
+  > If you just point directly to a file in the command line with the
+  > profile like so `me3.exe launch -p mods.me3 --auto-detect`, the parent
+  > of `mod.me3` will just be an empty path, which `normalize` refuses to
+  > handle.
+
+  > My quick solution for this is to just normalize first, then take the
+  > parent of the normalized path.
+
+
+- [ce9cc92](https://github.com/garyttierney/me3/commit/ce9cc922923510d77f7cf30168c5bbd7476012ca) Change game console output to UTF-8 on attach in [#361](https://github.com/garyttierney/me3/pull/361)
+
+
+
+- [e0557b2](https://github.com/garyttierney/me3/commit/e0557b2898d3996f1236ab1ea17e9338a581437c) Respect NO_COLOR in [#362](https://github.com/garyttierney/me3/pull/362)
+
+
+  > Fixes #277
+
+- [3652f42](https://github.com/garyttierney/me3/commit/3652f42aae0bf8b1d99d3dd0c1e14cdb2f1ee2ea) Respect Native.optional in [#358](https://github.com/garyttierney/me3/pull/358)
+
+
+  > Fixes #294
+
+- [e84e0b3](https://github.com/garyttierney/me3/commit/e84e0b342fc0c60fe304ea4d799c94d25d60f0f9) Don't list non-profile files in [#359](https://github.com/garyttierney/me3/pull/359)
+
+
+  > Fixes #306
+
+- [0aa020d](https://github.com/garyttierney/me3/commit/0aa020d63ffd0054a5bf74555eefada5743bc8ed) Don't crash on failure to read non-UTF8 logs in [#356](https://github.com/garyttierney/me3/pull/356)
+
+
+
+- [e9c5a61](https://github.com/garyttierney/me3/commit/e9c5a61a6270cc6d5428e41aea3b7cb3fe8324e9) Borrow the pointer dereference in [#350](https://github.com/garyttierney/me3/pull/350)
+
+
+
+- [050a41d](https://github.com/garyttierney/me3/commit/050a41d3033ea18bdd12dad789e7e7fe00ebe5fc) Respect native.enabled/package.enabled in [#299](https://github.com/garyttierney/me3/pull/299)
+
+
+  > Fixes #298
+
+- [5896daf](https://github.com/garyttierney/me3/commit/5896dafded3d3b88364a4bfadce24aca204bbf67) Validate mod profile filepaths in [#287](https://github.com/garyttierney/me3/pull/287)
+
+
+  > Skip invalid and nonexistent paths in mod profiles before passing them
+  > to the mod host, preventing hard errors.
+
+  > Closes #240
+
+- [a5e3db4](https://github.com/garyttierney/me3/commit/a5e3db4db6cbcc0b19d8da161450e605aa8a8325) Don't stop path discovery on every filesystem error
+
+
+
+- [c5fb8cc](https://github.com/garyttierney/me3/commit/c5fb8cc8a64d6178bb9eb0bd78436af310963890) Exclude nonexistent paths and warn the user
+
+
+
+- [c12976d](https://github.com/garyttierney/me3/commit/c12976dcc7a0695adefc7f4b52cbc12d7fd479be) Don't block shutdown with monitor thread in [#285](https://github.com/garyttierney/me3/pull/285)
+
+
+  > This exists purely to signal minidump crash events, which are currently
+  > not enabled in the latest release. Get rid of the infrastructure for
+  > handling it via pipes, and we'll use `WaitForMultipleObjects` on the
+  > process/crash event.
+
+  > Additionally switch the mod host to logging to `stdout`, so we capture
+  > logs from any other DLL mods in use.
+
+  > Fixes #270.
+
+- [aa10096](https://github.com/garyttierney/me3/commit/aa10096e16f715871ba9c4db50f9608c8ff27f22) Add singular profile aliases for packages/natives in [#283](https://github.com/garyttierney/me3/pull/283)
+
+
+
+- [c38f7e6](https://github.com/garyttierney/me3/commit/c38f7e675a0e84b33037ac7a5658716e4c3019b0) Add .sh extension to example Linux scripts in [#282](https://github.com/garyttierney/me3/pull/282)
+
+
+  > Closes #280
+
+- [bed1c98](https://github.com/garyttierney/me3/commit/bed1c980da385e02c4cab436686bb73de18ceaf5) Version list in GitHub issue template in [#278](https://github.com/garyttierney/me3/pull/278)
+
+
+
+### 🚜 Refactor
+
+- [9e5b759](https://github.com/garyttierney/me3/commit/9e5b75951ca44c3440b94629bcb31c7a1938e4ab) Move profile lookups to new ProfileDb in [#368](https://github.com/garyttierney/me3/pull/368)
+
+
+
+- [126e316](https://github.com/garyttierney/me3/commit/126e3164b8a98adf8f338037251fe281fe47357e) Make Package.id optional in [#357](https://github.com/garyttierney/me3/pull/357)
+
+
+  > Fixes #347
+
+- [71b2ac0](https://github.com/garyttierney/me3/commit/71b2ac013690feb0b4dcd772431829723a8f2b8c) Simplify layout of distributions in [#355](https://github.com/garyttierney/me3/pull/355)
+
+
+
+- [353f59f](https://github.com/garyttierney/me3/commit/353f59fe5266d17d9faf88c16fbc6761b7d551fb) Clean up handling of well known paths in [#336](https://github.com/garyttierney/me3/pull/336)
+
+
+  > Collates the various path lookups for
+  > config/profiles/data/logs/binaries/steam to a single location and adds
+  > additional search directories to cover a wider range of installations.
+
+
+- [39f5ed3](https://github.com/garyttierney/me3/commit/39f5ed3c26ea4c9745c24e1164d00adcf92ffc74) Centralized RTTI scanning in binary analysis workspace crate in [#349](https://github.com/garyttierney/me3/pull/349)
+
+
+
+- [8862431](https://github.com/garyttierney/me3/commit/88624316c6fb15757d827bdc513eec3375d67241) Add MSRV
+
+
+
+- [bb9aa8f](https://github.com/garyttierney/me3/commit/bb9aa8f071b5517e2c75a7a406e431f794f931f0) Suspend game process instead of debugging it in [#338](https://github.com/garyttierney/me3/pull/338)
+
+
+  > Use `CREATE_SUSPENDED` instead of `DEBUG_PROCESS` on (game) process
+  > creation and initialize the suspended process by creating a stub remote
+  > thread before injecting the dll-syringe payload.
+
+
+### 📚 Documentation
+
+- [b2d3d76](https://github.com/garyttierney/me3/commit/b2d3d768fd3f43c45fa0cb13bd731d4655973f01)  *(pl)* Localization of cookie consent in [#333](https://github.com/garyttierney/me3/pull/333)
+
+
+
+- [f3409f4](https://github.com/garyttierney/me3/commit/f3409f46e9abeac37b6d9b9dcd094d71f42e6fe5)  *(pl)* L10n refinements and MT corrections in [#326](https://github.com/garyttierney/me3/pull/326)
+
+
+
+- [ed6b486](https://github.com/garyttierney/me3/commit/ed6b486fa0060eca0dc08bfadf5bc84b0a414ec4)  *(zh)* Partial revision of computer terminology in [#329](https://github.com/garyttierney/me3/pull/329)
+
+
+
+- [b2ef03a](https://github.com/garyttierney/me3/commit/b2ef03a6b2052c717e611f7520f8099abaa306ef)  *(zh)* Localize user feedback prompt and cookie consent in [#323](https://github.com/garyttierney/me3/pull/323)
+
+
+
+- [e6a63cf](https://github.com/garyttierney/me3/commit/e6a63cf5068a17b46416a8279a8c8b2a01ebcdb6)  *(zh)* Refine Simplified Chinese translations in [#324](https://github.com/garyttierney/me3/pull/324)
+
+
+
+- [3108c51](https://github.com/garyttierney/me3/commit/3108c514f8bc828834bf6100fb64e0f2a58c5928) Fix typo in example profile in [#348](https://github.com/garyttierney/me3/pull/348)
+
+
+
+- [b32b655](https://github.com/garyttierney/me3/commit/b32b655170303e5ef8389c7a750f9d67f1c267b5) Add translated doc links to README in [#327](https://github.com/garyttierney/me3/pull/327)
+
+
+
+- [7ef38bd](https://github.com/garyttierney/me3/commit/7ef38bd859fa5548ac6c60972a1c6d45e5f7afce) Fix typos and syntax shifted by l10n in [#320](https://github.com/garyttierney/me3/pull/320)
+
+
+
+- [91a06aa](https://github.com/garyttierney/me3/commit/91a06aaec9635269a5111857dab7f812b6b814b0) Localize navigation to Simplified Chinese in [#322](https://github.com/garyttierney/me3/pull/322)
+
+
+
+- [f3cd704](https://github.com/garyttierney/me3/commit/f3cd704ed059d524e034bbb41cd35ac7c7ebaf21) Translate Mod Profile schema docs in [#321](https://github.com/garyttierney/me3/pull/321)
+
+
+
+- [5e66b88](https://github.com/garyttierney/me3/commit/5e66b88215cf74ced183d4eb0ed0ccce73ab4a37) Chinese (language) not Chinese (nationality) in [#319](https://github.com/garyttierney/me3/pull/319)
+
+
+  > 中国人 = Chinese (nationality)
+  > 中文 = Chinese (language)
+
+
+- [0187c55](https://github.com/garyttierney/me3/commit/0187c554f0b91d80bd0e109aa62707f08c97f6fe) Add Chinese and Polish translations in [#318](https://github.com/garyttierney/me3/pull/318)
+
+
+  > Adds the recent translations contributed by the community to the
+  > documentation site.
+  > A new language selector is available to switch between different
+  > languages.
+
+
+- [1a46c82](https://github.com/garyttierney/me3/commit/1a46c8270ee9fd3de81e14d28394ea9134329677) Add SECURITY.md in [#314](https://github.com/garyttierney/me3/pull/314)
+
+
+
+- [2abb7bb](https://github.com/garyttierney/me3/commit/2abb7bb3adedc475f5c0c0ad8652f6cf1d87f6cd) Fix 'value' typo in natives doc comment in [#297](https://github.com/garyttierney/me3/pull/297)
+
+
+
+- [6ad57b1](https://github.com/garyttierney/me3/commit/6ad57b111b29a537aec9f2ab5c68f44ad2b4c3a0) Fix typo in FROMSOFTWARE in [#295](https://github.com/garyttierney/me3/pull/295)
+
+
+  > Change "FROMSOTWARE" -> "FROMSOFTWARE"
+
+
+- [b19b629](https://github.com/garyttierney/me3/commit/b19b629120dcafb5dd90129d2a9583c88a6783ec) Complete initial release documentation tasks in [#284](https://github.com/garyttierney/me3/pull/284)
+
+
 ## me3 - [v0.6.1](https://github.com/garyttierney/me3/releases/v0.6.1) - 2025-06-30
 
 ### 🐛 Bug Fixes
@@ -2004,6 +2330,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
+[0.7.0]: https://github.com/garyttierney/me3/compare/v0.6.1..v0.7.0
 [0.6.1]: https://github.com/garyttierney/me3/compare/v0.6.0..v0.6.1
 [0.6.0]: https://github.com/garyttierney/me3/compare/v0.5.0..v0.6.0
 [0.5.0]: https://github.com/garyttierney/me3/compare/v0.4.0..v0.5.0
