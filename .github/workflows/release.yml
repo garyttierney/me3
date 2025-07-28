@@ -1,0 +1,171 @@
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+name: Create release draft
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: Build plan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      current_version: ${{ steps.get-versions.outputs.current_version }}
+      next_version: ${{ steps.get-versions.outputs.next_version }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: taiki-e/install-action@9ca1734d8940023f074414ee621fd530c4ce10f2 # v2.55.3
+        with:
+          tool: git-cliff
+      - id: get-versions
+        run: |
+          set -x
+          echo "current_version=v$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)" >> "$GITHUB_OUTPUT"
+          echo "next_version=$(git cliff --bumped-version)" >> "$GITHUB_OUTPUT"  
+        
+  create-release-draft:
+    needs:
+      - plan
+    name: Prerelease
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+      attestations: write
+    runs-on: ubuntu-latest
+    if: ${{ needs.plan.outputs.current_version != needs.plan.outputs.next_version }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit      
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ secrets.PUSH_TOKEN }}
+      - uses: ./.github/actions/setup-windows-toolchain
+      - uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b
+        with:
+          toolchain: nightly
+          targets: x86_64-pc-windows-msvc,x86_64-unknown-linux-gnu          
+
+      - uses: taiki-e/install-action@9ca1734d8940023f074414ee621fd530c4ce10f2 # v2.55.3
+        with:
+          tool: cargo-set-version,git-cliff
+
+      - name: Install pandoc
+        uses: pandoc/actions/setup@86321b6dd4675f5014c611e05088e10d4939e09e # v1.1.1
+        with:
+          version: 2.19
+
+      - name: Bump versions
+        run: |
+            # Bump Cargo workspace crates
+            cargo set-version "${NEXT_VERSION:1}" # strip the leading 'v'
+            cargo update --workspace
+
+            # Update version in Linux installer
+            sed -i "s/INSTALLER_VERSION=.*/INSTALLER_VERSION=$NEXT_VERSION/" installer.sh
+
+            # Update changelog
+            git cliff --tag "$NEXT_VERSION" -o CHANGELOG.md
+
+            # Bump bug report template
+            yq -i ".body[2].attributes.options |= [ \"$NEXT_VERSION\" ] + ." .github/ISSUE_TEMPLATE/bug-report.yml 
+
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git config --global user.name "github-actions"
+            git commit -am "chore: Release $NEXT_VERSION"
+        env:
+          NEXT_VERSION: ${{ needs.plan.outputs.next_version }}
+
+      - name: Build binaries
+        run: |
+          make -j4 out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll out/me3
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Sign binaries
+        uses: ./.github/actions/sign-authenticode
+        with:
+          files: out/me3.exe out/me3-launcher.exe out/me3_mod_host.dll
+          cloudflare_client_id: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
+          cloudflare_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
+          signing_pin: ${{ secrets.ME3_SIGNING_PIN }}
+
+      - name: Create distributions and installer
+        run: |
+          make all
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Sign installer
+        uses: ./.github/actions/sign-authenticode
+        with:
+          files: out/me3_installer.exe
+          cloudflare_client_id: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_ID }}
+          cloudflare_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
+          signing_pin: ${{ secrets.ME3_SIGNING_PIN }}
+
+      - uses: actions/attest-build-provenance@v2
+        id: attestation
+        with:
+          subject-path: |
+            installer.sh
+            out/me3_installer.exe
+            out/me3-windows-amd64.zip
+            out/me3-linux-amd64.tar.gz
+
+      - name: Delete old release drafts
+        uses: hugo19941994/delete-draft-releases@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.PUSH_TOKEN }}            
+        with:
+          threshold: "1s"
+
+      - name: Create zip file of PDBs
+        run: |
+          find out -name '*.pdb' -print | zip -j out/me3-debug-info.zip -@ 
+
+      - name: Create release draft
+        run: | # shell
+          pr_changelog=$(git cliff --strip=all  --unreleased)
+          release_changelog=$(git cliff --strip=all  --unreleased --tag="$NEXT_VERSION")
+          news=$(awk "NR == 1, /^## $NEXT_VERSION/ { next }; /^## / { exit }; { print }" <NEWS.md)
+          commit=$(git rev-parse --verify HEAD)
+          release_notes=$(NEWS="$news" VERSION="$NEXT_VERSION" CHANGES="$release_changelog" envsubst <releng/RELEASE_NOTES.md)
+
+          mv "${{ steps.attestation.outputs.bundle-path }}" "out/attestations.intoto.jsonl"
+          git push origin "HEAD:refs/heads/release-$NEXT_VERSION" --force
+          gh release create --target "$commit" -n "$release_notes" --draft "$NEXT_VERSION" \
+            'installer.sh#installer.sh (Installer for Linux)' \
+            'out/me3_installer.exe#me3_installer.exe (Installer for Windows)' \
+            'out/me3-windows-amd64.zip#me3-windows-amd64.zip (Portable distribution for Windows)' \
+            'out/me3-linux-amd64.tar.gz#me3-linux-amd64.tar.gz (Portable distribution for Linux)' \
+            'out/me3-debug-info.zip#me3-debug-info.zip (PDBs)' \
+            'out/attestations.intoto.jsonl'
+
+          if ! gh pr view "release-$NEXT_VERSION"; then
+            gh pr create -B main --title "chore: Release $NEXT_VERSION" -b "$pr_changelog" --head "release-$NEXT_VERSION"
+          else
+            gh pr edit "release-$NEXT_VERSION" -b "$pr_changelog"
+          fi
+        env:
+          NEXT_VERSION: ${{ needs.plan.outputs.next_version }}
+          GITHUB_TOKEN: ${{ secrets.PUSH_TOKEN }}
+          GH_TOKEN: ${{ secrets.PUSH_TOKEN }}
+        shell: /usr/bin/bash -euo pipefail {0}

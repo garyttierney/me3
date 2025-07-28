@@ -1,0 +1,52 @@
+permissions:
+  contents: read
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  virustotal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: VirusTotal Scan
+        uses: crazy-max/ghaction-virustotal@d34968c958ae283fe976efed637081b9f9dcf74f # v4.2.0
+        with:
+          vt_api_key: ${{ secrets.VIRUSTOTAL_TOKEN }}
+          files: |
+            .exe$
+            .zip$
+  sentry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release asset (.zip)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download ${{ github.event.release.tag_name }} --repo ${{ github.repository }} --pattern 'me3-debug-info.zip'
+
+      - name: Extract PDBs
+        run: |
+          unzip -j me3-debug-info.zip '*.pdb' -d pdbs
+
+      - name: Setup Sentry CLI
+        uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b # v2.0.0
+        with:
+          version: latest
+          token: ${{ secrets.SENTRY_AUTH_TOKEN }} # from GitHub secrets
+          organization: modengine
+          project: me3
+
+      - name: Create Sentry release
+        uses: getsentry/action-release@00ed2a6cc2171514e031a0f5b4b3cdc586dc171a # v3.1.1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: modengine
+          SENTRY_PROJECT: me3
+        with:
+          release: "${{ github.event.release.tag_name }}"
+          finalize: true
+      - name: Upload debug symbols to sentry
+        run: |
+          sentry-cli debug-files upload -o modengine -p me3 pdbs/
