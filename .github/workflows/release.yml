@@ -131,7 +131,7 @@ jobs:
             out/me3-linux-amd64.tar.gz
 
       - name: Delete old release drafts
-        uses: hugo19941994/delete-draft-releases@v1.0.0
+        uses: hugo19941994/delete-draft-releases@v2.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.PUSH_TOKEN }}            
         with:
