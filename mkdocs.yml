@@ -55,6 +55,14 @@ extra_javascript:
   - javascripts/readthedocs.js
 
 extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/garyttierney/me3
+      name: me3 on GitHub
+
+    - icon: fontawesome/brands/bluesky
+      link: https://bsky.app/profile/me3.dev
+      name: me3 on BlueSky
   alternate:
     - name: English
       link: /en/
