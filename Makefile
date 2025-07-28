@@ -69,7 +69,7 @@ $(DESTDIR)/me3-linux-amd64.tar.gz: dist-linux
 	tar --mtime="@$(SOURCE_DATE_EPOCH)" --sort=name --owner=0 --group=0 --numeric-owner -czv -f "$(linux_tarball_path)" ./*
 
 dist-windows: $(windows_binaries) $(DESTDIR)/CHANGELOG.pdf
-	install -d "$(DESTDIR)/dist-windows/eldenring-mods" "$(DESTDIR)/dist-linux/nightreign-mods"
+	install -d "$(DESTDIR)/dist-windows/eldenring-mods" "$(DESTDIR)/dist-windows/nightreign-mods"
 	install -D -t "$(DESTDIR)/dist-windows/bin" $(windows_binaries)
 	install -Dm 0755 -t "$(DESTDIR)/dist-windows" \
 		distribution/windows/launch-eldenring-mods.bat \
