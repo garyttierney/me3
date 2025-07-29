@@ -49,7 +49,7 @@ fn on() -> bool {
 /// the DVDBND.
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Package {
-    /// The unique identifier for this package..
+    /// The unique identifier for this package.
     pub(crate) id: Option<String>,
 
     /// Enable this package?
