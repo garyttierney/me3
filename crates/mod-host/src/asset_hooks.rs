@@ -137,10 +137,9 @@ fn hook_device_manager(
             let path = path.get().ok()?;
             let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
 
-            let (mapped_path, mapped_override) =
-                mapping.vfs_override(OsString::from_wide(&expanded))?;
+            let mapped_override = mapping.vfs_override(OsString::from_wide(&expanded))?;
 
-            info!("override" = mapped_path);
+            info!("override" = %mapped_override);
 
             let mut path = path.clone();
             path.replace(mapped_override);
@@ -210,7 +209,7 @@ fn hook_set_path(
 
         let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
 
-        let (_, mapped_override) = mapping.vfs_override(OsString::from_wide(&expanded))?;
+        let mapped_override = mapping.vfs_override(OsString::from_wide(&expanded))?;
 
         let mut path = path.clone();
         path.replace(mapped_override);
@@ -470,16 +469,14 @@ fn try_hook_wwise(
             let path_string = unsafe { path.to_string().unwrap() };
             debug!("asset" = path_string);
 
-            if let Some((mapped_path, mapped_override)) =
-                wwise::find_override(&mapping, &path_string)
-            {
-                info!("override" = mapped_path);
+            if let Some(mapped_override) = wwise::find_override(&mapping, &path_string) {
+                info!("override" = %mapped_override);
 
                 // Force lookup to wwise's ordinary read (from disk) mode instead of the EBL read.
                 unsafe {
                     trampoline(
                         p1,
-                        PCWSTR::from_raw(mapped_override.as_ptr()),
+                        mapped_override.into(),
                         AkOpenMode::Read as _,
                         p4,
                         p5,
