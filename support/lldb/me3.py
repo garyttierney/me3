@@ -139,7 +139,9 @@ def load_wine_modules(
         file_spec = lldb.SBFileSpec(path)
         spec = lldb.SBModuleSpec()
         spec.SetFileSpec(file_spec)
-        spec.SetTriple("x86_64-pc-windows-msvc")
+
+        if path.endswith('.exe', '.dll'):
+            spec.SetTriple("x86_64-pc-windows-msvc")
 
         module: lldb.SBModule = target.AddModule(spec)
         module.SetPlatformFileSpec(file_spec)
