@@ -35,7 +35,7 @@ pub fn add_to_path() -> color_eyre::Result<()> {
     }
 
     info!("current exe dir: {current_exe_dir}");
-    path_entries.push(&current_exe_dir);
+    path_entries.insert(0, &current_exe_dir);
 
     let new_path = path_entries.join(";");
     environment.set_value("Path", &new_path)?;
