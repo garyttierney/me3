@@ -148,7 +148,8 @@ def load_wine_modules(
         module_base_address = min(start for start, end in regions)
 
         if module.IsValid():
-            base_addr = module_base_address
+            base_addr = 0 if path.endswith('.exe') else module_base_address
+
             target.SetModuleLoadAddress(module, base_addr)
             print(f"Loaded module {path} at 0x{base_addr:x}")
         else:
