@@ -1551,6 +1551,7 @@ version = "0.7.0"
 dependencies = [
  "pelite",
  "rayon",
+ "regex",
  "thiserror 2.0.12",
  "undname",
 ]
