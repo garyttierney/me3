@@ -207,7 +207,7 @@
           "default": true
         },
         "id": {
-          "description": "The unique identifier for this package..",
+          "description": "The unique identifier for this package.",
           "type": [
             "string",
             "null"
