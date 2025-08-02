@@ -65,7 +65,7 @@ fn hook_file_init(
 ) -> Result<(), eyre::Error> {
     let init_fn = step_tables
         .by_name("CSFileStep::STEP_Init")
-        .or_else(|| step_tables.by_name("SPRJFileStep::STEP_Init"))
+        .or_else(|| step_tables.by_name("SprjFileStep::STEP_Init"))
         .ok_or_eyre("FileStep::STEP_Init not found")?;
 
     debug!("FileStep::STEP_Init" = ?init_fn);
