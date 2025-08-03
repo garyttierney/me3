@@ -99,7 +99,7 @@ impl<'a> Fd4StepTables<'a> {
                 };
 
                 if !fn_src.is_multiple_of(16)
-                    || !name_src.is_multiple_of(16)
+                    || !name_src.is_multiple_of(8)
                     || !fn_dst.is_multiple_of(8)
                     || !fn_dst.is_multiple_of(8)
                 {
@@ -171,7 +171,7 @@ impl<'a> Fd4StepTables<'a> {
             .filter_map(|w| {
                 let (fn_dst, name_src) = (&w[0], w[1]);
 
-                if !name_src.is_multiple_of(16) || !rdata_range.contains(&name_src) {
+                if !name_src.is_multiple_of(8) || !rdata_range.contains(&name_src) {
                     return None;
                 }
 
