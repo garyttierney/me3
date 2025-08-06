@@ -68,7 +68,7 @@ It points to a local path containing assets matching the hierarchy they would be
 the DVDBND.
 
   - **`enabled`** *(boolean)*: Enable this package? Default: `true`.
-  - **`id`** *(string, required)*: The unique identifier for this package..
+  - **`id`** *(['string', 'null'])*: The unique identifier for this package.
   - **`load_after`** *(array)*: A list of package IDs that this package should load after. Default: `[]`.
   - **`load_before`** *(array)*: A list of packages that this package should load before. Default: `[]`.
   - **`path`**: A path to the source of this package. Refer to *[ModFile](#ModFile)*.

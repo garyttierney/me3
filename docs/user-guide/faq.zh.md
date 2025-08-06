@@ -30,11 +30,6 @@ me3 的全局配置文件在 Linux 上是 `$HOME/.config/me3/me3.toml`，在 Win
 
 ## 已知问题
 
-### （Linux）me3死机，无法启动
-
-!!! bug "如果配置文件中没有设置`crash_reporting`，启动程序可能会在启动时死机。"
-!!! success "确保你的`me3.toml`配置文件包含`crash_reporting=true`或`crash-reporting=false`"
-
 ### （Steam Deck）将游戏安装到SD卡后，游戏无法启动
 
 !!! bug "me3 无法找到安装在 SD 卡中游戏的兼容层目录（compatprefix）"

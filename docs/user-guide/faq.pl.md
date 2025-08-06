@@ -30,11 +30,6 @@ Możesz użyć komendy `me3 launch` do wskazania niestandardowego pliku wykonywa
 
 ## Znane problemy
 
-### (Linux) me3 zgłasza błąd krytyczny i nie uruchamia się
-
-!!! bug "Launcher może zawiesić się podczas uruchamiania, jeśli `crash_reporting` nie jest ustawiony w pliku konfiguracyjnym."
-!!! success "Upewnij się, że plik konfiguracyjny `me3.toml` zawiera `crash_reporting = true` lub `crash_reporting = false`."
-
 ### (Steam Deck) Gra nie uruchamia się, gdy jest zainstalowana na karcie SD
 
 !!! bug "me3 nie znajduje prefiksu zgodności dla gier zainstalowanych na karcie SD."
