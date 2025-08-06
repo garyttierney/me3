@@ -15,6 +15,7 @@ runs:
     - name: Install LLVM
       shell: bash
       run: |
+        sudo apt-get update
         sudo apt install --install-recommends lld clang-tools llvm wkhtmltopdf nsis
 
     - name: Cache MSVC SDK
