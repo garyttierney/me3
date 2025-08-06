@@ -73,7 +73,6 @@ jobs:
       contents: read
       actions: write
       id-token: write
-      attestations: write
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
@@ -100,14 +99,6 @@ jobs:
       - name: Create distributions and installer
         run: |
           make all
-
-      - uses: actions/attest-build-provenance@v2
-        with:
-          subject-path: |
-            installer.sh
-            out/me3_installer.exe
-            out/me3-windows-amd64.zip
-            out/me3-linux-amd64.tar.gz
 
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
