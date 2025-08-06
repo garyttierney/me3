@@ -113,7 +113,7 @@ impl KnownDirs {
     /// highest.
     ///
     /// Under Linux these can be one of the following:
-    /// - $PREFIX/usr/lib/me3/x6_64-windows
+    /// - $PREFIX/usr/lib64/me3/x86_64-windows
     /// - $EXE_DIR/win64
     /// - {$XDG_DATA_DIR:=$HOME/.local/share}/me3/windows-bin
     /// - $EXE_DIR/../../x86_64-pc-windows-msvc/debug/ (Debug binaries only)
@@ -145,7 +145,7 @@ impl KnownDirs {
     ///
     /// These can be one of the following:
     ///
-    /// - $PREFIX/me3 (Linux)
+    /// - $PREFIX/etc/me3 (Linux)
     /// - %INSTALLDIR%/config (Windows)
     /// - $XDG_CONFIG_DIR:=$HOME/.config/me3 (Linux)
     /// - %LOCALAPPDATA%/garyttierney/me3/config (Windows)
