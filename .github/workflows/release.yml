@@ -85,7 +85,7 @@ jobs:
             git cliff --tag "$NEXT_VERSION" -o CHANGELOG.md
 
             # Bump bug report template
-            yq -i '(.body[] | select(.id == "version").attributes.options) |= .[0:1] + ["'$NEXT_VERSION'"] + .[1:5]' .github/ISSUE_TEMPLATE/bug-report.yml
+            yq -i '(.body[] | select(.id == "version").attributes.options) |= .[0:1] + ["'"$NEXT_VERSION"'"] + .[1:5]' .github/ISSUE_TEMPLATE/bug-report.yml
             git config --global user.email "github-actions[bot]@users.noreply.github.com"
             git config --global user.name "github-actions"
             git commit -am "chore: Release $NEXT_VERSION"
