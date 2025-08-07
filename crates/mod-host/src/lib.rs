@@ -9,7 +9,7 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
-use me3_binary_analysis::rtti;
+use me3_binary_analysis::{fd4_step::Fd4StepTables, rtti};
 use me3_env::TelemetryVars;
 use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, AttachResult, Attachment};
 use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
@@ -127,6 +127,7 @@ fn deferred_attach(
     override_mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     let class_map = Arc::new(rtti::classes(exe)?);
+    let step_tables = Fd4StepTables::from_initialized_data(exe)?;
 
     for native in &attach_config.natives {
         if let Err(e) = ModHost::get_attached_mut().load_native(&native.path, &native.initializer) {
@@ -142,7 +143,14 @@ fn deferred_attach(
         }
     }
 
-    asset_hooks::attach_override(attach_config, exe, class_map, override_mapping).map_err(|e| {
+    asset_hooks::attach_override(
+        attach_config,
+        exe,
+        class_map,
+        &step_tables,
+        override_mapping,
+    )
+    .map_err(|e| {
         e.wrap_err("failed to attach asset override hooks; no files will be overridden")
     })?;
 
