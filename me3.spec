@@ -87,8 +87,7 @@ update-mime-database %{_datadir}/mime
 %license LICENSE-APACHE LICENSE-MIT
 %doc README.md
 %{_bindir}/me3
-%{_libdir}/me3/x86_64-windows/me3-launcher.exe
-%{_libdir}/me3/x86_64-windows/me3_mod_host.dll
+%{_libdir}/me3/
 %{_datadir}/applications/me3-launch.desktop
 %{_datadir}/mime/packages/me3.xml
 %{_datadir}/icons/hicolor/128x128/apps/me3.png
