@@ -5,7 +5,7 @@ use std::{
     ffi::OsStr,
     fmt,
     fs::read_dir,
-    io, iter,
+    io,
     os::windows::ffi::OsStrExt as WinOsStrExt,
     path::{Path, PathBuf, StripPrefixError},
 };
@@ -14,10 +14,18 @@ use me3_mod_protocol::package::AssetOverrideSource;
 use normpath::PathExt;
 use thiserror::Error;
 use tracing::error;
+use windows::core::{PCSTR, PCWSTR};
 
+#[derive(Debug)]
 pub struct ArchiveOverrideMapping {
-    map: HashMap<VfsKey, (String, Box<[u16]>)>,
+    map: HashMap<VfsKey, ArchiveOverride>,
     current_dir: VfsKey,
+}
+
+pub struct ArchiveOverride {
+    display: Box<str>,
+    path_c_str: Box<Path>,
+    wide_c_str: Box<[u16]>,
 }
 
 #[derive(Debug, Error)]
@@ -95,33 +103,122 @@ impl ArchiveOverrideMapping {
                     continue;
                 };
 
-                let as_wide = dir_entry.to_wide_with_nul().into_boxed_slice();
-                let as_string = dir_entry.to_string_lossy().into_owned();
+                let archive_override = ArchiveOverride::new(dir_entry);
 
-                self.map.insert(vfs_key, (as_string, as_wide));
+                self.map.insert(vfs_key, archive_override);
             }
         }
 
         Ok(())
     }
 
-    pub fn vfs_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<(&str, &[u16])> {
-        self.get(VfsKey::for_vfs_path(Path::new(&path_str)))
+    pub fn vfs_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<&ArchiveOverride> {
+        let key = VfsKey::for_vfs_path(Path::new(&path_str));
+        self.map.get(&key)
     }
 
-    pub fn disk_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<(&str, &[u16])> {
-        self.get(VfsKey::for_asset_path(Path::new(&path_str), &self.current_dir).ok()?)
+    pub fn disk_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<&ArchiveOverride> {
+        let key = VfsKey::for_asset_path(Path::new(&path_str), &self.current_dir).ok()?;
+        self.map.get(&key)
+    }
+}
+
+impl ArchiveOverride {
+    pub fn new<P: AsRef<Path>>(path: P) -> Self {
+        let display = path.as_ref().display().to_string().into_boxed_str();
+
+        let (wide_c_str, path_c_str) = {
+            let mut os_str = path.as_ref().as_os_str().to_os_string();
+            os_str.push("\0");
+
+            (
+                Vec::into_boxed_slice(os_str.encode_wide().collect()),
+                PathBuf::into_boxed_path(os_str.into()),
+            )
+        };
+
+        Self {
+            display,
+            path_c_str,
+            wide_c_str,
+        }
     }
 
-    fn get<P: AsRef<Path>>(&self, key: P) -> Option<(&str, &[u16])> {
-        self.map
-            .get(key.as_ref())
-            .map(|(p, w)| (&p[..], &w[..w.len().saturating_sub(1)]))
+    pub fn as_str_lossy(&self) -> &str {
+        &self.display
+    }
+
+    pub fn as_path(&self) -> &Path {
+        let bytes_with_nul = self.path_c_str.as_os_str().as_encoded_bytes();
+        let bytes_without_nul = &bytes_with_nul[..bytes_with_nul.len() - 1];
+
+        // SAFETY: Source OsStr bytes split before valid substring ("\0"),
+        // which is always inserted by `ArchiveOverride::new`
+        unsafe { Path::new(OsStr::from_encoded_bytes_unchecked(bytes_without_nul)) }
+    }
+
+    pub fn as_wide(&self) -> &[u16] {
+        &self.wide_c_str[..self.wide_c_str.len() - 1]
+    }
+
+    pub fn as_c_str(&self) -> *const u8 {
+        self.path_c_str.as_os_str().as_encoded_bytes().as_ptr()
+    }
+
+    pub fn as_wide_c_str(&self) -> *const u16 {
+        self.wide_c_str.as_ptr()
+    }
+
+    pub fn as_pcstr(&self) -> PCSTR {
+        PCSTR::from_raw(self.as_c_str())
+    }
+
+    pub fn as_pcwstr(&self) -> PCWSTR {
+        PCWSTR::from_raw(self.as_wide_c_str())
+    }
+}
+
+impl fmt::Debug for ArchiveOverride {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ArchiveOverride")
+            .field("display", &self.display)
+            .field("path", &self.as_path())
+            .finish()
+    }
+}
+
+impl fmt::Display for ArchiveOverride {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.display.fmt(f)
+    }
+}
+
+impl AsRef<Path> for ArchiveOverride {
+    fn as_ref(&self) -> &Path {
+        self.as_path()
+    }
+}
+
+impl AsRef<[u16]> for ArchiveOverride {
+    fn as_ref(&self) -> &[u16] {
+        self.as_wide()
+    }
+}
+
+impl From<&ArchiveOverride> for PCSTR {
+    fn from(value: &ArchiveOverride) -> Self {
+        value.as_pcstr()
+    }
+}
+
+impl From<&ArchiveOverride> for PCWSTR {
+    fn from(value: &ArchiveOverride) -> Self {
+        value.as_pcwstr()
     }
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-struct VfsKey(PathBuf);
+struct VfsKey(Box<Path>);
 
 impl VfsKey {
     /// Turns a disk path into an asset lookup key that includes the root directory.
@@ -133,7 +230,7 @@ impl VfsKey {
             .map(|c| c.as_os_str().to_string_lossy().to_lowercase())
             .collect();
 
-        Ok(Self(normalized))
+        Ok(Self(PathBuf::into_boxed_path(normalized)))
     }
 
     /// Turns a vfs path into an asset lookup key that does not include the root directory.
@@ -145,7 +242,7 @@ impl VfsKey {
             .map(|c| c.as_os_str().to_string_lossy().to_lowercase())
             .collect();
 
-        Self(normalized)
+        Self(PathBuf::into_boxed_path(normalized))
     }
 
     /// Turns a disk path into an asset lookup key that does not include the root directory.
@@ -156,7 +253,7 @@ impl VfsKey {
             .strip_prefix(base)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidFilename, e))?;
 
-        Ok(Self(stripped.to_owned()))
+        Ok(Self(stripped.into()))
     }
 }
 
@@ -169,24 +266,6 @@ impl AsRef<Path> for VfsKey {
 impl Borrow<Path> for VfsKey {
     fn borrow(&self) -> &Path {
         &self.0
-    }
-}
-
-impl fmt::Debug for ArchiveOverrideMapping {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_map()
-            .entries(self.map.iter().map(|(k, (v, _))| (k, v)))
-            .finish()
-    }
-}
-
-trait OsStrExt {
-    fn to_wide_with_nul(&self) -> Vec<u16>;
-}
-
-impl<T: AsRef<OsStr>> OsStrExt for T {
-    fn to_wide_with_nul(&self) -> Vec<u16> {
-        self.as_ref().encode_wide().chain(iter::once(0)).collect()
     }
 }
 
