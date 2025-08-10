@@ -78,6 +78,10 @@ impl Game {
     fn launcher(self) -> &'static Path {
         self.0.executable()
     }
+
+    fn into_vars(self) -> me3_env::GameVars {
+        me3_env::GameVars { launched: self.0 }
+    }
 }
 
 impl From<Game> for me3_mod_protocol::Game {

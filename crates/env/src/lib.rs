@@ -1,5 +1,6 @@
 use std::{collections::HashMap, path::PathBuf, process::Command};
 
+use me3_mod_protocol::Game;
 use serde::{de::value::MapDeserializer, Deserialize, Serialize};
 use serde_json::Value;
 
@@ -31,6 +32,16 @@ pub struct LauncherVars {
     pub host_dll: PathBuf,
 
     pub host_config_path: PathBuf,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GameVars {
+    /// The game launched via `me3 launch`.
+    pub launched: Game,
+}
+
+impl EnvVars for GameVars {
+    const PREFIX: &'static str = "ME3_GAME_";
 }
 
 impl EnvVars for LauncherVars {

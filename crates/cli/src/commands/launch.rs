@@ -418,6 +418,7 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
         trace_id: me3_telemetry::trace_id(),
     };
 
+    me3_env::serialize_into_command(game.into_vars(), &mut injector_command);
     me3_env::serialize_into_command(launcher_vars, &mut injector_command);
     me3_env::serialize_into_command(telemetry_vars, &mut injector_command);
 

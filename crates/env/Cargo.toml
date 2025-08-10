@@ -8,6 +8,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
+me3-mod-protocol.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 

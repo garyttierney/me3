@@ -6,29 +6,29 @@ use std::{
     ptr::{self, NonNull},
 };
 
-use cxx_stl::vec::CxxVec;
 use me3_binary_analysis::pe;
+use me3_mod_host_types::{
+    alloc::DlStdAllocator,
+    string::{DlUtf16String, EncodingError},
+    vector::DlVector,
+};
 use pelite::pe::Pe;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rdvec::Vec as DynVec;
 use thiserror::Error;
 use windows::{
     core::PCWSTR,
     Win32::System::Threading::{EnterCriticalSection, LeaveCriticalSection, CRITICAL_SECTION},
 };
 
-use crate::{
-    alloc::DlStdAllocator,
-    string::{DlUtf16String, EncodingError},
-};
-
 #[repr(C)]
 pub struct DlDeviceManager {
-    devices: CxxVec<NonNull<DlDevice>, DlStdAllocator>,
-    spis: CxxVec<NonNull<()>, DlStdAllocator>,
+    devices: DlVector<NonNull<DlDevice>>,
+    spis: DlVector<NonNull<()>>,
     disk_device: NonNull<DlDevice>,
-    virtual_roots: CxxVec<DlVirtualRoot, DlStdAllocator>,
-    bnd3_mounts: CxxVec<DlVirtualMount, DlStdAllocator>,
-    bnd4_mounts: CxxVec<DlVirtualMount, DlStdAllocator>,
+    virtual_roots: DlVector<DlVirtualRoot>,
+    bnd3_mounts: DlVector<DlVirtualMount>,
+    bnd4_mounts: DlVector<DlVirtualMount>,
     bnd3_spi: NonNull<()>,
     bnd4_spi: NonNull<()>,
     mutex_vtable: usize,
@@ -246,7 +246,7 @@ impl DlDeviceManagerGuard {
         let snapshot = device_manager
             .bnd4_mounts
             .iter()
-            .map(|m| m.root.get().map(|s| s.as_bytes().to_owned()))
+            .map(|m| m.root.get().map(|s| s.as_slice().to_owned()))
             .collect::<Result<Vec<Vec<u16>>, EncodingError>>()?;
 
         Ok(BndSnapshot::new(snapshot))
@@ -282,11 +282,13 @@ impl DlDeviceManagerGuard {
 
         device_manager
             .devices
-            .extend(vfs.inner.iter().map(|m| m.device));
+            .extend(&mut vfs.inner.iter().map(|m| m.device));
 
         let old_mounts_len = device_manager.bnd4_mounts.len();
 
-        device_manager.bnd4_mounts.extend(vfs.inner.iter().cloned());
+        device_manager
+            .bnd4_mounts
+            .extend(&mut vfs.inner.iter().cloned());
 
         VfsPushGuard {
             owner: self,
@@ -310,10 +312,10 @@ impl DlDeviceManagerGuard {
             let virtual_root = device_manager
                 .virtual_roots
                 .iter()
-                .find(|v| v.root.get().is_ok_and(|r| root == r.as_bytes()));
+                .find(|v| v.root.get().is_ok_and(|r| root == r.as_slice()));
 
             if let Some(replace_with) = virtual_root.and_then(|v| v.expanded.get().ok()) {
-                let mut new = replace_with.as_bytes().to_owned();
+                let mut new = replace_with.as_slice().to_owned();
                 new.extend_from_slice(&expanded[root_end + 2..]);
                 expanded = Cow::Owned(new);
             } else {
@@ -342,7 +344,7 @@ impl BndSnapshot {
     fn has_mount(&self, mount: &DlVirtualMount) -> bool {
         mount.root.get().is_ok_and(|r| {
             self.inner
-                .binary_search_by(|v| Ord::cmp(&**v, r.as_bytes()))
+                .binary_search_by(|v| Ord::cmp(&**v, r.as_slice()))
                 .is_ok()
         })
     }
@@ -375,14 +377,14 @@ impl VfsMounts {
         allocator: DlStdAllocator,
         is_temp_file: bool,
     ) -> Option<NonNull<DlFileOperator>> {
-        let path_bytes = unsafe { path.as_ref().get().ok()?.as_bytes() };
+        let path_bytes = unsafe { path.as_ref().get().ok()?.as_slice() };
 
         let root_end = path_bytes.windows(2).position(is_root_separator)?;
         let root = &path_bytes[..root_end];
 
         self.inner
             .iter()
-            .find(|m| m.root.get().is_ok_and(|r| root == r.as_bytes()))
+            .find(|m| m.root.get().is_ok_and(|r| root == r.as_slice()))
             .and_then(|m| {
                 let f = unsafe { ptr::read(&raw const m.device.read().as_ref().open_file) };
                 unsafe {
