@@ -14,15 +14,15 @@ use eyre::{eyre, OptionExt};
 use me3_binary_analysis::rtti::ClassMap;
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_host_assets::{
-    alloc::DlStdAllocator,
     bhd5::Bhd5Header,
     dl_device::{self, DlDeviceManager, DlFileOperator, VfsMounts},
     ebl::{mount_ebl, EblFileDevice, EblFileManager},
     file_step,
     mapping::ArchiveOverrideMapping,
-    string::DlUtf16String,
     wwise::{self, find_wwise_open_file, AkOpenMode},
 };
+use me3_mod_host_types::{alloc::DlStdAllocator, string::DlUtf16String};
+use rdvec::{RawVec, Vec as DynVec};
 use rsa::{pkcs1::DecodeRsaPublicKey, traits::PublicKeyParts, RsaPublicKey};
 use tempfile::NamedTempFile;
 use tracing::{debug, error, info, info_span, instrument, warn};
@@ -135,7 +135,7 @@ fn hook_device_manager(
 
         move |path: &DlUtf16String| {
             let path = path.get().ok()?;
-            let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
+            let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_slice());
 
             let (mapped_path, mapped_override) =
                 mapping.vfs_override(OsString::from_wide(&expanded))?;
@@ -143,7 +143,8 @@ fn hook_device_manager(
             info!("override" = mapped_path);
 
             let mut path = path.clone();
-            path.replace(mapped_override);
+
+            path.replace_from_slice(mapped_override);
 
             Some(path)
         }
@@ -208,12 +209,13 @@ fn hook_set_path(
     let override_path = move |path: &DlUtf16String| {
         let path = path.get().ok()?;
 
-        let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_bytes());
+        let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_slice());
 
         let (_, mapped_override) = mapping.vfs_override(OsString::from_wide(&expanded))?;
 
         let mut path = path.clone();
-        path.replace(mapped_override);
+
+        path.replace_from_slice(mapped_override);
 
         Some(path)
     };

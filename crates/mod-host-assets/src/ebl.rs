@@ -2,11 +2,12 @@ use std::{mem, ptr::NonNull};
 
 use from_singleton::FromSingleton;
 use me3_binary_analysis::{pe, rtti::ClassMap};
+use me3_mod_host_types::alloc::DlStdAllocator;
 use pelite::pe::Pe;
 use regex::bytes::Regex;
 use windows::core::{PCSTR, PCWSTR};
 
-use crate::{alloc::DlStdAllocator, bhd5::Bhd5Header};
+use crate::bhd5::Bhd5Header;
 
 #[repr(C)]
 pub struct EblFileManager;

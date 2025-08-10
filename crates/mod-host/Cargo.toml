@@ -19,7 +19,6 @@ crate-type = ["cdylib"]
 closure-ffi = { version = "3.0", features = ["coverage", "std", "tuple_trait"] }
 color-eyre.workspace = true
 crash-handler.workspace = true
-cxx-stl.workspace = true
 dll-syringe = { workspace = true, features = ["payload-utils"] }
 eyre = { workspace = true, default-features = false, features = ["track-caller"] }
 from-singleton.workspace = true
@@ -28,10 +27,12 @@ me3-binary-analysis.workspace = true
 me3-env.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-host-assets.workspace = true
+me3-mod-host-types.workspace = true
 me3-mod-protocol.workspace = true
 me3-telemetry.workspace = true
 pelite.workspace = true
 regex.workspace = true
+rdvec.workspace = true
 rayon.workspace = true
 retour = { git = "https://github.com/Hpmason/retour-rs" }
 rsa = "0.9"

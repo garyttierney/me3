@@ -624,15 +624,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cstl-sys"
-version = "2.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93cb3efebcf02ee15186d55068b8394bf5df33331feabda4f2cdcf3573d7c659"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "ctrlc"
 version = "3.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -640,15 +631,6 @@ checksum = "46f93780a459b7d656ef7f071fe699c4d3d2cb201c4b24d085b6ddc505276e73"
 dependencies = [
  "nix 0.30.1",
  "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "cxx-stl"
-version = "4.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e42cf6d86f92c165eaf2d4afa54382ec9b8d1cdef39f4265bc938cd055198f83"
-dependencies = [
- "cstl-sys",
 ]
 
 [[package]]
@@ -1592,6 +1574,7 @@ dependencies = [
 name = "me3-env"
 version = "0.7.0"
 dependencies = [
+ "me3-mod-protocol",
  "serde",
  "serde_json",
 ]
@@ -1633,7 +1616,6 @@ dependencies = [
  "closure-ffi",
  "color-eyre",
  "crash-handler",
- "cxx-stl",
  "dll-syringe",
  "eyre",
  "from-singleton",
@@ -1642,10 +1624,12 @@ dependencies = [
  "me3-env",
  "me3-launcher-attach-protocol",
  "me3-mod-host-assets",
+ "me3-mod-host-types",
  "me3-mod-protocol",
  "me3_telemetry",
  "pelite",
  "rayon",
+ "rdvec",
  "regex",
  "retour",
  "rsa",
@@ -1663,17 +1647,29 @@ dependencies = [
 name = "me3-mod-host-assets"
 version = "0.7.0"
 dependencies = [
- "cxx-stl",
  "from-singleton",
  "me3-binary-analysis",
+ "me3-mod-host-types",
  "me3-mod-protocol",
  "normpath",
  "pelite",
  "rayon",
+ "rdvec",
  "regex",
  "thiserror 2.0.12",
  "tracing",
  "undname",
+ "windows",
+]
+
+[[package]]
+name = "me3-mod-host-types"
+version = "0.7.0"
+dependencies = [
+ "me3-env",
+ "me3-mod-protocol",
+ "rdvec",
+ "thiserror 2.0.12",
  "windows",
 ]
 
@@ -2409,6 +2405,12 @@ dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
 ]
+
+[[package]]
+name = "rdvec"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6077c71bd2c02416117556e4b7d189513a8156c882915866285ccf11fe630a00"
 
 [[package]]
 name = "redox_syscall"
