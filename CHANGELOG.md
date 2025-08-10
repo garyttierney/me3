@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
+## me3 - [v0.7.1](https://github.com/garyttierney/me3/releases/v0.7.1) - 2025-08-10
+
+### 🐛 Bug Fixes
+
+- [39d7922](https://github.com/garyttierney/me3/commit/39d7922a6ee23c345f21166d3c8ab9331c812c0f) Unowned dirs in [#417](https://github.com/garyttierney/me3/pull/417)
+
+
+
+- [41f6b13](https://github.com/garyttierney/me3/commit/41f6b13f96412c6b1e4ee2572a82c0cb9ffcf2f9) Prepend to Windows PATH instead of append in [#396](https://github.com/garyttierney/me3/pull/396)
+
+
+  > A new path entry added by Windows seems to be interfering with PATH
+  > resolution. Prepend our path to the front of the list until Microsot
+  > deal with this.
+
+
+- [76eabf9](https://github.com/garyttierney/me3/commit/76eabf9fe79b579247eaeface9a550b00e43e62b) Missing nightreign-mods folder in Windows dist in [#392](https://github.com/garyttierney/me3/pull/392)
+
+
+
+### 📚 Documentation
+
+- [b62d3e2](https://github.com/garyttierney/me3/commit/b62d3e2ec6901c13b7378d07b0962fc0deacc090) Update docs for 0.7.0 in [#398](https://github.com/garyttierney/me3/pull/398)
+
+
+
+- [0da622c](https://github.com/garyttierney/me3/commit/0da622cb1aed670c21ae8c51d5bb81beaa6fcd5b) Add linkback to GitHub/bsky in [#393](https://github.com/garyttierney/me3/pull/393)
+
+
 ## me3 - [v0.7.0](https://github.com/garyttierney/me3/releases/v0.7.0) - 2025-07-28
 
 ### 🚀 Features
@@ -2330,6 +2359,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
+[0.7.1]: https://github.com/garyttierney/me3/compare/v0.7.0..v0.7.1
 [0.7.0]: https://github.com/garyttierney/me3/compare/v0.6.1..v0.7.0
 [0.6.1]: https://github.com/garyttierney/me3/compare/v0.6.0..v0.6.1
 [0.6.0]: https://github.com/garyttierney/me3/compare/v0.5.0..v0.6.0
