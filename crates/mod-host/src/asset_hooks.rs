@@ -11,13 +11,12 @@ use std::{
 };
 
 use eyre::{eyre, OptionExt};
-use me3_binary_analysis::rtti::ClassMap;
+use me3_binary_analysis::{fd4_step::Fd4StepTables, rtti::ClassMap};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_host_assets::{
     bhd5::Bhd5Header,
     dl_device::{self, DlDeviceManager, DlFileOperator, VfsMounts},
     ebl::{mount_ebl, EblFileDevice, EblFileManager},
-    file_step,
     mapping::ArchiveOverrideMapping,
     wwise::{self, find_wwise_open_file, AkOpenMode},
 };
@@ -38,9 +37,16 @@ pub fn attach_override(
     attach_config: Arc<AttachConfig>,
     exe: Executable,
     class_map: Arc<ClassMap<'static>>,
+    step_tables: &Fd4StepTables,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
-    hook_file_init(attach_config, exe, class_map.clone(), mapping.clone())?;
+    hook_file_init(
+        attach_config,
+        exe,
+        class_map.clone(),
+        step_tables,
+        mapping.clone(),
+    )?;
 
     if let Err(e) = try_hook_wwise(exe, &class_map, mapping.clone()) {
         debug!("error" = &*e, "skipping Wwise hook");
@@ -54,9 +60,13 @@ fn hook_file_init(
     attach_config: Arc<AttachConfig>,
     exe: Executable,
     class_map: Arc<ClassMap<'static>>,
+    step_tables: &Fd4StepTables,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
-    let init_fn = file_step::find_init_fn(exe)?;
+    let init_fn = step_tables
+        .by_name("CSFileStep::STEP_Init")
+        .or_else(|| step_tables.by_name("SprjFileStep::STEP_Init"))
+        .ok_or_eyre("FileStep::STEP_Init not found")?;
 
     debug!("FileStep::STEP_Init" = ?init_fn);
 
