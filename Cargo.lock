@@ -1529,7 +1529,7 @@ dependencies = [
 
 [[package]]
 name = "me3-binary-analysis"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "pelite",
  "rayon",
@@ -1540,7 +1540,7 @@ dependencies = [
 
 [[package]]
 name = "me3-cli"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "assert_fs",
  "chrono",
@@ -1573,7 +1573,7 @@ dependencies = [
 
 [[package]]
 name = "me3-env"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "me3-mod-protocol",
  "serde",
@@ -1582,7 +1582,7 @@ dependencies = [
 
 [[package]]
 name = "me3-launcher"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "crash-context",
  "dll-syringe",
@@ -1601,7 +1601,7 @@ dependencies = [
 
 [[package]]
 name = "me3-launcher-attach-protocol"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "bincode",
  "eyre",
@@ -1612,7 +1612,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-host"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "closure-ffi",
  "color-eyre",
@@ -1646,7 +1646,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-host-assets"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "from-singleton",
  "me3-binary-analysis",
@@ -1676,7 +1676,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-protocol"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "expect-test",
  "schemars",
@@ -1691,7 +1691,7 @@ dependencies = [
 
 [[package]]
 name = "me3_telemetry"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "color-eyre",
  "eyre",
@@ -4102,7 +4102,7 @@ checksum = "ea2f10b9bb0928dfb1b42b65e1f9e36f7f54dbdf08457afefb38afcdec4fa2bb"
 
 [[package]]
 name = "xtask"
-version = "0.7.0"
+version = "0.7.1"
 
 [[package]]
 name = "xxhash-rust"
