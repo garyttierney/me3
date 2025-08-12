@@ -81,7 +81,7 @@ fn hook_create_file(kb: HMODULE, mapping: Arc<ArchiveOverrideMapping>) -> Result
         )
     };
 
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(create_file_a)
         .with_span(info_span!("create_file_a"))
         .with_closure({
@@ -105,7 +105,7 @@ fn hook_create_file(kb: HMODULE, mapping: Arc<ArchiveOverrideMapping>) -> Result
         })
         .install()?;
 
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(create_file_w)
         .with_span(info_span!("create_file_w"))
         .with_closure({
@@ -129,7 +129,7 @@ fn hook_create_file(kb: HMODULE, mapping: Arc<ArchiveOverrideMapping>) -> Result
         })
         .install()?;
 
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(create_file_2)
         .with_span(info_span!("create_file_2"))
         .with_closure({
@@ -194,7 +194,7 @@ fn hook_create_directory(
         )
     };
 
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(create_dir_a)
         .with_closure({
             let mapping = mapping.clone();
@@ -213,7 +213,7 @@ fn hook_create_directory(
         })
         .install()?;
 
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(create_dir_w)
         .with_closure({
             let mapping = mapping.clone();
@@ -232,7 +232,7 @@ fn hook_create_directory(
         })
         .install()?;
 
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(create_dir_exw)
         .with_closure({
             let mapping = mapping.clone();
@@ -273,7 +273,7 @@ fn hook_delete_file(kb: HMODULE, mapping: Arc<ArchiveOverrideMapping>) -> Result
         )
     };
 
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(delete_file_a)
         .with_closure({
             let mapping = mapping.clone();
@@ -292,7 +292,7 @@ fn hook_delete_file(kb: HMODULE, mapping: Arc<ArchiveOverrideMapping>) -> Result
         })
         .install()?;
 
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(delete_file_w)
         .with_closure({
             let mapping = mapping.clone();

@@ -68,6 +68,12 @@ impl ModProfile {
         }
     }
 
+    pub fn start_online_mut(&mut self) -> &mut Option<bool> {
+        match self {
+            ModProfile::V1(v1) => &mut v1.start_online,
+        }
+    }
+
     pub fn supports(&self) -> Vec<Supports> {
         match self {
             ModProfile::V1(v1) => v1.supports.to_vec(),
@@ -83,6 +89,12 @@ impl ModProfile {
     pub fn packages(&self) -> Vec<Package> {
         match self {
             ModProfile::V1(v1) => v1.packages.to_vec(),
+        }
+    }
+
+    pub fn start_online(&self) -> Option<bool> {
+        match self {
+            ModProfile::V1(v1) => v1.start_online,
         }
     }
 }
@@ -103,6 +115,10 @@ pub struct ModProfileV1 {
     #[serde(default)]
     #[serde(alias = "package")]
     packages: Vec<Package>,
+
+    /// Starts the game with multiplayer server connectivity enabled.
+    #[serde(default)]
+    start_online: Option<bool>,
 }
 
 #[cfg(test)]

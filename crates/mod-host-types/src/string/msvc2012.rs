@@ -10,8 +10,8 @@ use crate::{alloc::DlStdAllocator, string::RawCxxString};
 #[repr(C)]
 pub struct DlString<T: 'static, const E: u8> {
     pub raw: RawCxxString<T>,
-    pub encoding: u8,
     pub alloc: DlStdAllocator,
+    pub encoding: u8,
 }
 
 impl<T, const E: u8> DlString<T, E> {

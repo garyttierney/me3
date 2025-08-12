@@ -28,6 +28,7 @@ use tempfile::NamedTempFile;
 use tracing::{error, info};
 
 use crate::{
+    commands::profile::ProfileOptions,
     config::Config,
     db::{profile::Profile, DbContext},
     Game,
@@ -68,6 +69,10 @@ pub struct GameOptions {
     #[clap(long("show-logos"), default_missing_value = "true", num_args=0..=1, value_parser = invert_bool())]
     pub(crate) skip_logos: Option<bool>,
 
+    /// Try to neutralize Arxan GuardIT code protection to improve mod stability?
+    #[clap(long("disable-arxan"), default_missing_value = "true", num_args=0..=1)]
+    pub(crate) disable_arxan: Option<bool>,
+
     /// Skip initializing Steam within the launcher?
     #[clap(long("skip-steam-init"), default_missing_value = "true", num_args=0..=1)]
     pub(crate) skip_steam_init: Option<bool>,
@@ -87,8 +92,9 @@ impl GameOptions {
         Self {
             boot_boost: other.boot_boost.or(self.boot_boost),
             skip_logos: other.skip_logos.or(self.skip_logos),
-            exe: other.exe.or(self.exe),
+            disable_arxan: other.disable_arxan.or(self.disable_arxan),
             skip_steam_init: other.skip_steam_init.or(self.skip_steam_init),
+            exe: other.exe.or(self.exe),
         }
     }
 }
@@ -100,6 +106,9 @@ pub struct LaunchArgs {
 
     #[clap(flatten)]
     game_options: GameOptions,
+
+    #[clap(flatten)]
+    profile_options: ProfileOptions,
 
     /// Enable diagnostics for this launch?
     #[clap(short('d'), long("diagnostics"), action = ArgAction::SetTrue)]
@@ -138,6 +147,7 @@ pub struct LaunchArgs {
         )]
     natives: Vec<PathBuf>,
 }
+
 pub trait Launcher: Debug {
     fn into_command(self, launcher: PathBuf) -> color_eyre::Result<Command>;
 }
@@ -224,92 +234,124 @@ impl Launcher for CompatToolLauncher {
     }
 }
 
-pub fn generate_attach_config(
+struct LaunchContext {
     game: Game,
-    opts: &GameOptions,
-    profile: &Profile,
-    extra_natives: &[PathBuf],
-    extra_packages: &[PathBuf],
-    suspend_on_attach: bool,
-    cache_path: Option<Box<Path>>,
-) -> color_eyre::Result<AttachConfig> {
-    for path in extra_natives.iter().chain(extra_packages) {
-        if !path.exists() {
-            return Err(eyre!("{path:?} does not exist"));
-        }
+    profile: Profile,
+    game_options: GameOptions,
+    profile_options: ProfileOptions,
+    attach_config: AttachConfig,
+}
+
+impl LaunchArgs {
+    fn parse_with_context(
+        &self,
+        db: &DbContext,
+        config: &Config,
+    ) -> color_eyre::Result<LaunchContext> {
+        let profile = if let Some(profile_name) = &self.profile {
+            db.profiles.load(profile_name)?
+        } else {
+            Profile::transient()
+        };
+
+        let game = if self.target_selector.auto_detect {
+            profile
+                .supported_game()
+                .map(crate::Game)
+                .ok_or_eyre("me3 profile lists no supported games")
+        } else {
+            self.target_selector
+                .game
+                .or_else(|| self.target_selector.steam_id.and_then(Game::from_app_id))
+                .ok_or_eyre("unable to determine game from name or app ID")
+        }?;
+
+        let game_options = config
+            .options
+            .game
+            .get(&game.0)
+            .cloned()
+            .unwrap_or_default()
+            .merge(self.game_options.clone());
+
+        let profile_options = profile.options().merge(self.profile_options.clone());
+
+        info!(?game, ?game_options, ?profile_options, "resolved game");
+
+        let attach_config = self.generate_attach_config(
+            game,
+            &game_options,
+            &profile,
+            &profile_options,
+            config.cache_dir(),
+        )?;
+
+        Ok(LaunchContext {
+            game,
+            profile,
+            game_options,
+            profile_options,
+            attach_config,
+        })
     }
 
-    let mut natives = vec![];
-    let mut packages = vec![];
+    fn generate_attach_config(
+        &self,
+        game: Game,
+        opts: &GameOptions,
+        profile: &Profile,
+        profile_options: &ProfileOptions,
+        cache_path: Option<Box<Path>>,
+    ) -> color_eyre::Result<AttachConfig> {
+        for path in self.natives.iter().chain(&self.packages) {
+            if !path.exists() {
+                return Err(eyre!("{path:?} does not exist"));
+            }
+        }
 
-    packages.extend(
-        extra_packages
+        let mut packages = self
+            .packages
             .iter()
             .filter_map(|path| path.normalize().ok())
-            .map(|normalized| Package::new(normalized.into_path_buf())),
-    );
+            .map(|normalized| Package::new(normalized.into_path_buf()))
+            .collect::<Vec<_>>();
 
-    natives.extend(
-        extra_natives
+        let mut natives = self
+            .natives
             .iter()
             .filter_map(|path| path.normalize().ok())
-            .map(|normalized| Native::new(normalized.into_path_buf())),
-    );
+            .map(|normalized| Native::new(normalized.into_path_buf()))
+            .collect::<Vec<_>>();
 
-    let (ordered_natives, ordered_packages) = profile.compile()?;
-    packages.extend(ordered_packages);
-    natives.extend(ordered_natives);
+        let (ordered_natives, ordered_packages) = profile.compile()?;
 
-    Ok(AttachConfig {
-        game: game.into(),
-        packages,
-        natives,
-        cache_path: cache_path.map(|path| path.into_path_buf()),
-        suspend: suspend_on_attach,
-        boot_boost: opts.boot_boost.unwrap_or(true),
-        skip_logos: opts.skip_logos.unwrap_or(true),
-        skip_steam_init: opts.skip_steam_init.unwrap_or(false),
-    })
+        packages.extend(ordered_packages);
+        natives.extend(ordered_natives);
+
+        Ok(AttachConfig {
+            game: game.into(),
+            packages,
+            natives,
+            cache_path: cache_path.map(|path| path.into_path_buf()),
+            suspend: self.suspend,
+            boot_boost: opts.boot_boost.unwrap_or(true),
+            skip_logos: opts.skip_logos.unwrap_or(true),
+            start_online: profile_options.start_online.unwrap_or(false),
+            disable_arxan: opts.disable_arxan.unwrap_or(false),
+            skip_steam_init: opts.skip_steam_init.unwrap_or(false),
+        })
+    }
 }
 
 #[tracing::instrument(err, skip_all)]
 pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
-    let profile = if let Some(profile_name) = &args.profile {
-        db.profiles.load(profile_name)?
-    } else {
-        Profile::transient()
-    };
-
-    let game = if args.target_selector.auto_detect {
-        profile
-            .supported_game()
-            .map(crate::Game)
-            .ok_or_eyre("me3 profile lists no supported games")
-    } else {
-        args.target_selector
-            .game
-            .or_else(|| args.target_selector.steam_id.and_then(Game::from_app_id))
-            .ok_or_eyre("unable to determine game from name or app ID")
-    }?;
-
-    let game_options = config
-        .options
-        .game
-        .get(&game.0)
-        .cloned()
-        .unwrap_or_default()
-        .merge(args.game_options);
-
-    info!(?game, ?game_options, "resolved game");
-    let attach_config = generate_attach_config(
+    let LaunchContext {
         game,
-        &game_options,
-        &profile,
-        &args.natives,
-        &args.packages,
-        args.suspend,
-        config.cache_dir(),
-    )?;
+        profile,
+        game_options,
+        profile_options: _profile_options,
+        attach_config,
+    } = args.parse_with_context(&db, &config)?;
 
     let bins_dir = config
         .windows_binaries_dir()
@@ -485,7 +527,7 @@ mod tests {
     use clap::Parser;
 
     use crate::{
-        commands::{launch::GameOptions, Commands},
+        commands::{launch::GameOptions, profile::ProfileOptions, Commands},
         Cli,
     };
 
@@ -502,9 +544,15 @@ mod tests {
             GameOptions {
                 boot_boost: None,
                 skip_logos: None,
+                disable_arxan: None,
                 skip_steam_init: None,
                 exe: None,
             },
+        );
+
+        pretty_assertions::assert_eq!(
+            launch_args.profile_options,
+            ProfileOptions { start_online: None },
         );
     }
 
@@ -517,7 +565,9 @@ mod tests {
             "er",
             "--no-boot-boost",
             "--show-logos",
+            "--disable-arxan",
             "--skip-steam-init",
+            "--online",
         ]);
 
         let Commands::Launch(launch_args) = cli.command else {
@@ -529,8 +579,16 @@ mod tests {
             GameOptions {
                 boot_boost: Some(false),
                 skip_logos: Some(false),
+                disable_arxan: Some(true),
                 skip_steam_init: Some(true),
                 exe: None,
+            },
+        );
+
+        pretty_assertions::assert_eq!(
+            launch_args.profile_options,
+            ProfileOptions {
+                start_online: Some(true),
             },
         );
     }
@@ -544,7 +602,9 @@ mod tests {
             "er",
             "--no-boot-boost=false",
             "--show-logos=false",
+            "--disable-arxan=false",
             "--skip-steam-init=false",
+            "--online=false",
         ]);
 
         let Commands::Launch(launch_args) = cli.command else {
@@ -556,8 +616,16 @@ mod tests {
             GameOptions {
                 boot_boost: Some(true),
                 skip_logos: Some(true),
+                disable_arxan: Some(false),
                 skip_steam_init: Some(false),
                 exe: None,
+            },
+        );
+
+        pretty_assertions::assert_eq!(
+            launch_args.profile_options,
+            ProfileOptions {
+                start_online: Some(false),
             },
         );
     }
@@ -571,7 +639,9 @@ mod tests {
             "er",
             "--no-boot-boost=true",
             "--show-logos=true",
+            "--disable-arxan=true",
             "--skip-steam-init=true",
+            "--online=true",
         ]);
 
         let Commands::Launch(launch_args) = cli.command else {
@@ -583,8 +653,16 @@ mod tests {
             GameOptions {
                 boot_boost: Some(false),
                 skip_logos: Some(false),
+                disable_arxan: Some(true),
                 skip_steam_init: Some(true),
                 exe: None,
+            },
+        );
+
+        pretty_assertions::assert_eq!(
+            launch_args.profile_options,
+            ProfileOptions {
+                start_online: Some(true),
             },
         );
     }

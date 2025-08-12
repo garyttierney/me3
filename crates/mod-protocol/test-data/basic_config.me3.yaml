@@ -1,9 +1,0 @@
-profileVersion: v1
-natives:
-  - enabled: true
-    optional: true
-    path: "./mod.dll"
-
-packages:
-  - id: my-mod
-    source: "mod/"
