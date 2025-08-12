@@ -37,6 +37,14 @@
       "type": "string",
       "oneOf": [
         {
+          "title": "Dark Souls III",
+          "description": "Dark Souls III (Steam App ID: 374320)",
+          "enum": [
+            "darksouls3",
+            "ds3"
+          ]
+        },
+        {
           "title": "Sekiro: Shadows Die Twice",
           "description": "Sekiro: Shadows Die Twice (Steam App ID: 814380)",
           "enum": [

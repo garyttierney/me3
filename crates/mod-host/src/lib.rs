@@ -24,8 +24,10 @@ use windows::Win32::{
 };
 
 use crate::{
-    debugger::suspend_for_debugger, deferred::defer_until_init, executable::Executable,
-    host::ModHost,
+    debugger::suspend_for_debugger,
+    deferred::defer_until_init,
+    executable::Executable,
+    host::{game_properties, ModHost},
 };
 
 mod asset_hooks;
@@ -93,7 +95,15 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         ModHost::new().attach();
 
+        host::dearxan(&attach_config);
+
         skip_logos::attach_override(attach_config.clone(), exe)?;
+
+        game_properties::attach_override(attach_config.clone(), exe)?;
+
+        if !attach_config.start_online {
+            game_properties::start_offline();
+        }
 
         let mut override_mapping = ArchiveOverrideMapping::new()?;
         override_mapping.scan_directories(attach_config.packages.iter())?;
@@ -130,7 +140,7 @@ fn deferred_attach(
     let step_tables = Fd4StepTables::from_initialized_data(exe)?;
 
     for native in &attach_config.natives {
-        if let Err(e) = ModHost::get_attached_mut().load_native(&native.path, &native.initializer) {
+        if let Err(e) = ModHost::get_attached().load_native(&native.path, &native.initializer) {
             warn!(
                 error = &*e,
                 path = %native.path.display(),

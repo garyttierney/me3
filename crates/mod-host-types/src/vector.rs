@@ -48,6 +48,46 @@ impl<T> DlVector<T> {
         }
     }
 
+    /// Reads and verifies the storage bounds pointers and the allocator address:
+    /// `(first, last, end, alloc_addr)`
+    ///
+    /// # Safety
+    ///
+    /// `ptr` must be valid for reads of up to 32 bytes.
+    #[inline]
+    pub unsafe fn try_read_raw_parts(ptr: *const Self) -> Option<(*mut T, *mut T, *mut T, usize)> {
+        if ptr.is_null() || !ptr.is_aligned() {
+            return None;
+        }
+
+        let (RawCxxVec { first, last, end }, alloc_addr) = match *GAME {
+            game if game < Game::Sekiro => unsafe {
+                let ptr = (&raw const (*ptr).msvc2012) as *const msvc2012::DlVector<T>;
+
+                (
+                    ptr::read(&raw const (*ptr).raw),
+                    ptr::read(&raw const (*ptr).alloc as *const usize),
+                )
+            },
+            _ => unsafe {
+                let ptr = (&raw const (*ptr).msvc2015) as *const msvc2015::DlVector<T>;
+
+                (
+                    ptr::read(&raw const (*ptr).raw),
+                    ptr::read(&raw const (*ptr).alloc as *const usize),
+                )
+            },
+        };
+
+        (alloc_addr.is_multiple_of(8)
+            && first.is_aligned()
+            && last.is_aligned()
+            && end.is_aligned()
+            && first <= last
+            && last <= end)
+            .then_some((first, last, end, alloc_addr))
+    }
+
     #[inline]
     fn as_dyn(&self) -> &dyn Vec<T, Alloc = DlStdAllocator> {
         match *GAME {

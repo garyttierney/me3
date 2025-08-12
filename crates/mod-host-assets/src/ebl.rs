@@ -2,23 +2,29 @@ use std::{mem, ptr::NonNull};
 
 use from_singleton::FromSingleton;
 use me3_binary_analysis::{pe, rtti::ClassMap};
-use me3_mod_host_types::alloc::DlStdAllocator;
+use me3_mod_host_types::{alloc::DlStdAllocator, game::GAME};
+use me3_mod_protocol::Game;
 use pelite::pe::Pe;
 use regex::bytes::Regex;
 use windows::core::{PCSTR, PCWSTR};
 
-use crate::bhd5::Bhd5Header;
+use crate::{bhd5::Bhd5Holder, dl_device::DlDevice};
 
 #[repr(C)]
 pub struct EblFileManager;
 
 #[repr(C)]
-pub struct EblFileDevice {
+struct EblFileDeviceDs3 {
     _vtable: usize,
-    _unk00: [u8; 0xa8],
-    bhd_header: Option<NonNull<Bhd5Header>>,
-    bucket_count: u32,
-    buckets: Option<NonNull<u32>>,
+    _unk08: [u8; 0xb8],
+    bhd_holder: Bhd5Holder,
+}
+
+#[repr(C)]
+struct EblFileDeviceSdt {
+    _vtable: usize,
+    _unk08: [u8; 0xa8],
+    bhd_holder: Bhd5Holder,
 }
 
 #[repr(C)]
@@ -83,29 +89,6 @@ impl EblFileManager {
     }
 }
 
-impl EblFileDevice {
-    pub fn bhd_header(&self) -> Option<&Bhd5Header> {
-        self.bhd_header.map(|ptr| unsafe { ptr.as_ref() })
-    }
-
-    /// # Safety
-    ///
-    /// The buffer pointed to by `contents` should be aligned and allocated
-    /// with a [`DlStdAllocator`], so that it may be freed later.
-    pub unsafe fn assign_bhd_contents(&mut self, contents: *mut Bhd5Header) {
-        self.bhd_header = NonNull::new(contents);
-
-        if let Some(contents) = &self.bhd_header {
-            let header = unsafe { contents.as_ref() };
-
-            let buckets = header.buckets();
-
-            self.bucket_count = buckets.len() as u32;
-            self.buckets = Some(buckets.cast());
-        }
-    }
-}
-
 pub fn mount_ebl<'a, P>(program: P) -> Option<MountEbl>
 where
     P: Pe<'a>,
@@ -143,6 +126,42 @@ where
     };
 
     Some(mount_ebl)
+}
+
+pub trait DlDeviceEblExt {
+    /// Extracts a reference to the BHD5 file holder in a `EblFileDevice` from a `DlDevice`,
+    /// without verifying the validity of the cast.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be valid to downcast to a `EblFileDevice`.
+    unsafe fn as_bhd_holder_unchecked(&self) -> &Bhd5Holder;
+
+    /// Extracts a mutable reference to the BHD5 file holder in a `EblFileDevice` from a `DlDevice`,
+    /// without verifying the validity of the cast.
+    ///
+    /// # Safety
+    ///
+    /// `device` must be valid to downcast to a `EblFileDevice`.
+    unsafe fn as_mut_bhd_holder_unchecked(&mut self) -> &mut Bhd5Holder;
+}
+
+impl DlDeviceEblExt for DlDevice {
+    unsafe fn as_bhd_holder_unchecked(&self) -> &Bhd5Holder {
+        if *GAME < Game::Sekiro {
+            unsafe { &mem::transmute::<&Self, &EblFileDeviceDs3>(self).bhd_holder }
+        } else {
+            unsafe { &mem::transmute::<&Self, &EblFileDeviceSdt>(self).bhd_holder }
+        }
+    }
+
+    unsafe fn as_mut_bhd_holder_unchecked(&mut self) -> &mut Bhd5Holder {
+        if *GAME < Game::Sekiro {
+            unsafe { &mut mem::transmute::<&mut Self, &mut EblFileDeviceDs3>(self).bhd_holder }
+        } else {
+            unsafe { &mut mem::transmute::<&mut Self, &mut EblFileDeviceSdt>(self).bhd_holder }
+        }
+    }
 }
 
 impl FromSingleton for EblFileManager {

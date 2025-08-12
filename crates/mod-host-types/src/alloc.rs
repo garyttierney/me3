@@ -104,6 +104,18 @@ struct DlAllocatorVtable {
     block_of: extern "C" fn(this: NonNull<DlAllocator>, ptr: *mut u8) -> *mut u8,
 }
 
+impl DlStdAllocator {
+    pub const fn new() -> Self {
+        Self {
+            inner: NonNull::from_ref(&DEFAULT_DLALLOC),
+        }
+    }
+
+    pub fn addr(self) -> usize {
+        self.inner.addr().get()
+    }
+}
+
 unsafe impl GlobalAlloc for DlStdAllocator {
     #[inline]
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
@@ -123,9 +135,7 @@ unsafe impl GlobalAlloc for DlStdAllocator {
 
 impl Default for DlStdAllocator {
     fn default() -> Self {
-        Self {
-            inner: NonNull::from(&DEFAULT_DLALLOC),
-        }
+        Self::new()
     }
 }
 

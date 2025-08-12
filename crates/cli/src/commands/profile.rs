@@ -49,6 +49,9 @@ pub struct ProfileCreateArgs {
     #[clap(long("native"))]
     natives: Vec<PathBuf>,
 
+    #[clap(flatten)]
+    options: ProfileOptions,
+
     /// Optional flag to treat the input as a filename instead of a profile ID to store in
     /// ME3_PROFILE_DIR.
     #[clap(short, long, action = ArgAction::SetTrue)]
@@ -57,6 +60,21 @@ pub struct ProfileCreateArgs {
     /// Overwrite the profile if it already exists
     #[clap(long, action = ArgAction::SetTrue)]
     overwrite: bool,
+}
+
+#[derive(Args, Clone, Debug, Default, PartialEq)]
+pub struct ProfileOptions {
+    /// Allow the game to connect to the multiplayer server?
+    #[clap(long("online"), default_missing_value = "true", num_args=0..=1)]
+    pub start_online: Option<bool>,
+}
+
+impl ProfileOptions {
+    pub fn merge(self, other: Self) -> Self {
+        Self {
+            start_online: other.start_online.or(self.start_online),
+        }
+    }
 }
 
 #[tracing::instrument(skip_all)]
@@ -122,6 +140,9 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         natives.push(Native::new(pkg));
     }
 
+    let start_online = profile.start_online_mut();
+    *start_online = args.options.start_online;
+
     let contents = toml::to_string_pretty(&profile)?;
 
     std::fs::write(profile_path, contents)?;
@@ -162,6 +183,14 @@ pub fn show(db: DbContext, name: String) -> color_eyre::Result<()> {
                 builder.property("Enabled", package.enabled);
             });
         }
+    });
+
+    output.section("Options", |builder| {
+        let opt_to_str =
+            |o: Option<bool>| o.map(|o| o.to_string()).unwrap_or_else(|| "-".to_owned());
+
+        let options = profile.options();
+        builder.property("Start Online", opt_to_str(options.start_online));
     });
 
     println!("{}", output.build());

@@ -150,7 +150,7 @@ fn fix_show_window_flash() -> Result<(), eyre::Error> {
         let register_class = GetProcAddress(user32, s!("RegisterClassExW"))
             .ok_or_eyre("RegisterClassExW not found")?;
 
-        ModHost::get_attached_mut()
+        ModHost::get_attached()
             .hook(mem::transmute::<
                 _,
                 unsafe extern "C" fn(*const WNDCLASSEXW) -> u16,
