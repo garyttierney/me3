@@ -24,19 +24,22 @@ use windows::{
 #[repr(C)]
 pub struct DlDeviceManager {
     devices: DlVector<NonNull<DlDevice>>,
-    spis: DlVector<NonNull<()>>,
+    spis: DlVector<NonNull<*mut ()>>,
     disk_device: NonNull<DlDevice>,
     virtual_roots: DlVector<DlVirtualRoot>,
     bnd3_mounts: DlVector<DlVirtualMount>,
     bnd4_mounts: DlVector<DlVirtualMount>,
-    bnd3_spi: NonNull<()>,
-    bnd4_spi: NonNull<()>,
-    mutex_vtable: usize,
+    bnd3_spi: NonNull<*mut ()>,
+    bnd4_spi: NonNull<*mut ()>,
+    mutex_vtable: NonNull<*mut ()>,
     critical_section: CRITICAL_SECTION,
     _unke8: bool,
 }
 
-pub type DlDevice = NonNull<DlDeviceVtable>;
+#[repr(C)]
+pub struct DlDevice {
+    pub(crate) vtable: NonNull<DlDeviceVtable>,
+}
 
 pub type DlFileOperator = NonNull<DlFileOperatorVtable>;
 
@@ -104,7 +107,6 @@ pub fn find_device_manager<'a, P>(program: P) -> Result<NonNull<DlDeviceManager>
 where
     P: Pe<'a>,
 {
-    // SAFETY: must be upheld by caller.
     let [data, rdata] = pe::sections(program, [".data", ".rdata"]).map_err(FindError::Section)?;
 
     let data = program.get_section_bytes(data)?;
@@ -134,6 +136,7 @@ where
 }
 
 /// # Safety
+///
 /// `ptr` must be in bounds for all reads.
 unsafe fn verify_dl_device_manager_layout(
     device_manager: *const DlDeviceManager,
@@ -144,84 +147,70 @@ unsafe fn verify_dl_device_manager_layout(
         return false;
     }
 
-    let ptr = device_manager.cast::<*const usize>();
-
-    macro_rules! verify_vec {
-        ($v:expr, $alloc:expr) => {
-            #[allow(unused_unsafe)]
-            unsafe {
-                if $alloc != $v.read() {
-                    return false;
-                }
-
-                let first = $v.add(1).read();
-                let last = $v.add(2).read();
-                let end = $v.add(3).read();
-
-                if !first.is_aligned() || !last.is_aligned() || !end.is_aligned() {
-                    return false;
-                }
-
-                if first > last || last > end {
-                    return false;
-                }
-            }
-        };
-    }
-
     // SAFETY: pointer is aligned for all reads, in bounds by precondition.
     unsafe {
-        let alloc = ptr.read();
+        let Some((_, _, _, alloc)) =
+            DlVector::try_read_raw_parts(&raw const (*device_manager).devices)
+        else {
+            return false;
+        };
 
-        if !alloc.is_aligned() || !data_range.contains(&alloc.cast()) {
+        if !data_range.contains(&(alloc as *const u8)) {
             return false;
         }
 
-        verify_vec!(ptr, alloc);
-
-        verify_vec!(
-            &raw const (*device_manager).spis as *const *const usize,
-            alloc
-        );
-
-        verify_vec!(
-            &raw const (*device_manager).virtual_roots as *const *const usize,
-            alloc
-        );
-
-        verify_vec!(
-            &raw const (*device_manager).bnd3_mounts as *const *const usize,
-            alloc
-        );
-
-        verify_vec!(
-            &raw const (*device_manager).bnd4_mounts as *const *const usize,
-            alloc
-        );
-
-        let disk_device =
-            ptr::read(&raw const (*device_manager).disk_device as *const *const usize);
-
-        if disk_device.is_null() || !disk_device.is_aligned() {
+        if !matches!(
+            DlVector::try_read_raw_parts(&raw const (*device_manager).spis),
+            Some((_, _, _, other_alloc)) if other_alloc == alloc
+        ) {
             return false;
         }
 
-        let bnd3_spi = ptr::read(&raw const (*device_manager).bnd3_spi as *const *const usize);
-
-        if bnd3_spi.is_null() || !bnd3_spi.is_aligned() {
+        if !matches!(
+            DlVector::try_read_raw_parts(&raw const (*device_manager).virtual_roots),
+            Some((_, _, _, other_alloc)) if other_alloc == alloc
+        ) {
             return false;
         }
 
-        let bnd4_spi = ptr::read(&raw const (*device_manager).bnd4_spi as *const *const usize);
+        if !matches!(
+            DlVector::try_read_raw_parts(&raw const (*device_manager).bnd3_mounts),
+            Some((_, _, _, other_alloc)) if other_alloc == alloc
+        ) {
+            return false;
+        }
 
-        if bnd4_spi.is_null() || !bnd4_spi.is_aligned() {
+        if !matches!(
+            DlVector::try_read_raw_parts(&raw const (*device_manager).bnd4_mounts),
+            Some((_, _, _, other_alloc)) if other_alloc == alloc
+        ) {
+            return false;
+        }
+
+        let disk_device = ptr::read(
+            &raw const (*device_manager).disk_device as *const *mut NonNull<DlDeviceVtable>,
+        );
+
+        if !disk_device.is_aligned() || disk_device.is_null() {
+            return false;
+        }
+
+        let bnd3_spi = ptr::read(&raw const (*device_manager).bnd3_spi as *const *mut *mut ());
+
+        if !bnd3_spi.is_aligned() || bnd3_spi.is_null() {
+            return false;
+        }
+
+        let bnd4_spi = ptr::read(&raw const (*device_manager).bnd4_spi as *const *mut *mut ());
+
+        if !bnd4_spi.is_aligned() || bnd4_spi.is_null() {
             return false;
         }
 
         let mutex_vtable =
-            ptr::read(&raw const (*device_manager).mutex_vtable as *const *const usize);
+            ptr::read(&raw const (*device_manager).mutex_vtable as *const *mut *mut ());
 
-        if !mutex_vtable.is_aligned() || !rdata_range.contains(&mutex_vtable.cast()) {
+        if !mutex_vtable.is_aligned() || !rdata_range.contains(&(mutex_vtable as *const u8)) {
             return false;
         }
     }
@@ -329,7 +318,12 @@ impl DlDeviceManagerGuard {
     pub fn open_disk_file(&self) -> DlDeviceOpen {
         unsafe {
             let device_manager = self.inner.as_ref();
-            device_manager.disk_device.as_ref().as_ref().open_file
+            device_manager
+                .disk_device
+                .as_ref()
+                .vtable
+                .as_ref()
+                .open_file
         }
     }
 }
@@ -358,7 +352,7 @@ impl VfsMounts {
     pub fn open_disk_file_fn(&self) -> Option<DlDeviceOpen> {
         unsafe {
             let ptr = self.inner.first()?.device;
-            Some(ptr::read(&raw const ptr.read().as_ref().open_file))
+            Some(ptr::read(&raw const ptr.read().vtable.as_ref().open_file))
         }
     }
 
@@ -386,7 +380,7 @@ impl VfsMounts {
             .iter()
             .find(|m| m.root.get().is_ok_and(|r| root == r.as_slice()))
             .and_then(|m| {
-                let f = unsafe { ptr::read(&raw const m.device.read().as_ref().open_file) };
+                let f = unsafe { ptr::read(&raw const m.device.read().vtable.as_ref().open_file) };
                 unsafe {
                     f(
                         m.device,

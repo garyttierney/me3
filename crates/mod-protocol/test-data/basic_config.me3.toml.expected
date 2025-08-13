@@ -27,5 +27,6 @@ V1(
                 load_before: [],
             },
         ],
+        start_online: None,
     },
 )

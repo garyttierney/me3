@@ -1,18 +1,20 @@
 use std::{
+    collections::HashMap,
     ffi::CString,
     fmt::Debug,
     marker::Tuple,
     panic,
     path::Path,
-    sync::{Arc, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard},
+    sync::{Arc, Mutex, OnceLock},
     time::Duration,
 };
 
 use closure_ffi::traits::FnPtr;
 use libloading::{Library, Symbol};
-use me3_mod_protocol::{native::NativeInitializerCondition, ModProfile};
+use me3_launcher_attach_protocol::AttachConfig;
+use me3_mod_protocol::{native::NativeInitializerCondition, Game, ModProfile};
 use retour::Function;
-use tracing::{error, info, warn};
+use tracing::{error, info, warn, Span};
 
 use self::hook::HookInstaller;
 use crate::{
@@ -21,15 +23,17 @@ use crate::{
 };
 
 mod append;
+pub mod game_properties;
 pub mod hook;
 
-static ATTACHED_INSTANCE: OnceLock<RwLock<ModHost>> = OnceLock::new();
+static ATTACHED_INSTANCE: OnceLock<ModHost> = OnceLock::new();
 
 #[derive(Default)]
 pub struct ModHost {
-    hooks: Vec<Arc<UntypedDetour>>,
-    native_modules: Vec<Library>,
+    hooks: Mutex<Vec<Arc<UntypedDetour>>>,
+    native_modules: Mutex<Vec<Library>>,
     profiles: Vec<ModProfile>,
+    property_overrides: Mutex<HashMap<Vec<u16>, bool>>,
 }
 
 impl Debug for ModHost {
@@ -37,6 +41,7 @@ impl Debug for ModHost {
         f.debug_struct("ModHost")
             .field("hooks", &self.hooks)
             .field("profiles", &self.profiles)
+            .field("property_overrides", &self.property_overrides)
             .finish()
     }
 }
@@ -48,7 +53,7 @@ impl ModHost {
     }
 
     pub fn load_native(
-        &mut self,
+        &self,
         path: &Path,
         condition: &Option<NativeInitializerCondition>,
     ) -> eyre::Result<()> {
@@ -92,40 +97,51 @@ impl ModHost {
                 Ok(())
             }
             Ok(result) => result.map(|module| {
-                self.native_modules.push(module);
+                self.native_modules.lock().unwrap().push(module);
             }),
         }
     }
 
-    pub fn get_attached() -> RwLockReadGuard<'static, ModHost> {
-        let lock = ATTACHED_INSTANCE.get().expect("not attached");
-
-        match lock.read() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        }
-    }
-
-    pub fn get_attached_mut() -> RwLockWriteGuard<'static, ModHost> {
-        let lock = ATTACHED_INSTANCE.get().expect("not attached");
-
-        match lock.write() {
-            Ok(guard) => guard,
-            Err(poisoned) => poisoned.into_inner(),
-        }
+    pub fn get_attached() -> &'static ModHost {
+        ATTACHED_INSTANCE.get().expect("not attached")
     }
 
     pub fn attach(self) {
-        ATTACHED_INSTANCE
-            .set(RwLock::new(self))
-            .expect("already attached");
+        ATTACHED_INSTANCE.set(self).expect("already attached");
     }
 
-    pub fn hook<F>(&mut self, target: F) -> HookInstaller<'_, F>
+    pub fn hook<F>(&'static self, target: F) -> HookInstaller<F>
     where
         F: Function + FnPtr,
         F::Arguments: Tuple,
     {
-        HookInstaller::new(Some(&mut self.hooks), target)
+        HookInstaller::new(target).on_install(|hook| self.hooks.lock().unwrap().push(hook))
+    }
+
+    pub fn override_game_property<S: AsRef<str>>(&self, property: S, state: bool) {
+        self.property_overrides
+            .lock()
+            .unwrap()
+            .insert(property.as_ref().encode_utf16().collect(), state);
+    }
+}
+
+pub fn dearxan(attach_config: &AttachConfig) {
+    if !attach_config.disable_arxan && attach_config.game != Game::DarkSouls3 {
+        return;
+    }
+
+    info!(
+        "game" = %attach_config.game,
+        "disable_arxan" = attach_config.disable_arxan,
+        "will attempt to disable Arxan code protection",
+    );
+
+    let span = Span::current();
+    unsafe {
+        dearxan::disabler::neuter_arxan(move |_, detected_arxan| {
+            let _span_guard = span.enter();
+            info!(detected_arxan, "dearxan::disabler::neuter_arxan finished");
+        });
     }
 }

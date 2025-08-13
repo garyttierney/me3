@@ -41,7 +41,7 @@ where
 
 #[instrument]
 fn hook_steam_init() -> Result<(), eyre::Error> {
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(steam_init_fn()?)
         .with_closure(|trampoline| {
             let result = unsafe { trampoline() };

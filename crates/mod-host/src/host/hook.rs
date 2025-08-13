@@ -17,43 +17,48 @@ pub enum HookSource<F: Function> {
     Closure((F, &'static OnceCell<F>)),
 }
 
-pub struct HookInstaller<'a, F>
+pub struct HookInstaller<F>
 where
     F: Function,
 {
     enable_on_install: bool,
+    on_install: Option<Box<dyn FnOnce(Arc<UntypedDetour>)>>,
     source: Option<HookSource<F>>,
-    storage: Option<&'a mut Vec<Arc<UntypedDetour>>>,
     span: Span,
     target: F,
 }
 
-impl<'a, F> HookInstaller<'a, F>
+impl<F> HookInstaller<F>
 where
     F: Function,
 {
-    #[inline]
-    pub fn new(storage: Option<&'a mut Vec<Arc<UntypedDetour>>>, target: F) -> Self {
+    pub fn new(target: F) -> Self {
         Self {
             enable_on_install: true,
+            on_install: None,
             source: None,
-            storage,
             span: Span::none(),
             target,
         }
     }
 
-    #[inline]
-    #[allow(unused)]
-    pub fn with(self, source: F) -> Self {
+    pub(crate) fn on_install<C>(self, c: C) -> Self
+    where
+        C: FnOnce(Arc<UntypedDetour>) + 'static,
+    {
         Self {
-            source: Some(HookSource::Function(source)),
+            on_install: Some(Box::new(c)),
             ..self
         }
     }
 
-    #[inline]
-    pub fn with_closure<C>(mut self, closure: C) -> Self
+    #[allow(unused)]
+    pub fn with(&mut self, source: F) -> &mut Self {
+        self.source = Some(HookSource::Function(source));
+        self
+    }
+
+    pub fn with_closure<C>(&mut self, closure: C) -> &mut Self
     where
         C: Fn<<F::Arguments as Append<F>>::Output, Output = F::Output> + 'static,
         F: FnPtr,
@@ -68,22 +73,19 @@ where
 
         let bare: BareFn<_> = with_appended.bare();
 
-        Self {
-            source: Some(HookSource::Closure((bare.leak(), trampoline))),
-            ..self
-        }
+        self.source = Some(HookSource::Closure((bare.leak(), trampoline)));
+        self
     }
 
-    #[inline]
-    pub fn with_span(self, span: Span) -> Self {
-        Self { span, ..self }
+    pub fn with_span(&mut self, span: Span) -> &mut Self {
+        self.span = span;
+        self
     }
 
-    #[inline]
-    pub fn install(self) -> Result<Arc<Detour<F>>, DetourError> {
+    pub fn install(&mut self) -> Result<Arc<Detour<F>>, DetourError> {
         let mut uninit_trampoline = None;
 
-        let hook = match self.source.expect("no hook source") {
+        let hook = match self.source.take().expect("no hook source") {
             HookSource::Function(f) => f,
             HookSource::Closure((f, trampoline)) => {
                 uninit_trampoline = Some(trampoline);
@@ -93,8 +95,8 @@ where
 
         let detour = Arc::new(install_detour(self.target, hook)?);
 
-        if let Some(storage) = self.storage {
-            storage.push(unsafe { mem::transmute(detour.clone()) });
+        if let Some(on_install) = self.on_install.take() {
+            on_install(unsafe { mem::transmute(detour.clone()) })
         }
 
         if let Some(trampoline) = uninit_trampoline {
@@ -121,9 +123,7 @@ mod tests {
 
     #[test]
     fn context_with_closure() -> Result<(), Box<dyn Error>> {
-        let hook_installer = HookInstaller::<unsafe extern "C" fn() -> usize>::new(None, test_fn);
-
-        let hook = hook_installer
+        let hook = HookInstaller::<unsafe extern "C" fn() -> usize>::new(test_fn)
             .with_closure(|trampoline| 5 + unsafe { trampoline() })
             .install()?;
 

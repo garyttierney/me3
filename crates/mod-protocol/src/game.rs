@@ -11,6 +11,7 @@ use strum_macros::VariantArray;
 /// Feature gates can use [`Ord`] comparisons between game type constants.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, VariantArray)]
 pub enum Game {
+    DarkSouls3,
     Sekiro,
     EldenRing,
     ArmoredCore6,
@@ -22,6 +23,7 @@ impl Game {
     pub const fn name(self) -> &'static str {
         use Game::*;
         match self {
+            DarkSouls3 => "darksouls3",
             Sekiro => "sekiro",
             EldenRing => "eldenring",
             ArmoredCore6 => "armoredcore6",
@@ -33,6 +35,7 @@ impl Game {
     pub const fn title(self) -> &'static str {
         use Game::*;
         match self {
+            DarkSouls3 => "Dark Souls III",
             Sekiro => "Sekiro: Shadows Die Twice",
             EldenRing => "Elden Ring",
             ArmoredCore6 => "Armored Core VI: Fires of Rubicon",
@@ -44,6 +47,7 @@ impl Game {
     pub fn possible_names(self) -> &'static [&'static str] {
         use Game::*;
         match self {
+            DarkSouls3 => &[const { DarkSouls3.name() }, "ds3"],
             Sekiro => &[const { Sekiro.name() }, "sdt"],
             EldenRing => &[const { EldenRing.name() }, "er", "elden-ring"],
             ArmoredCore6 => &[const { ArmoredCore6.name() }, "ac6"],
@@ -90,6 +94,7 @@ impl Game {
     pub fn app_id(self) -> u32 {
         use Game::*;
         match self {
+            DarkSouls3 => 374320,
             Sekiro => 814380,
             EldenRing => 1245620,
             ArmoredCore6 => 1888160,
@@ -109,6 +114,7 @@ impl Game {
     pub fn executable(self) -> &'static Path {
         use Game::*;
         Path::new(match self {
+            DarkSouls3 => "Game/DarkSoulsIII.exe",
             Sekiro => "sekiro.exe",
             EldenRing => "Game/eldenring.exe",
             ArmoredCore6 => "Game/armoredcore6.exe",

@@ -16,11 +16,12 @@ use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_host_assets::{
     bhd5::Bhd5Header,
     dl_device::{self, DlDeviceManager, DlFileOperator, VfsMounts},
-    ebl::{mount_ebl, EblFileDevice, EblFileManager},
+    ebl::{mount_ebl, DlDeviceEblExt, EblFileManager},
     mapping::ArchiveOverrideMapping,
     wwise::{self, find_wwise_open_file, AkOpenMode},
 };
 use me3_mod_host_types::{alloc::DlStdAllocator, string::DlUtf16String};
+use me3_mod_protocol::Game;
 use rdvec::{RawVec, Vec as DynVec};
 use rsa::{pkcs1::DecodeRsaPublicKey, traits::PublicKeyParts, RsaPublicKey};
 use tempfile::NamedTempFile;
@@ -40,6 +41,8 @@ pub fn attach_override(
     step_tables: &Fd4StepTables,
     mapping: Arc<ArchiveOverrideMapping>,
 ) -> Result<(), eyre::Error> {
+    enable_loose_params(&attach_config, &mapping);
+
     hook_file_init(
         attach_config,
         exe,
@@ -53,6 +56,27 @@ pub fn attach_override(
     }
 
     Ok(())
+}
+
+fn enable_loose_params(attach_config: &AttachConfig, mapping: &ArchiveOverrideMapping) {
+    // Some Dark Souls 3 mods use a legacy Mod Engine 2 option of loading "loose" param files
+    // instead of Data0. For backwards compatibility me3 enables it below.
+    if attach_config.game != Game::DarkSouls3 {
+        return;
+    }
+
+    static LOOSE_PARAM_FILES: [&str; 3] = [
+        "data1:/param/gameparam/gameparam.parambnd.dcx",
+        "data1:/param/gameparam/gameparam_dlc1.parambnd.dcx",
+        "data1:/param/gameparam/gameparam_dlc2.parambnd.dcx",
+    ];
+
+    if LOOSE_PARAM_FILES
+        .iter()
+        .any(|file| mapping.vfs_override(file).is_some())
+    {
+        ModHost::get_attached().override_game_property("Game.Debug.EnableRegulationFile", false);
+    }
 }
 
 #[instrument(name = "file_step", skip_all)]
@@ -70,7 +94,7 @@ fn hook_file_init(
 
     debug!("FileStep::STEP_Init" = ?init_fn);
 
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(init_fn)
         .with_span(info_span!("hook"))
         .with_closure(move |p1, trampoline| {
@@ -106,7 +130,7 @@ fn hook_ebl_utility(
 
     debug!(?make_ebl_object);
 
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(make_ebl_object)
         .with_closure(move |p1, path, p3, trampoline| {
             let mut device_manager = DlDeviceManager::lock(device_manager);
@@ -166,7 +190,7 @@ fn hook_device_manager(
             .is_ok()
     };
 
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(open_disk_file)
         .with_span(info_span!("hook"))
         .with_closure(move |p1, path, p3, p4, p5, p6, trampoline| {
@@ -233,7 +257,7 @@ fn hook_set_path(
     for set_path in [vtable.set_path, vtable.set_path2, vtable.set_path3] {
         let override_path = override_path.clone();
 
-        ModHost::get_attached_mut()
+        ModHost::get_attached()
             .hook(set_path)
             .with_closure(move |p1, path, p3, p4, trampoline| {
                 if let Some(path) = override_path(unsafe { path.as_ref() }) {
@@ -294,10 +318,15 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
         let mut device = new_mounts
             .devices()
             .next()
-            .ok_or_eyre("no devices were added")?
-            .cast::<EblFileDevice>();
+            .ok_or_eyre("no devices were added")?;
 
-        let original_len = unsafe { device.as_ref().bhd_header().map(Bhd5Header::file_size) };
+        let original_len = unsafe {
+            device
+                .as_ref()
+                .as_bhd_holder_unchecked()
+                .bhd_header()
+                .map(Bhd5Header::file_size)
+        };
 
         let hash = hash.join().expect("thread panicked");
 
@@ -329,12 +358,12 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
             let device = new_mounts
                 .devices()
                 .next()
-                .ok_or_eyre("no devices were added")?
-                .cast::<EblFileDevice>();
+                .ok_or_eyre("no devices were added")?;
 
             let header = unsafe {
                 device
                     .as_ref()
+                    .as_bhd_holder_unchecked()
                     .bhd_header()
                     .ok_or_eyre("BHD header is null")?
             };
@@ -365,7 +394,10 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
             })?;
 
             unsafe {
-                device.as_mut().assign_bhd_contents(buf.as_mut_ptr().cast());
+                device
+                    .as_mut()
+                    .as_mut_bhd_holder_unchecked()
+                    .assign_bhd_contents(buf.as_mut_ptr().cast());
             }
 
             VFS_MOUNTS.lock().unwrap().append(new_mounts);
@@ -422,7 +454,7 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
 
     debug!(?mount_ebl);
 
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(mount_ebl)
         .with_span(info_span!("hook"))
         .with_closure(move |p1, p2, p3, p4, p5, p6, trampoline| {
@@ -475,7 +507,7 @@ fn try_hook_wwise(
     let wwise_open_file =
         find_wwise_open_file(exe, class_map).ok_or_eyre("WwiseOpenFileByName not found")?;
 
-    ModHost::get_attached_mut()
+    ModHost::get_attached()
         .hook(wwise_open_file)
         .with_span(info_span!("hook"))
         .with_closure(move |p1, path, open_mode, p4, p5, p6, trampoline| {

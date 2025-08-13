@@ -19,6 +19,7 @@ crate-type = ["cdylib"]
 closure-ffi = { version = "3.0", features = ["coverage", "std", "tuple_trait"] }
 color-eyre.workspace = true
 crash-handler.workspace = true
+dearxan = "0.2.2"
 dll-syringe = { workspace = true, features = ["payload-utils"] }
 eyre = { workspace = true, default-features = false, features = ["track-caller"] }
 from-singleton.workspace = true

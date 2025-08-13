@@ -10,6 +10,8 @@ use me3_mod_protocol::{
 use normpath::PathExt;
 use tracing::warn;
 
+use crate::commands::profile::ProfileOptions;
+
 pub struct ProfileDb {
     search_paths: Vec<Box<Path>>,
 }
@@ -72,6 +74,13 @@ impl Profile {
     /// See [compile] to produce an ordered list.
     pub fn packages(&self) -> impl Iterator<Item = Package> {
         self.profile.packages().into_iter()
+    }
+
+    /// Returns misc. options set by this profile.
+    pub fn options(&self) -> ProfileOptions {
+        ProfileOptions {
+            start_online: self.profile.start_online(),
+        }
     }
 
     /// Compile this profile into a load order of native DLLs and packages to be loaded.
