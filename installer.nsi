@@ -193,8 +193,8 @@ Section "Main Application" SEC01
 
     WriteRegStr HKCU "Software\${PRODUCT}" "Install_Dir" $INSTDIR
     nsExec::Exec '"$INSTDIR\bin\me3.exe" add-to-path'
-    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr nightreign-default --package nightreign-mods'
-    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er eldenring-default --package eldenring-mods'
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr nightreign-default --package nightreign-mods --native "(your dll file path)"'
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er eldenring-default --package eldenring-mods --native "(your dll file path)"'
 
     CreateDirectory "$SMPROGRAMS\me3"
     CreateShortCut "$SMPROGRAMS\me3\ELDEN RING (me3).lnk" "$INSTDIR\bin\me3.exe" \
