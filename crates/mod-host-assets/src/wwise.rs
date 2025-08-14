@@ -5,7 +5,7 @@ use pelite::pe::Pe;
 use regex::bytes::Regex;
 use windows::core::PCWSTR;
 
-use crate::mapping::ArchiveOverrideMapping;
+use crate::mapping::{ArchiveOverride, ArchiveOverrideMapping};
 
 pub type WwiseOpenFileByName =
     unsafe extern "C" fn(usize, PCWSTR, u64, usize, usize, usize) -> usize;
@@ -52,7 +52,7 @@ pub enum AkOpenMode {
 pub fn find_override<'a>(
     mapping: &'a ArchiveOverrideMapping,
     input: &str,
-) -> Option<(&'a str, &'a [u16])> {
+) -> Option<&'a ArchiveOverride> {
     let input = strip_prefix(input);
     if input.ends_with(".wem") {
         let wem_path = format!("wem/{input}");
@@ -77,7 +77,7 @@ pub fn find_override<'a>(
 fn get_override<'a>(
     mapping: &'a ArchiveOverrideMapping,
     input: &str,
-) -> Option<(&'a str, &'a [u16])> {
+) -> Option<&'a ArchiveOverride> {
     for prefix in PREFIXES {
         let prefixed = format!("{prefix}/{input}");
         if let Some(replacement) = mapping.vfs_override(&prefixed) {
