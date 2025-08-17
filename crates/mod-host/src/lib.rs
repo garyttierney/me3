@@ -184,11 +184,16 @@ pub extern "system" fn DllMain(instance: usize, reason: u32, _: *mut usize) -> i
                 __llvm_profile_write_file()
             };
 
-            std::thread::spawn(|| {
-                #[allow(static_mut_refs)]
-                let telemetry = unsafe { TELEMETRY_INSTANCE.take() };
-                drop(telemetry);
-            });
+            // FIXME: this panics on process exit, either on thread creation or accessing a thread local.
+            // Ideally, it should be called at an earlier point.
+            //
+            // The crash handler (when re-added) should call flush instead.
+            //
+            // std::thread::spawn(|| {
+            //     #[allow(static_mut_refs)]
+            //     let telemetry = unsafe { TELEMETRY_INSTANCE.take() };
+            //     drop(telemetry);
+            // });
         }
         _ => {}
     }
