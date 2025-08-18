@@ -13,12 +13,14 @@ pub mod windows;
 #[command(flatten_help = true)]
 pub enum Commands {
     /// Launch the selected game with mods.
+    #[clap(disable_version_flag = true)]
     Launch(LaunchArgs),
 
     /// Show information on the me3 installation and search paths.
+    #[clap(disable_version_flag = true)]
     Info,
 
-    #[clap(subcommand)]
+    #[clap(subcommand, disable_version_flag = true)]
     Profile(ProfileCommands),
 
     #[cfg(target_os = "windows")]
