@@ -19,6 +19,7 @@ pub enum ProfileCommands {
     Create(ProfileCreateArgs),
 
     /// List profiles in the profile dir.
+    #[clap(disable_help_flag = true)]
     List,
 
     /// Show information on a profile.

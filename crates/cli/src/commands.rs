@@ -17,7 +17,7 @@ pub enum Commands {
     Launch(LaunchArgs),
 
     /// Show information on the me3 installation and search paths.
-    #[clap(disable_version_flag = true)]
+    #[clap(disable_version_flag = true, disable_help_flag = true)]
     Info,
 
     #[clap(subcommand, disable_version_flag = true)]
