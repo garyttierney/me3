@@ -41,11 +41,11 @@ pub struct ProfileCreateArgs {
     #[arg(value_enum)]
     game: Option<Game>,
 
-    /// Path to a list of packages to add to the profile.
+    /// Path to package directory (asset override mod) [repeatable option]
     #[clap(long("package"))]
     packages: Vec<PathBuf>,
 
-    /// Path to a list of native DLLs to add to the profile.
+    /// Path to DLL file (native DLL mod) [repeatable option]
     #[clap(long("native"))]
     natives: Vec<PathBuf>,
 
