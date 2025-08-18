@@ -34,8 +34,6 @@ runs:
             echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS /EHsc"
             echo "CC_x86_64_pc_windows_msvc=clang-cl-18"
             echo "CXX_x86_64_pc_windows_msvc=clang-cl-18"
-
-            echo "RUSTC_BOOTSTRAP=1"
         } >>"$GITHUB_ENV"
 
         cat >~/.cargo/config.toml <<EOF

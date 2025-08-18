@@ -8,6 +8,9 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: true
 
+env:
+  RUSTC_BOOTSTRAP: 1
+
 jobs:
   plan:
     name: Build plan
