@@ -17,7 +17,7 @@ sentry = ["me3-telemetry/sentry"]
 
 [dependencies]
 chrono.workspace = true
-clap = { workspace = true, features = ["derive"] }
+clap = { workspace = true, features = ["derive", "wrap_help"] }
 color-eyre = { workspace = true, default-features = false, features = [
     "track-caller",
     "capture-spantrace",
