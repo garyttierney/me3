@@ -177,7 +177,7 @@ fn hook_device_manager(
 
             let mut path = path.clone();
 
-            path.replace_from_slice(mapped_override);
+            path.replace_from_slice(mapped_override.as_ref());
 
             Some(path)
         }
@@ -248,7 +248,7 @@ fn hook_set_path(
 
         let mut path = path.clone();
 
-        path.replace_from_slice(mapped_override);
+        path.replace_from_slice(mapped_override.as_ref());
 
         Some(path)
     };
