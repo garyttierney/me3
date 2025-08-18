@@ -60,7 +60,7 @@ jobs:
       - uses: ./.github/actions/setup-windows-toolchain
       - uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b
         with:
-          toolchain: nightly
+          toolchain: stable
           targets: x86_64-pc-windows-msvc,x86_64-unknown-linux-gnu          
 
       - uses: taiki-e/install-action@9ca1734d8940023f074414ee621fd530c4ce10f2 # v2.55.3

@@ -89,7 +89,7 @@ jobs:
       - name: Setup | Rust
         uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b
         with:
-          toolchain: nightly
+          toolchain: stable
 
       - uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2.8.0
         with:
@@ -123,7 +123,7 @@ jobs:
           save-if: false
       - uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b
         with:
-          toolchain: nightly
+          toolchain: stable
           targets: x86_64-pc-windows-msvc
           components: clippy
 
@@ -152,7 +152,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b
         with:
-          toolchain: nightly
+          toolchain: stable
           components: rustfmt
           targets: x86_64-pc-windows-msvc
-      - run: cargo +nightly fmt --all --check
+      - run: cargo fmt --all --check

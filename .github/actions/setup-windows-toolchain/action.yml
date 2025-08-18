@@ -1,14 +1,5 @@
-name: 'Hello World'
-description: 'Greet someone'
-inputs:
-  who-to-greet: # id of input
-    description: 'Who to greet'
-    required: true
-    default: 'World'
-outputs:
-  random-number:
-    description: 'Random number'
-    value: ${{ steps.random-number-generator.outputs.random-number }}
+name: "Setup Windows toolchain"
+description: "Install and set up the x86_64-pc-windows-msvc Rust toolchain"
 runs:
   using: 'composite'
   steps:
@@ -43,6 +34,8 @@ runs:
             echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS /EHsc"
             echo "CC_x86_64_pc_windows_msvc=clang-cl-18"
             echo "CXX_x86_64_pc_windows_msvc=clang-cl-18"
+
+            echo "RUSTC_BOOTSTRAP=1"
         } >>"$GITHUB_ENV"
 
         cat >~/.cargo/config.toml <<EOF

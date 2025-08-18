@@ -1,4 +1,22 @@
 {
+  "terminal.integrated.env.linux": {
+    "RUSTC_BOOTSTRAP": "1"
+  },
+  "terminal.integrated.env.windows": {
+    "RUSTC_BOOTSTRAP": "1"
+  },
+  "terminal.integrated.env.osx": {
+    "RUSTC_BOOTSTRAP": "1"
+  },
+  "rust-analyzer.cargo.extraEnv": {
+    "RUSTC_BOOTSTRAP": "1",
+  },
+  "rust-analyzer.runnables.extraEnv": {
+    "RUSTC_BOOTSTRAP": "1",
+  },
+  "rust-analyzer.server.extraEnv": {
+    "RUSTC_BOOTSTRAP": "1",
+  },
   "json.schemas": [
     {
       "fileMatch": [
