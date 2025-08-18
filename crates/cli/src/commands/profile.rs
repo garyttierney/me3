@@ -49,7 +49,7 @@ pub struct ProfileCreateArgs {
     packages: Vec<PathBuf>,
 
     /// Path to DLL file (native DLL mod) [repeatable option]
-    #[clap(long("native"))]
+    #[clap(short('n'), long("native"))]
     natives: Vec<PathBuf>,
 
     #[clap(flatten)]
