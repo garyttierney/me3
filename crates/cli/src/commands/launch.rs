@@ -128,7 +128,7 @@ pub struct LaunchArgs {
         )]
     profile: Option<String>,
 
-    /// Path to package directories that the mod host will use as VFS mount points.
+    /// Path to package directory (asset override mod) [repeatable option]
     #[arg(
             long("package"),
             action = clap::ArgAction::Append,
@@ -137,7 +137,7 @@ pub struct LaunchArgs {
         )]
     packages: Vec<PathBuf>,
 
-    /// Path to DLLs to be loaded by the mod host.
+    /// Path to DLL file (native DLL mod) [repeatable option]
     #[arg(
             short('n'),
             long("native"),
