@@ -17,7 +17,7 @@ resolver = "2"
 [workspace.package]
 version = "0.6.0-prerelease"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.89"
 repository = "https://github.com/garyttierney/me3"
 license = "MIT OR Apache-2.0"
 
