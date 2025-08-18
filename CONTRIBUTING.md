@@ -11,11 +11,11 @@
 
 ## Development Workspace Setup
 
-This project currently depends on the Rust `nightly` toolchain. The preferred way to install a `nightly` toolchain is via rustup:
+This project uses the latest stable Rust version with `RUSTC_BOOTSTRAP=1` to access select unstable upstream features.
 
-```shell
-> $ rustup toolchain install nightly
-```
+Set `RUSTC_BOOTSTRAP=1` when building, testing, or when using `rust-analyzer`.
+
+The provided VS Code `.vscode/settings.json` config sets this environment variable automatically.
 
 ## Testing
 
