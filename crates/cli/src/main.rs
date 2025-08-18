@@ -17,9 +17,14 @@ pub mod db;
 pub mod output;
 
 #[derive(Parser)]
-#[command(name = "me3", version, about)]
-#[command(propagate_version = true)]
-#[command(flatten_help = true)]
+#[command(
+    name = "me3",
+    version,
+    about = "Mod loader for FROMSOFTWARE games",
+    after_help = "For more information, visit https://me3.help/",
+    propagate_version = true,
+    flatten_help = true
+)]
 struct Cli {
     #[clap(flatten)]
     config: Options,
