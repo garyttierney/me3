@@ -23,7 +23,10 @@ pub enum ProfileCommands {
 
     /// Show information on a profile.
     #[clap(name = "show")]
-    Show { name: String },
+    Show {
+        /// Name of the profile.
+        name: String,
+    },
 }
 
 #[derive(Args, Debug)]
