@@ -33,7 +33,7 @@ fn run() -> LauncherResult<()> {
     if !config.skip_steam_init {
         require_steam(&args.exe)?;
     } else {
-        warn!("skpping steam initialization, no guarantee Steam game will launch successfully");
+        warn!("skipping Steam initialization, no guarantee Steam game will launch successfully");
     }
 
     let game_path = args.exe.parent();
