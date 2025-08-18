@@ -37,12 +37,12 @@ use crate::{
 #[derive(Debug, clap::Args)]
 #[group(multiple = false)]
 pub struct Selector {
-    /// Automatically detect the game to launch from mod profiles.
+    /// Detect the game to launch from mod profile.
     #[clap(long, help_heading = "Game selection", action = ArgAction::SetTrue, required = false)]
     auto_detect: bool,
 
-    /// Short name of a game to launch. The launcher will look for the the installation in
-    /// available Steam libraries.
+    /// Short name of a game to launch. The launcher will look for the game in available Steam
+    /// libraries.
     #[clap(
         short('g'),
         long,
@@ -53,8 +53,8 @@ pub struct Selector {
     #[arg(value_enum)]
     game: Option<Game>,
 
-    /// The Steam APPID of the game to launch. The launcher will attempt to find this app installed
-    /// in a Steam library and launch the configured command
+    /// Steam APPID of the game to launch. The launcher will look for this APPID in available Steam
+    /// libraries.
     #[clap(
         short('s'),
         long,
@@ -68,11 +68,11 @@ pub struct Selector {
 
 #[derive(Args, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
 pub struct GameOptions {
-    /// Don't cache decrypted BHD files (used to improve game startup speed)?
+    /// Don't cache decrypted BHD files (used for faster game startup)?
     #[clap(long("no-boot-boost"), default_missing_value = "true", num_args=0..=1, value_parser = invert_bool())]
     pub(crate) boot_boost: Option<bool>,
 
-    /// Show the intro logos shown on every game launch?
+    /// Show game intro logos?
     #[clap(long("show-logos"), default_missing_value = "true", num_args=0..=1, value_parser = invert_bool())]
     pub(crate) skip_logos: Option<bool>,
 
@@ -80,8 +80,7 @@ pub struct GameOptions {
     #[clap(long("skip-steam-init"), default_missing_value = "true", num_args=0..=1)]
     pub(crate) skip_steam_init: Option<bool>,
 
-    /// An optional path to the game executable to launch with mod support. Uses the default
-    /// launcher if not present.
+    /// Custom path to the game executable.
     #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
     pub(crate) exe: Option<PathBuf>,
 }
@@ -112,16 +111,15 @@ pub struct LaunchArgs {
     #[clap(flatten)]
     profile_options: ProfileOptions,
 
-    /// Enable diagnostics for this launch?
+    /// Enable diagnostics for this launch.
     #[clap(short('d'), long("diagnostics"), action = ArgAction::SetTrue)]
     diagnostics: bool,
 
-    /// Suspend the game until a debugger is attached?
+    /// Suspend the game until a debugger is attached.
     #[clap(long("suspend"), action = ArgAction::SetTrue)]
     suspend: bool,
 
-    /// Path to a ModProfile configuration file (TOML or JSON) or name of a profile
-    /// stored in the me3 profile folder ($XDG_CONFIG_HOME/me3).
+    /// Name of a profile in the me3 profile dir, or path to a ModProfile (TOML or JSON).
     #[arg(
             short('p'),
             long("profile"),

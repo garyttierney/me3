@@ -15,13 +15,13 @@ use crate::{config::Config, db::DbContext, output::OutputBuilder, Game};
 #[derive(Subcommand, Debug)]
 #[command(flatten_help = true)]
 pub enum ProfileCommands {
-    /// Create a new profile with the given name.
+    /// Create a new ModProfile.
     Create(ProfileCreateArgs),
 
-    /// List all profiles stored in the ME3_PROFILE_DIR.
+    /// List profiles in the profile dir.
     List,
 
-    /// Show information on a profile identified by a name.
+    /// Show information on a profile.
     #[clap(name = "show")]
     Show { name: String },
 }
@@ -31,7 +31,7 @@ pub struct ProfileCreateArgs {
     /// Name of the profile.
     name: String,
 
-    /// An optional game to associate with this profile for one-click launches.
+    /// Game to associate with this profile for one-click launches.
     #[clap(
         short('g'),
         long,
@@ -56,12 +56,11 @@ pub struct ProfileCreateArgs {
     #[clap(flatten)]
     options: ProfileOptions,
 
-    /// Optional flag to treat the input as a filename instead of a profile ID to store in
-    /// ME3_PROFILE_DIR.
+    /// Treat NAME as a file path, instead of creating the profile in the profile dir.
     #[clap(short, long, action = ArgAction::SetTrue)]
     file: bool,
 
-    /// Overwrite the profile if it already exists
+    /// Overwrite the profile if it already exists.
     #[clap(long, action = ArgAction::SetTrue)]
     overwrite: bool,
 }
