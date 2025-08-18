@@ -41,8 +41,7 @@ pub struct Selector {
     #[clap(long, help_heading = "Game selection", action = ArgAction::SetTrue, required = false)]
     auto_detect: bool,
 
-    /// Short name of a game to launch. The launcher will look for the game in available Steam
-    /// libraries.
+    /// Short name of a game to launch.
     #[clap(
         short('g'),
         long,
@@ -53,8 +52,7 @@ pub struct Selector {
     #[arg(value_enum)]
     game: Option<Game>,
 
-    /// Steam APPID of the game to launch. The launcher will look for this APPID in available Steam
-    /// libraries.
+    /// Steam APPID of the game to launch.
     #[clap(
         short('s'),
         long,
