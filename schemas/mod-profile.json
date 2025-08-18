@@ -103,6 +103,14 @@
             "$ref": "#/$defs/Package"
           }
         },
+        "start_online": {
+          "description": "Starts the game with multiplayer server connectivity enabled.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
         "supports": {
           "description": "The games that this profile supports.",
           "type": "array",
