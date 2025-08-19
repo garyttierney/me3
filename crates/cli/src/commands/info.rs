@@ -23,19 +23,19 @@ pub fn info(config: Config) -> color_eyre::Result<()> {
     for (game, config) in &config.options.game {
         output.section(game.title(), |builder| {
             if let Some(boot_boost) = config.boot_boost {
-                builder.property("Boot Boost", boot_boost);
+                builder.property("Boot boost", boot_boost);
             }
 
             if let Some(skip_logos) = config.skip_logos {
-                builder.property("Skip startup logos?", skip_logos);
+                builder.property("Skip startup logos", skip_logos);
             }
 
             if let Some(skip_steam_init) = config.skip_steam_init {
-                builder.property("Skip Steam init?", format_status(skip_steam_init));
+                builder.property("Skip Steam init", format_status(skip_steam_init));
             }
 
             if let Some(exe) = &config.exe {
-                builder.property("Executable", exe.to_string_lossy());
+                builder.property("Custom executable", exe.to_string_lossy());
             }
         });
     }
