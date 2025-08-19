@@ -66,7 +66,10 @@ pub struct Selector {
 
 #[derive(Args, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
 pub struct GameOptions {
-    /// Don't cache decrypted BHD files (used for faster game startup)?
+    /// Don't cache decrypted BHD files?
+    ///
+    /// BHD archives are decrypted every time a game is started, which takes significant time and
+    /// CPU. me3 caches the decrypted archives to reduce game startup time.
     #[clap(long("no-boot-boost"), default_missing_value = "true", num_args=0..=1, value_parser = invert_bool())]
     pub(crate) boot_boost: Option<bool>,
 

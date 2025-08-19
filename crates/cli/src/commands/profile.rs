@@ -71,11 +71,19 @@ pub struct ProfileCreateArgs {
 
 #[derive(Args, Clone, Debug, Default, PartialEq)]
 pub struct ProfileOptions {
-    /// Allow the game to connect to the multiplayer server?
+    /// Re-enable online matchmaking (ban risk)?
+    ///
+    /// Supported games are blocked from matchmaking servers by default to prevent accidental
+    /// online play with invalid (modded) data. Setting this option to true disables this
+    /// protection.
     #[clap(long("online"), default_missing_value = "true", num_args=0..=1)]
     pub start_online: Option<bool>,
 
-    /// Try to neutralize Arxan GuardIT code protection to improve mod stability?
+    /// Neutralize Arxan/GuardIT code protection?
+    ///
+    /// Arxan/GuardIT is a code tampering protection solution applied to most FromSoftware PC
+    /// games. Neutralizing it may help with stability of some mods that patch game executables and
+    /// allows for debugging the games without crashing.
     #[clap(long("disable-arxan"), default_missing_value = "true", num_args=0..=1)]
     pub disable_arxan: Option<bool>,
 }
