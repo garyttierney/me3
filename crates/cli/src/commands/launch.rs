@@ -67,7 +67,7 @@ pub struct GameOptions {
     #[clap(long("show-logos"), default_missing_value = "true", num_args=0..=1, value_parser = invert_bool())]
     pub(crate) skip_logos: Option<bool>,
 
-    /// Try to neutralize Arxan GuardIT code protection to improve mod stability?
+    /// Neutralize Arxan/GuardIT code protection (may improve mod stability)?
     #[clap(long("disable-arxan"), default_missing_value = "true", num_args=0..=1)]
     pub(crate) disable_arxan: Option<bool>,
 

@@ -67,7 +67,7 @@ pub struct ProfileCreateArgs {
 
 #[derive(Args, Clone, Debug, Default, PartialEq)]
 pub struct ProfileOptions {
-    /// Allow the game to connect to the multiplayer server?
+    /// Allow the game to connect to official multiplayer servers?
     #[clap(long("online"), default_missing_value = "true", num_args=0..=1)]
     pub start_online: Option<bool>,
 }
