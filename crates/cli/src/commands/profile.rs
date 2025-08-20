@@ -67,7 +67,11 @@ pub struct ProfileCreateArgs {
 
 #[derive(Args, Clone, Debug, Default, PartialEq)]
 pub struct ProfileOptions {
-    /// Allow the game to connect to official multiplayer servers?
+    /// Re-enable online matchmaking (ban risk)?
+    ///
+    /// Supported games are blocked from matchmaking servers by default to prevent accidental
+    /// online play with invalid (modded) data. Setting this option to true disables this
+    /// protection.
     #[clap(long("online"), default_missing_value = "true", num_args=0..=1)]
     pub start_online: Option<bool>,
 }

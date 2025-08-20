@@ -59,7 +59,10 @@ pub struct Selector {
 
 #[derive(Args, Clone, Debug, Serialize, Deserialize, Default, PartialEq)]
 pub struct GameOptions {
-    /// Don't cache decrypted BHD files (used for faster game startup)?
+    /// Don't cache decrypted BHD files?
+    ///
+    /// BHD archives are decrypted every time a game is started, which takes significant time and
+    /// CPU. me3 caches the decrypted archives to reduce game startup time.
     #[clap(long("no-boot-boost"), default_missing_value = "true", num_args=0..=1, value_parser = invert_bool())]
     pub(crate) boot_boost: Option<bool>,
 
@@ -67,7 +70,11 @@ pub struct GameOptions {
     #[clap(long("show-logos"), default_missing_value = "true", num_args=0..=1, value_parser = invert_bool())]
     pub(crate) skip_logos: Option<bool>,
 
-    /// Neutralize Arxan/GuardIT code protection (may improve mod stability)?
+    /// Neutralize Arxan/GuardIT code protection?
+    ///
+    /// Arxan/GuardIT is a code tampering protection solution applied to most FromSoftware PC
+    /// games. Neutralizing it may help with stability of certain mods that patch game
+    /// executables and allows for debugging the games without crashing.
     #[clap(long("disable-arxan"), default_missing_value = "true", num_args=0..=1)]
     pub(crate) disable_arxan: Option<bool>,
 
