@@ -24,7 +24,6 @@ use windows::Win32::{
 };
 
 use crate::{
-    debugger::suspend_for_debugger,
     deferred::defer_until_init,
     executable::Executable,
     host::{game_properties, ModHost},
@@ -46,7 +45,7 @@ static mut TELEMETRY_INSTANCE: OnceLock<me3_telemetry::Telemetry> = OnceLock::ne
 dll_syringe::payload_procedure! {
     fn me_attach(request: AttachRequest) -> AttachResult {
         if request.config.suspend {
-            suspend_for_debugger();
+            debugger::suspend_for_debugger();
         }
 
         on_attach(request)
@@ -89,6 +88,12 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
     let result = me3_telemetry::with_root_span("host", "attach", move || {
         info!("Beginning host attach");
+
+        if debugger::is_debugger_present()
+            && let Err(e) = debugger::prevent_hiding_threads()
+        {
+            warn!("error" = &*e, "may fail to debug some threads");
+        }
 
         // SAFETY: process is still suspended.
         let exe = unsafe { Executable::new() };
