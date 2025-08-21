@@ -146,6 +146,15 @@ pub struct LaunchArgs {
             value_hint = clap::ValueHint::FilePath,
         )]
     natives: Vec<PathBuf>,
+
+    /// Path to an alternative savefile location to use (relative to the default
+    /// savefile directory).
+    #[arg(
+            long("savefile-path"),
+            help_heading = "Mod configuration",
+            value_hint = clap::ValueHint::FilePath,
+        )]
+    saves_path: Option<PathBuf>,
 }
 
 pub trait Launcher: Debug {
@@ -328,10 +337,13 @@ impl LaunchArgs {
         packages.extend(ordered_packages);
         natives.extend(ordered_natives);
 
+        let saves_path = self.saves_path.clone().or_else(|| profile.saves_path());
+
         Ok(AttachConfig {
             game: game.into(),
             packages,
             natives,
+            saves_path,
             cache_path: cache_path.map(|path| path.into_path_buf()),
             suspend: self.suspend,
             boot_boost: opts.boot_boost.unwrap_or(true),

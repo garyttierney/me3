@@ -5,7 +5,7 @@ use pelite::pe::Pe;
 use regex::bytes::Regex;
 use windows::core::PCWSTR;
 
-use crate::mapping::{ArchiveOverride, ArchiveOverrideMapping};
+use crate::mapping::{VfsOverride, VfsOverrideMapping};
 
 pub type WwiseOpenFileByName =
     unsafe extern "C" fn(usize, PCWSTR, u64, usize, usize, usize) -> usize;
@@ -49,10 +49,7 @@ pub enum AkOpenMode {
 }
 
 /// Tries to find an override for a sound archive entry.
-pub fn find_override<'a>(
-    mapping: &'a ArchiveOverrideMapping,
-    input: &str,
-) -> Option<&'a ArchiveOverride> {
+pub fn find_override<'a>(mapping: &'a VfsOverrideMapping, input: &str) -> Option<&'a VfsOverride> {
     let input = strip_prefix(input);
     if input.ends_with(".wem") {
         let wem_path = format!("wem/{input}");
@@ -74,10 +71,7 @@ pub fn find_override<'a>(
     None
 }
 
-fn get_override<'a>(
-    mapping: &'a ArchiveOverrideMapping,
-    input: &str,
-) -> Option<&'a ArchiveOverride> {
+fn get_override<'a>(mapping: &'a VfsOverrideMapping, input: &str) -> Option<&'a VfsOverride> {
     for prefix in PREFIXES {
         let prefixed = format!("{prefix}/{input}");
         if let Some(replacement) = mapping.vfs_override(&prefixed) {
@@ -91,11 +85,11 @@ fn get_override<'a>(
 mod test {
     use std::path::Path;
 
-    use crate::{mapping::ArchiveOverrideMapping, wwise::find_override};
+    use crate::{mapping::VfsOverrideMapping, wwise::find_override};
 
     #[test]
     fn scan_directory_and_overrides() {
-        let mut asset_mapping = ArchiveOverrideMapping::new().unwrap();
+        let mut asset_mapping = VfsOverrideMapping::new().unwrap();
 
         let test_mod_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data/test-mod");
         asset_mapping.scan_directory(test_mod_dir).unwrap();

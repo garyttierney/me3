@@ -9,9 +9,12 @@ description = "C++ and FromSoftware type FFI"
 publish = false
 
 [dependencies]
+me3-binary-analysis.workspace = true
 me3-env.workspace = true
 me3-mod-protocol.workspace = true
+pelite.workspace = true
 rdvec.workspace = true
+regex.workspace = true
 thiserror.workspace = true
 
 [dependencies.windows]

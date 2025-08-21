@@ -1732,9 +1732,12 @@ dependencies = [
 name = "me3-mod-host-types"
 version = "0.7.0"
 dependencies = [
+ "me3-binary-analysis",
  "me3-env",
  "me3-mod-protocol",
+ "pelite",
  "rdvec",
+ "regex",
  "thiserror 2.0.15",
  "windows",
 ]

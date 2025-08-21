@@ -6,7 +6,7 @@ use std::{
 };
 
 use eyre::OptionExt;
-use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
+use me3_mod_host_assets::mapping::VfsOverrideMapping;
 use tracing::{info, info_span, instrument};
 use windows::{
     core::{s, w, BOOL, PCSTR, PCWSTR},
@@ -24,7 +24,7 @@ use windows::{
 use crate::host::ModHost;
 
 #[instrument(name = "filesystem", skip_all)]
-pub fn attach_override(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Error> {
+pub fn attach_override(mapping: Arc<VfsOverrideMapping>) -> Result<(), eyre::Error> {
     let kernelbase = unsafe { GetModuleHandleW(w!("kernelbase.dll"))? };
 
     hook_create_file(kernelbase, mapping.clone())?;
@@ -37,7 +37,7 @@ pub fn attach_override(mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre:
 }
 
 #[instrument(name = "create_file", skip_all)]
-fn hook_create_file(kb: HMODULE, mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Error> {
+fn hook_create_file(kb: HMODULE, mapping: Arc<VfsOverrideMapping>) -> Result<(), eyre::Error> {
     type CreateFileA = unsafe extern "C" fn(
         lpfilename: PCSTR,
         dwdesiredaccess: u32,
@@ -159,10 +159,7 @@ fn hook_create_file(kb: HMODULE, mapping: Arc<ArchiveOverrideMapping>) -> Result
 }
 
 #[instrument(name = "create_directory", skip_all)]
-fn hook_create_directory(
-    kb: HMODULE,
-    mapping: Arc<ArchiveOverrideMapping>,
-) -> Result<(), eyre::Error> {
+fn hook_create_directory(kb: HMODULE, mapping: Arc<VfsOverrideMapping>) -> Result<(), eyre::Error> {
     type CreateDirectoryA = unsafe extern "C" fn(
         lppathname: PCSTR,
         lpsecurityattributes: *const SECURITY_ATTRIBUTES,
@@ -257,7 +254,7 @@ fn hook_create_directory(
 }
 
 #[instrument(name = "delete_file", skip_all)]
-fn hook_delete_file(kb: HMODULE, mapping: Arc<ArchiveOverrideMapping>) -> Result<(), eyre::Error> {
+fn hook_delete_file(kb: HMODULE, mapping: Arc<VfsOverrideMapping>) -> Result<(), eyre::Error> {
     type DeleteFileA = unsafe extern "C" fn(lpfilename: PCSTR) -> BOOL;
     type DeleteFileW = unsafe extern "C" fn(lpfilename: PCWSTR) -> BOOL;
 
