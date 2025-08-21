@@ -79,7 +79,7 @@ impl Profile {
         self.profile.packages().into_iter()
     }
 
-    /// Get the savefile path that may be overriden by this profile.
+    /// Get the savefile path that may be overridden by this profile.
     pub fn saves_path(&self) -> Option<PathBuf> {
         self.profile.saves_path()
     }
