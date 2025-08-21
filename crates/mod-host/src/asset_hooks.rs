@@ -17,7 +17,7 @@ use me3_mod_host_assets::{
     bhd5::Bhd5Header,
     dl_device::{self, DlDeviceManager, DlFileOperator, VfsMounts},
     ebl::{mount_ebl, DlDeviceEblExt, EblFileManager},
-    mapping::ArchiveOverrideMapping,
+    mapping::VfsOverrideMapping,
     wwise::{self, find_wwise_open_file, AkOpenMode},
 };
 use me3_mod_host_types::{alloc::DlStdAllocator, string::DlUtf16String};
@@ -39,7 +39,7 @@ pub fn attach_override(
     exe: Executable,
     class_map: Arc<ClassMap<'static>>,
     step_tables: &Fd4StepTables,
-    mapping: Arc<ArchiveOverrideMapping>,
+    mapping: Arc<VfsOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     enable_loose_params(&attach_config, &mapping);
 
@@ -58,7 +58,7 @@ pub fn attach_override(
     Ok(())
 }
 
-fn enable_loose_params(attach_config: &AttachConfig, mapping: &ArchiveOverrideMapping) {
+fn enable_loose_params(attach_config: &AttachConfig, mapping: &VfsOverrideMapping) {
     // Some Dark Souls 3 mods use a legacy Mod Engine 2 option of loading "loose" param files
     // instead of Data0. For backwards compatibility me3 enables it below.
     if attach_config.game != Game::DarkSouls3 {
@@ -85,7 +85,7 @@ fn hook_file_init(
     exe: Executable,
     class_map: Arc<ClassMap<'static>>,
     step_tables: &Fd4StepTables,
-    mapping: Arc<ArchiveOverrideMapping>,
+    mapping: Arc<VfsOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     let init_fn = step_tables
         .by_name("CSFileStep::STEP_Init")
@@ -121,7 +121,7 @@ fn hook_file_init(
 fn hook_ebl_utility(
     exe: Executable,
     class_map: &ClassMap,
-    mapping: Arc<ArchiveOverrideMapping>,
+    mapping: Arc<VfsOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     let device_manager = locate_device_manager(exe)?;
 
@@ -158,7 +158,7 @@ fn hook_ebl_utility(
 #[instrument(name = "device_manager", skip_all)]
 fn hook_device_manager(
     exe: Executable,
-    mapping: Arc<ArchiveOverrideMapping>,
+    mapping: Arc<VfsOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     let device_manager = locate_device_manager(exe)?;
 
@@ -233,7 +233,7 @@ fn hook_device_manager(
 fn hook_set_path(
     exe: Executable,
     file_operator: NonNull<DlFileOperator>,
-    mapping: Arc<ArchiveOverrideMapping>,
+    mapping: Arc<VfsOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     let vtable = unsafe { file_operator.as_ref().as_ref() };
 
@@ -501,7 +501,7 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
 fn try_hook_wwise(
     exe: Executable,
     class_map: &ClassMap,
-    mapping: Arc<ArchiveOverrideMapping>,
+    mapping: Arc<VfsOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     let wwise_open_file =
         find_wwise_open_file(exe, class_map).ok_or_eyre("WwiseOpenFileByName not found")?;
@@ -511,7 +511,6 @@ fn try_hook_wwise(
         .with_span(info_span!("hook"))
         .with_closure(move |p1, path, open_mode, p4, p5, p6, trampoline| {
             let path_string = unsafe { path.to_string().unwrap() };
-            debug!("asset" = path_string);
 
             if let Some(mapped_override) = wwise::find_override(&mapping, &path_string) {
                 info!("override" = %mapped_override);

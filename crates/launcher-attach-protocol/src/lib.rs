@@ -24,6 +24,10 @@ pub struct AttachConfig {
     /// An ordered list of packages to be loaded on attach.
     pub packages: Vec<Package>,
 
+    /// Path to an alternative savefile location to use (relative to the default
+    /// savefile directory).
+    pub saves_path: Option<PathBuf>,
+
     /// Path to the cache directory.
     pub cache_path: Option<PathBuf>,
 

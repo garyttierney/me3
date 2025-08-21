@@ -12,7 +12,7 @@ use std::{
 use me3_binary_analysis::{fd4_step::Fd4StepTables, rtti};
 use me3_env::TelemetryVars;
 use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, AttachResult, Attachment};
-use me3_mod_host_assets::mapping::ArchiveOverrideMapping;
+use me3_mod_host_assets::mapping::VfsOverrideMapping;
 use me3_telemetry::TelemetryConfig;
 use tracing::{error, info, warn, Span};
 use windows::Win32::{
@@ -37,6 +37,7 @@ mod executable;
 mod filesystem;
 mod host;
 mod native;
+mod savefile;
 mod skip_logos;
 
 static INSTANCE: OnceLock<usize> = OnceLock::new();
@@ -110,8 +111,11 @@ fn on_attach(request: AttachRequest) -> AttachResult {
             game_properties::start_offline();
         }
 
-        let mut override_mapping = ArchiveOverrideMapping::new()?;
+        let mut override_mapping = VfsOverrideMapping::new()?;
+
         override_mapping.scan_directories(attach_config.packages.iter())?;
+        savefile::attach_override(&attach_config, &mut override_mapping)?;
+
         let override_mapping = Arc::new(override_mapping);
 
         filesystem::attach_override(override_mapping.clone())?;
@@ -139,10 +143,17 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 fn deferred_attach(
     attach_config: Arc<AttachConfig>,
     exe: Executable,
-    override_mapping: Arc<ArchiveOverrideMapping>,
+    override_mapping: Arc<VfsOverrideMapping>,
 ) -> Result<(), eyre::Error> {
     let class_map = Arc::new(rtti::classes(exe)?);
     let step_tables = Fd4StepTables::from_initialized_data(exe)?;
+
+    savefile::oversized_regulation_fix(
+        attach_config.clone(),
+        exe,
+        &step_tables,
+        override_mapping.clone(),
+    )?;
 
     for native in &attach_config.natives {
         if let Err(e) = ModHost::get_attached().load_native(&native.path, &native.initializer) {

@@ -103,6 +103,14 @@
             "$ref": "#/$defs/Package"
           }
         },
+        "saves_path": {
+          "description": "Path to an alternative savefile location to use (relative to the default\nsavefile directory).",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
         "start_online": {
           "description": "Starts the game with multiplayer server connectivity enabled.",
           "type": [

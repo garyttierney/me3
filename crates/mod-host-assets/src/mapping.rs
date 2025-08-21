@@ -16,20 +16,22 @@ use thiserror::Error;
 use tracing::error;
 use windows::core::{PCSTR, PCWSTR};
 
-#[derive(Debug)]
-pub struct ArchiveOverrideMapping {
-    map: HashMap<VfsKey, ArchiveOverride>,
+mod savefile;
+
+pub struct VfsOverrideMapping {
+    map: HashMap<VfsKey, VfsOverride>,
     current_dir: VfsKey,
+    savefile_override: Option<savefile::SavefileOverrideMapping>,
 }
 
-pub struct ArchiveOverride {
+pub struct VfsOverride {
     display: Box<str>,
     path_c_str: Box<Path>,
     wide_c_str: Box<[u16]>,
 }
 
 #[derive(Debug, Error)]
-pub enum ArchiveOverrideMappingError {
+pub enum VfsOverrideMappingError {
     #[error("Package source specified is not a directory {0}.")]
     InvalidDirectory(PathBuf),
 
@@ -40,20 +42,21 @@ pub enum ArchiveOverrideMappingError {
     StripPrefix(#[from] StripPrefixError),
 }
 
-impl ArchiveOverrideMapping {
-    pub fn new() -> Result<Self, ArchiveOverrideMappingError> {
+impl VfsOverrideMapping {
+    pub fn new() -> Result<Self, VfsOverrideMappingError> {
         let current_dir = env::current_dir()
             .and_then(VfsKey::for_disk_path)
-            .map_err(ArchiveOverrideMappingError::ReadDir)?;
+            .map_err(VfsOverrideMappingError::ReadDir)?;
 
         Ok(Self {
             map: HashMap::new(),
             current_dir,
+            savefile_override: None,
         })
     }
 
     /// Scans a set of directories, mapping discovered assets into itself.
-    pub fn scan_directories<I, S>(&mut self, sources: I) -> Result<(), ArchiveOverrideMappingError>
+    pub fn scan_directories<I, S>(&mut self, sources: I) -> Result<(), VfsOverrideMappingError>
     where
         I: Iterator<Item = S>,
         S: AssetOverrideSource,
@@ -69,22 +72,22 @@ impl ArchiveOverrideMapping {
     pub fn scan_directory<P: AsRef<Path>>(
         &mut self,
         base_directory: P,
-    ) -> Result<(), ArchiveOverrideMappingError> {
+    ) -> Result<(), VfsOverrideMappingError> {
         let base_directory = base_directory
             .as_ref()
             .to_path_buf()
             .normalize()
-            .map_err(ArchiveOverrideMappingError::ReadDir)?
+            .map_err(VfsOverrideMappingError::ReadDir)?
             .into_path_buf();
 
         if !base_directory.is_dir() {
-            return Err(ArchiveOverrideMappingError::InvalidDirectory(
+            return Err(VfsOverrideMappingError::InvalidDirectory(
                 base_directory.to_path_buf(),
             ));
         }
 
         let base_directory_key =
-            VfsKey::for_disk_path(&base_directory).map_err(ArchiveOverrideMappingError::ReadDir)?;
+            VfsKey::for_disk_path(&base_directory).map_err(VfsOverrideMappingError::ReadDir)?;
 
         let mut paths_to_scan = VecDeque::from(vec![base_directory.clone()]);
         while let Some(current_path) = paths_to_scan.pop_front() {
@@ -103,7 +106,7 @@ impl ArchiveOverrideMapping {
                     continue;
                 };
 
-                let archive_override = ArchiveOverride::new(dir_entry);
+                let archive_override = VfsOverride::new(dir_entry);
 
                 self.map.insert(vfs_key, archive_override);
             }
@@ -112,18 +115,37 @@ impl ArchiveOverrideMapping {
         Ok(())
     }
 
-    pub fn vfs_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<&ArchiveOverride> {
-        let key = VfsKey::for_vfs_path(Path::new(&path_str));
+    pub fn add_savefile_override<P, F>(&mut self, savefile_dir: P, f: F) -> Result<(), io::Error>
+    where
+        P: AsRef<Path>,
+        F: Fn(&Path) -> Option<PathBuf> + Send + Sync + 'static,
+    {
+        let savefile_override = savefile::SavefileOverrideMapping::new(savefile_dir, f)?;
+        self.savefile_override = Some(savefile_override);
+        Ok(())
+    }
+
+    pub fn vfs_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<&VfsOverride> {
+        let path = Path::new(&path_str);
+
+        if let Some(savefile_override) = &self.savefile_override
+            && let Ok(key) = VfsKey::for_disk_path(path)
+            && let Some(savefile_override_path) = savefile_override.try_override(path, &key)
+        {
+            return Some(savefile_override_path);
+        }
+
+        let key = VfsKey::for_vfs_path(path);
         self.map.get(&key)
     }
 
-    pub fn disk_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<&ArchiveOverride> {
+    pub fn disk_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<&VfsOverride> {
         let key = VfsKey::for_asset_path(Path::new(&path_str), &self.current_dir).ok()?;
         self.map.get(&key)
     }
 }
 
-impl ArchiveOverride {
+impl VfsOverride {
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
         let display = path.as_ref().display().to_string().into_boxed_str();
 
@@ -153,7 +175,7 @@ impl ArchiveOverride {
         let bytes_without_nul = &bytes_with_nul[..bytes_with_nul.len() - 1];
 
         // SAFETY: Source OsStr bytes split before valid substring ("\0"),
-        // which is always inserted by `ArchiveOverride::new`
+        // which is always inserted by `VfsOverride::new`
         unsafe { Path::new(OsStr::from_encoded_bytes_unchecked(bytes_without_nul)) }
     }
 
@@ -178,41 +200,41 @@ impl ArchiveOverride {
     }
 }
 
-impl fmt::Debug for ArchiveOverride {
+impl fmt::Debug for VfsOverride {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ArchiveOverride")
+        f.debug_struct("VfsOverride")
             .field("display", &self.display)
             .field("path", &self.as_path())
             .finish()
     }
 }
 
-impl fmt::Display for ArchiveOverride {
+impl fmt::Display for VfsOverride {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.display.fmt(f)
     }
 }
 
-impl AsRef<Path> for ArchiveOverride {
+impl AsRef<Path> for VfsOverride {
     fn as_ref(&self) -> &Path {
         self.as_path()
     }
 }
 
-impl AsRef<[u16]> for ArchiveOverride {
+impl AsRef<[u16]> for VfsOverride {
     fn as_ref(&self) -> &[u16] {
         self.as_wide()
     }
 }
 
-impl From<&ArchiveOverride> for PCSTR {
-    fn from(value: &ArchiveOverride) -> Self {
+impl From<&VfsOverride> for PCSTR {
+    fn from(value: &VfsOverride) -> Self {
         value.as_pcstr()
     }
 }
 
-impl From<&ArchiveOverride> for PCWSTR {
-    fn from(value: &ArchiveOverride) -> Self {
+impl From<&VfsOverride> for PCWSTR {
+    fn from(value: &VfsOverride) -> Self {
         value.as_pcwstr()
     }
 }
@@ -247,9 +269,13 @@ impl VfsKey {
 
     /// Turns a disk path into an asset lookup key that does not include the root directory.
     fn for_asset_path<P: AsRef<Path>>(path: P, base: &Self) -> Result<Self, io::Error> {
-        let Self(normalized) = Self::for_disk_path(path)?;
+        Self::for_disk_path(path)?.strip_prefix(base)
+    }
 
-        let stripped = normalized
+    /// Strips the root directory from a disk asset lookup key.
+    fn strip_prefix(&self, base: &Self) -> Result<Self, io::Error> {
+        let stripped = self
+            .0
             .strip_prefix(base)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidFilename, e))?;
 
@@ -273,7 +299,7 @@ impl Borrow<Path> for VfsKey {
 mod test {
     use std::path::Path;
 
-    use super::{ArchiveOverrideMapping, VfsKey};
+    use super::{VfsKey, VfsOverrideMapping};
 
     #[test]
     fn asset_path_lookup_keys() {
@@ -317,7 +343,7 @@ mod test {
 
     #[test]
     fn scan_directory_and_overrides() {
-        let mut asset_mapping = ArchiveOverrideMapping::new().unwrap();
+        let mut asset_mapping = VfsOverrideMapping::new().unwrap();
 
         let test_mod_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data/test-mod");
         asset_mapping.scan_directory(test_mod_dir).unwrap();
