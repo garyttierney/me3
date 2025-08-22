@@ -1,8 +1,4 @@
-use std::{
-    fs::File,
-    io::Read,
-    path::{Path, PathBuf},
-};
+use std::{ffi::OsString, fs::File, io::Read, path::Path};
 
 use native::Native;
 use package::Package;
@@ -96,9 +92,9 @@ impl ModProfile {
         }
     }
 
-    pub fn saves_path(&self) -> Option<PathBuf> {
+    pub fn savefile(&self) -> Option<OsString> {
         match self {
-            ModProfile::V1(v1) => v1.saves_path.clone(),
+            ModProfile::V1(v1) => v1.savefile.clone(),
         }
     }
 
@@ -126,10 +122,9 @@ pub struct ModProfileV1 {
     #[serde(alias = "package")]
     packages: Vec<Package>,
 
-    /// Path to an alternative savefile location to use (relative to the default
-    /// savefile directory).
+    /// Name of an alternative savefile to use (in the default savefile directory).
     #[serde(default)]
-    saves_path: Option<PathBuf>,
+    savefile: Option<OsString>,
 
     /// Starts the game with multiplayer server connectivity enabled.
     #[serde(default)]

@@ -1,7 +1,4 @@
-use std::{
-    fs::DirEntry,
-    path::{Path, PathBuf},
-};
+use std::{ffi::OsString, fs::DirEntry, path::Path};
 
 use color_eyre::eyre::{Context as _, OptionExt as _};
 use me3_mod_protocol::{
@@ -79,9 +76,9 @@ impl Profile {
         self.profile.packages().into_iter()
     }
 
-    /// Get the savefile path that may be overridden by this profile.
-    pub fn saves_path(&self) -> Option<PathBuf> {
-        self.profile.saves_path()
+    /// Get the savefile name that may be overridden by this profile.
+    pub fn savefile(&self) -> Option<OsString> {
+        self.profile.savefile()
     }
 
     /// Returns misc. options set by this profile.

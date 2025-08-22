@@ -1,5 +1,6 @@
 use std::{
     alloc::{GlobalAlloc, Layout},
+    ffi::OsStr,
     fs, mem,
     path::{Path, PathBuf},
     ptr::NonNull,
@@ -28,19 +29,19 @@ pub fn attach_override(
     attach_config: &AttachConfig,
     mapping: &mut VfsOverrideMapping,
 ) -> Result<(), eyre::Error> {
-    if let Some(override_path) = &attach_config.saves_path {
+    if let Some(override_name) = &attach_config.savefile {
         let savefile_dir = game::savefile_dir(attach_config.game)
             .ok_or_eyre("unable to locate savefile directory")?;
 
         let span = Span::current();
-        let override_path = override_path.clone();
+        let override_name = override_name.clone();
 
         mapping.add_savefile_override(savefile_dir, move |current_path| {
             let _span_guard = span.enter();
 
-            let override_path = override_savefile_path(current_path, &override_path)
+            let override_path = override_savefile_path(current_path, &override_name)
                 .inspect_err(
-                    |e| error!("error" = &**e, "saves_path" = ?override_path, SL_FATAL_ERROR),
+                    |e| error!("error" = &**e, "savefile" = ?override_name, SL_FATAL_ERROR),
                 )
                 .expect(SL_FATAL_ERROR);
 
@@ -53,13 +54,9 @@ pub fn attach_override(
 
 fn override_savefile_path(
     current_path: &Path,
-    override_path: &Path,
+    override_name: &OsStr,
 ) -> Result<PathBuf, eyre::Error> {
-    let override_path = if override_path.is_relative() {
-        current_path.parent().unwrap().join(override_path)
-    } else {
-        override_path.to_owned()
-    };
+    let override_path = current_path.with_file_name(override_name);
 
     if !override_path.try_exists()? {
         if let Some(parent_dir) = override_path.parent() {
