@@ -1,4 +1,5 @@
 use std::{
+    ffi::OsString,
     fmt::Debug,
     io::{Read, Write},
     path::PathBuf,
@@ -24,9 +25,8 @@ pub struct AttachConfig {
     /// An ordered list of packages to be loaded on attach.
     pub packages: Vec<Package>,
 
-    /// Path to an alternative savefile location to use (relative to the default
-    /// savefile directory).
-    pub saves_path: Option<PathBuf>,
+    /// Name of an alternative savefile to use (in the default savefile directory).
+    pub savefile: Option<OsString>,
 
     /// Path to the cache directory.
     pub cache_path: Option<PathBuf>,

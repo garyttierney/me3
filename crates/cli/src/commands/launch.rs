@@ -1,5 +1,6 @@
 use std::{
     error::Error,
+    ffi::OsString,
     fmt::Debug,
     fs::{self, File},
     io::{BufRead, BufReader},
@@ -154,14 +155,9 @@ pub struct LaunchArgs {
         )]
     natives: Vec<PathBuf>,
 
-    /// Path to an alternative savefile location to use (relative to the default
-    /// savefile directory).
-    #[arg(
-            long("savefile-path"),
-            help_heading = "Mod configuration",
-            value_hint = clap::ValueHint::FilePath,
-        )]
-    saves_path: Option<PathBuf>,
+    /// Name of an alternative savefile to use (in the default savefile directory).
+    #[arg(long("savefile"), help_heading = "Mod configuration")]
+    savefile: Option<OsString>,
 }
 
 pub trait Launcher: Debug {
@@ -350,13 +346,42 @@ impl LaunchArgs {
         packages.extend(ordered_packages);
         natives.extend(ordered_natives);
 
-        let saves_path = self.saves_path.clone().or_else(|| profile.saves_path());
+        let savefile = self.savefile.clone().or_else(|| profile.savefile());
+
+        if let Some(savefile) = &savefile {
+            // https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions
+            let is_windows_path_reserved_char = |c: &u8| {
+                matches!(
+                    *c,
+                    (b'\x00'..b'\x1f')
+                        | b'<'
+                        | b'>'
+                        | b':'
+                        | b'"'
+                        | b'/'
+                        | b'\\'
+                        | b'|'
+                        | b'?'
+                        | b'*'
+                )
+            };
+
+            if savefile
+                .as_encoded_bytes()
+                .iter()
+                .any(is_windows_path_reserved_char)
+            {
+                return Err(eyre!(
+                    "savefile name ({savefile:?}) contains reserved file name characters"
+                ));
+            }
+        }
 
         Ok(AttachConfig {
             game: game.into(),
             packages,
             natives,
-            saves_path,
+            savefile,
             cache_path: cache_path.map(|path| path.into_path_buf()),
             suspend: self.suspend,
             boot_boost: opts.boot_boost.unwrap_or(true),
