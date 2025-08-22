@@ -49,6 +49,10 @@ pub struct ProfileCreateArgs {
     #[clap(long("native"))]
     natives: Vec<PathBuf>,
 
+    /// Name of an alternative savefile to use (in the default savefile directory).
+    #[clap(long("savefile"))]
+    savefile: Option<String>,
+
     #[clap(flatten)]
     options: ProfileOptions,
 
@@ -184,6 +188,10 @@ pub fn show(db: DbContext, name: String) -> color_eyre::Result<()> {
             });
         }
     });
+
+    if let Some(savefile) = profile.savefile() {
+        output.property("Savefile", savefile);
+    }
 
     output.section("Options", |builder| {
         let opt_to_str =

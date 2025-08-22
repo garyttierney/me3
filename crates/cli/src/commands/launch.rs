@@ -1,6 +1,5 @@
 use std::{
     error::Error,
-    ffi::OsString,
     fmt::Debug,
     fs::{self, File},
     io::{BufRead, BufReader},
@@ -157,7 +156,7 @@ pub struct LaunchArgs {
 
     /// Name of an alternative savefile to use (in the default savefile directory).
     #[arg(long("savefile"), help_heading = "Mod configuration")]
-    savefile: Option<OsString>,
+    savefile: Option<String>,
 }
 
 pub trait Launcher: Debug {
@@ -350,27 +349,14 @@ impl LaunchArgs {
 
         if let Some(savefile) = &savefile {
             // https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions
-            let is_windows_path_reserved_char = |c: &u8| {
+            let is_windows_path_reserved_char = |c: char| {
                 matches!(
-                    *c,
-                    (b'\x00'..b'\x1f')
-                        | b'<'
-                        | b'>'
-                        | b':'
-                        | b'"'
-                        | b'/'
-                        | b'\\'
-                        | b'|'
-                        | b'?'
-                        | b'*'
+                    c,
+                    '\x00'..'\x1f' | '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'
                 )
             };
 
-            if savefile
-                .as_encoded_bytes()
-                .iter()
-                .any(is_windows_path_reserved_char)
-            {
+            if savefile.chars().any(is_windows_path_reserved_char) {
                 return Err(eyre!(
                     "savefile name ({savefile:?}) contains reserved file name characters"
                 ));

@@ -1,6 +1,5 @@
 use std::{
     alloc::{GlobalAlloc, Layout},
-    ffi::OsStr,
     fs, mem,
     path::{Path, PathBuf},
     ptr::NonNull,
@@ -54,7 +53,7 @@ pub fn attach_override(
 
 fn override_savefile_path(
     current_path: &Path,
-    override_name: &OsStr,
+    override_name: &str,
 ) -> Result<PathBuf, eyre::Error> {
     let override_path = current_path.with_file_name(override_name);
 
