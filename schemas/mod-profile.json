@@ -105,13 +105,9 @@
         },
         "savefile": {
           "description": "Name of an alternative savefile to use (in the default savefile directory).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/OsString"
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "string",
+            "null"
           ],
           "default": null
         },
@@ -221,44 +217,6 @@
           "additionalProperties": false,
           "required": [
             "function"
-          ]
-        }
-      ]
-    },
-    "OsString": {
-      "oneOf": [
-        {
-          "type": "object",
-          "properties": {
-            "Unix": {
-              "type": "array",
-              "items": {
-                "type": "integer",
-                "format": "uint8",
-                "maximum": 255,
-                "minimum": 0
-              }
-            }
-          },
-          "required": [
-            "Unix"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "Windows": {
-              "type": "array",
-              "items": {
-                "type": "integer",
-                "format": "uint16",
-                "maximum": 65535,
-                "minimum": 0
-              }
-            }
-          },
-          "required": [
-            "Windows"
           ]
         }
       ]
