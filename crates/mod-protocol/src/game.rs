@@ -1,4 +1,7 @@
-use std::{fmt::Display, path::Path};
+use std::{
+    fmt::Display,
+    path::{Path, PathBuf},
+};
 
 use schemars::{json_schema, JsonSchema};
 use serde::{de::Error, Deserialize, Serialize};
@@ -58,6 +61,26 @@ impl Game {
     /// All aliases of a game as lowercase strings, excluding the primary name.
     pub fn aliases(self) -> &'static [&'static str] {
         &self.possible_names()[1..]
+    }
+
+    /// The savefile directory used by a game.
+    pub fn savefile_dir(self) -> Option<PathBuf> {
+        use Game::*;
+
+        // DS1/DSR will need to resolve CSIDL_MYDOCUMENTS/FOLDERID_Documents instead.
+        let base_dir = match self {
+            DarkSouls3 | Sekiro | EldenRing | ArmoredCore6 | Nightreign => {
+                std::env::var_os("APPDATA").map(PathBuf::from)
+            }
+        };
+
+        Some(match self {
+            DarkSouls3 => base_dir?.join("DarkSoulsIII"),
+            Sekiro => base_dir?.join("Sekiro"),
+            EldenRing => base_dir?.join("EldenRing"),
+            ArmoredCore6 => base_dir?.join("ArmoredCore6"),
+            Nightreign => base_dir?.join("Nightreign"),
+        })
     }
 
     fn to_json(self) -> serde_json::Value {
