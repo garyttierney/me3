@@ -20,8 +20,6 @@ use tracing::{error, info, instrument, warn, Span};
 
 use crate::{executable::Executable, host::ModHost};
 
-mod game;
-
 const SL_FATAL_ERROR: &str = "could not load alternative savefile location";
 
 #[instrument(skip_all)]
@@ -30,7 +28,9 @@ pub fn attach_override(
     mapping: &mut VfsOverrideMapping,
 ) -> Result<(), eyre::Error> {
     if let Some(override_name) = &attach_config.savefile {
-        let savefile_dir = game::savefile_dir(attach_config.game)
+        let savefile_dir = attach_config
+            .game
+            .savefile_dir()
             .ok_or_eyre("unable to locate savefile directory")?;
 
         let span = Span::current();
