@@ -35,10 +35,10 @@ use crate::{
 };
 
 #[derive(Debug, clap::Args)]
-#[group(required = true, multiple = false)]
+#[group(multiple = false)]
 pub struct Selector {
     /// Automatically detect the game to launch from mod profiles.
-    #[clap(long, help_heading = "Game selection", action = ArgAction::SetTrue)]
+    #[clap(long, help_heading = "Game selection", action = ArgAction::SetTrue, required = false)]
     auto_detect: bool,
 
     /// Short name of a game to launch. The launcher will look for the the installation in
@@ -47,14 +47,21 @@ pub struct Selector {
         short('g'),
         long,
         hide_possible_values = false,
-        help_heading = "Game selection"
+        help_heading = "Game selection",
+        required = false
     )]
     #[arg(value_enum)]
     game: Option<Game>,
 
     /// The Steam APPID of the game to launch. The launcher will attempt to find this app installed
     /// in a Steam library and launch the configured command
-    #[clap(short('s'), long, alias("steamid"), help_heading = "Game selection")]
+    #[clap(
+        short('s'),
+        long,
+        alias("steamid"),
+        help_heading = "Game selection",
+        required = false
+    )]
     #[arg(value_parser = clap::value_parser!(u32))]
     steam_id: Option<u32>,
 }
@@ -102,7 +109,7 @@ impl GameOptions {
 #[derive(Args, Debug)]
 pub struct LaunchArgs {
     #[clap(flatten)]
-    pub target_selector: Selector,
+    target_selector: Option<Selector>,
 
     #[clap(flatten)]
     game_options: GameOptions,
@@ -254,15 +261,21 @@ impl LaunchArgs {
             Profile::transient()
         };
 
-        let game = if self.target_selector.auto_detect {
+        let target_selector = self.target_selector.as_ref().unwrap_or(&Selector {
+            auto_detect: true,
+            game: None,
+            steam_id: None,
+        });
+
+        let game = if target_selector.auto_detect {
             profile
                 .supported_game()
                 .map(crate::Game)
-                .ok_or_eyre("me3 profile lists no supported games")
+                .ok_or_eyre("unable to determine which game to launch")
         } else {
-            self.target_selector
+            target_selector
                 .game
-                .or_else(|| self.target_selector.steam_id.and_then(Game::from_app_id))
+                .or_else(|| target_selector.steam_id.and_then(Game::from_app_id))
                 .ok_or_eyre("unable to determine game from name or app ID")
         }?;
 
