@@ -10,8 +10,7 @@ use crate::mapping::{VfsKey, VfsOverride};
 pub struct SavefileOverrideMapping {
     savefile_dir: VfsKey,
     override_path: OnceLock<(VfsOverride, VfsOverride)>,
-    #[allow(clippy::type_complexity)]
-    on_override: Box<dyn Fn(&Path) -> Option<PathBuf> + Send + Sync>,
+    on_override: Box<dyn Fn(&Path) -> PathBuf + Send + Sync>,
 }
 
 impl SavefileOverrideMapping {
@@ -19,7 +18,7 @@ impl SavefileOverrideMapping {
     pub fn new<P, F>(savefile_dir: P, f: F) -> io::Result<Self>
     where
         P: AsRef<Path>,
-        F: Fn(&Path) -> Option<PathBuf> + Send + Sync + 'static,
+        F: Fn(&Path) -> PathBuf + Send + Sync + 'static,
     {
         Ok(Self {
             savefile_dir: VfsKey::for_disk_path(savefile_dir.as_ref())?,
@@ -44,21 +43,19 @@ impl SavefileOverrideMapping {
             return None;
         }
 
-        self.override_path
-            .get_or_try_init(|| {
-                let override_path = (self.on_override)(path).ok_or(())?;
+        Some(self.override_path.get_or_init(|| {
+            let override_path = (self.on_override)(path);
 
-                let override_path_bak = {
-                    let mut override_path = override_path.clone();
-                    override_path.as_mut_os_string().push(".bak");
-                    override_path
-                };
+            let override_path_bak = {
+                let mut override_path = override_path.clone();
+                override_path.as_mut_os_string().push(".bak");
+                override_path
+            };
 
-                Result::<_, ()>::Ok((
-                    VfsOverride::new(override_path),
-                    VfsOverride::new(override_path_bak),
-                ))
-            })
-            .ok()
+            (
+                VfsOverride::new(override_path),
+                VfsOverride::new(override_path_bak),
+            )
+        }))
     }
 }

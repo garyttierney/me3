@@ -38,13 +38,13 @@ pub fn attach_override(
         mapping.add_savefile_override(savefile_dir, move |current_path| {
             let _span_guard = span.enter();
 
-            let override_path = override_savefile_path(current_path, &override_name)
+            // Panic on failure instead of loading the user's primary savefile instead
+            // of the alternative one they requested.
+            override_savefile_path(current_path, &override_name)
                 .inspect_err(
                     |e| error!("error" = &**e, "savefile" = ?override_name, SL_FATAL_ERROR),
                 )
-                .expect(SL_FATAL_ERROR);
-
-            Some(override_path)
+                .expect(SL_FATAL_ERROR)
         })?;
     }
 

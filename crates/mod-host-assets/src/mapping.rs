@@ -118,7 +118,7 @@ impl VfsOverrideMapping {
     pub fn add_savefile_override<P, F>(&mut self, savefile_dir: P, f: F) -> Result<(), io::Error>
     where
         P: AsRef<Path>,
-        F: Fn(&Path) -> Option<PathBuf> + Send + Sync + 'static,
+        F: Fn(&Path) -> PathBuf + Send + Sync + 'static,
     {
         let savefile_override = savefile::SavefileOverrideMapping::new(savefile_dir, f)?;
         self.savefile_override = Some(savefile_override);
