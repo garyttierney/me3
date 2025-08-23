@@ -71,12 +71,21 @@ pub struct ProfileOptions {
     /// Allow the game to connect to the multiplayer server?
     #[clap(long("online"), default_missing_value = "true", num_args=0..=1)]
     pub start_online: Option<bool>,
+
+    /// Try to neutralize Arxan GuardIT code protection to improve mod stability?
+    #[clap(long("disable-arxan"), default_missing_value = "true", num_args=0..=1)]
+    pub disable_arxan: Option<bool>,
 }
 
 impl ProfileOptions {
     pub fn merge(self, other: Self) -> Self {
         Self {
             start_online: other.start_online.or(self.start_online),
+            disable_arxan: match (other.disable_arxan, self.disable_arxan) {
+                (Some(true), _) => Some(true),
+                (_, Some(true)) => Some(true),
+                (a, b) => a.or(b),
+            },
         }
     }
 }
@@ -199,6 +208,7 @@ pub fn show(db: DbContext, name: String) -> color_eyre::Result<()> {
 
         let options = profile.options();
         builder.property("Start Online", opt_to_str(options.start_online));
+        builder.property("Neutralize Arxan", opt_to_str(options.disable_arxan));
     });
 
     println!("{}", output.build());

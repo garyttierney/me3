@@ -17,5 +17,6 @@ V1(
         ],
         savefile: None,
         start_online: None,
+        disable_arxan: None,
     },
 )
