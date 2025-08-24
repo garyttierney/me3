@@ -87,6 +87,14 @@
     "ModProfileV1": {
       "type": "object",
       "properties": {
+        "disable_arxan": {
+          "description": "Try to neutralize Arxan GuardIT code protection to improve mod stability.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
         "natives": {
           "description": "Native modules (DLLs) that will be loaded.",
           "type": "array",

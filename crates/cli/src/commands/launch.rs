@@ -76,10 +76,6 @@ pub struct GameOptions {
     #[clap(long("show-logos"), default_missing_value = "true", num_args=0..=1, value_parser = invert_bool())]
     pub(crate) skip_logos: Option<bool>,
 
-    /// Try to neutralize Arxan GuardIT code protection to improve mod stability?
-    #[clap(long("disable-arxan"), default_missing_value = "true", num_args=0..=1)]
-    pub(crate) disable_arxan: Option<bool>,
-
     /// Skip initializing Steam within the launcher?
     #[clap(long("skip-steam-init"), default_missing_value = "true", num_args=0..=1)]
     pub(crate) skip_steam_init: Option<bool>,
@@ -99,7 +95,6 @@ impl GameOptions {
         Self {
             boot_boost: other.boot_boost.or(self.boot_boost),
             skip_logos: other.skip_logos.or(self.skip_logos),
-            disable_arxan: other.disable_arxan.or(self.disable_arxan),
             skip_steam_init: other.skip_steam_init.or(self.skip_steam_init),
             exe: other.exe.or(self.exe),
         }
@@ -373,7 +368,7 @@ impl LaunchArgs {
             boot_boost: opts.boot_boost.unwrap_or(true),
             skip_logos: opts.skip_logos.unwrap_or(true),
             start_online: profile_options.start_online.unwrap_or(false),
-            disable_arxan: opts.disable_arxan.unwrap_or(false),
+            disable_arxan: profile_options.disable_arxan.unwrap_or(false),
             skip_steam_init: opts.skip_steam_init.unwrap_or(false),
         })
     }
@@ -580,7 +575,6 @@ mod tests {
             GameOptions {
                 boot_boost: None,
                 skip_logos: None,
-                disable_arxan: None,
                 skip_steam_init: None,
                 exe: None,
             },
@@ -588,7 +582,10 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             launch_args.profile_options,
-            ProfileOptions { start_online: None },
+            ProfileOptions {
+                start_online: None,
+                disable_arxan: None,
+            },
         );
     }
 
@@ -615,7 +612,6 @@ mod tests {
             GameOptions {
                 boot_boost: Some(false),
                 skip_logos: Some(false),
-                disable_arxan: Some(true),
                 skip_steam_init: Some(true),
                 exe: None,
             },
@@ -625,6 +621,7 @@ mod tests {
             launch_args.profile_options,
             ProfileOptions {
                 start_online: Some(true),
+                disable_arxan: Some(true),
             },
         );
     }
@@ -652,7 +649,6 @@ mod tests {
             GameOptions {
                 boot_boost: Some(true),
                 skip_logos: Some(true),
-                disable_arxan: Some(false),
                 skip_steam_init: Some(false),
                 exe: None,
             },
@@ -662,6 +658,7 @@ mod tests {
             launch_args.profile_options,
             ProfileOptions {
                 start_online: Some(false),
+                disable_arxan: Some(false),
             },
         );
     }
@@ -689,7 +686,6 @@ mod tests {
             GameOptions {
                 boot_boost: Some(false),
                 skip_logos: Some(false),
-                disable_arxan: Some(true),
                 skip_steam_init: Some(true),
                 exe: None,
             },
@@ -699,6 +695,7 @@ mod tests {
             launch_args.profile_options,
             ProfileOptions {
                 start_online: Some(true),
+                disable_arxan: Some(true),
             },
         );
     }
