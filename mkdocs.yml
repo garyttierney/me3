@@ -116,10 +116,14 @@ nav:
   - Blog:
       - blog/index.md
 plugins:
+  - group:
+      enabled: !ENV MKDOCS_MATERIAL_INSIDERS_ENABLED
+      plugins:
+          - optimize
   - blog
   - meta
   - search
-  - optimize
+  
   - meta-descriptions
   - git-committers:
       repository: garyttierney/me3
