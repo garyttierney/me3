@@ -85,6 +85,7 @@ impl Profile {
     pub fn options(&self) -> ProfileOptions {
         ProfileOptions {
             start_online: self.profile.start_online(),
+            disable_arxan: self.profile.disable_arxan(),
         }
     }
 

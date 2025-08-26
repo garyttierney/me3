@@ -103,6 +103,12 @@ impl ModProfile {
             ModProfile::V1(v1) => v1.start_online,
         }
     }
+
+    pub fn disable_arxan(&self) -> Option<bool> {
+        match self {
+            ModProfile::V1(v1) => v1.disable_arxan,
+        }
+    }
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
@@ -129,6 +135,10 @@ pub struct ModProfileV1 {
     /// Starts the game with multiplayer server connectivity enabled.
     #[serde(default)]
     start_online: Option<bool>,
+
+    /// Try to neutralize Arxan GuardIT code protection to improve mod stability.
+    #[serde(default)]
+    disable_arxan: Option<bool>,
 }
 
 #[cfg(test)]
