@@ -6,10 +6,11 @@ use std::{
 
 use color_eyre::eyre::Context;
 use me3_mod_protocol::{
-    dependency::sort_dependencies,
+    mod_file::{AsModFile, ModFile},
     native::Native,
-    package::{Package, WithPackageSource},
-    Game, ModProfile,
+    package::Package,
+    profile::{ModProfile, ProfileMergeError},
+    Game,
 };
 use normpath::PathExt;
 use tracing::warn;
@@ -54,28 +55,30 @@ impl Profile {
         self.path.parent()
     }
 
+    /// Returns the path to the profile file.
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
     /// Get the single game this profile supports, or None if it supports multiple games/omits
     /// support metadata.
     pub fn supported_game(&self) -> Option<Game> {
-        let supports = self.profile.supports();
-        match &supports[..] {
-            [one_game] => Some(one_game.game),
-            _ => None,
-        }
+        self.profile.game()
     }
 
-    /// Get an unordered list of natives to be loaded by this profile.
-    ///
-    /// See [compile] to produce an ordered list.
+    /// Returns a list of natives to be loaded by this profile.
     pub fn natives(&self) -> impl Iterator<Item = Native> {
         self.profile.natives().into_iter()
     }
 
-    /// Get an unordered list of packages loaded by this profile.
-    ///
-    /// See [compile] to produce an ordered list.
+    /// Returns a list of packages loaded by this profile.
     pub fn packages(&self) -> impl Iterator<Item = Package> {
         self.profile.packages().into_iter()
+    }
+
+    /// Returns a list of profiles loaded by this profile.
+    pub fn profiles(&self) -> impl Iterator<Item = ModFile> {
+        self.profile.profiles().into_iter()
     }
 
     /// Get the savefile name that may be overridden by this profile.
@@ -91,23 +94,34 @@ impl Profile {
         }
     }
 
-    /// Compile this profile into a load order of native DLLs and packages to be loaded.
-    pub fn compile(&self) -> color_eyre::Result<(Vec<Native>, Vec<Package>)> {
-        fn exists<S: WithPackageSource>(p: &S) -> bool {
-            match p.source().try_exists() {
-                Ok(true) => true,
-                _ => {
-                    warn!(path = %p.source().display(), "specified path does not exist or is inaccessible");
-                    false
-                }
-            }
-        }
+    /// Attempt to apply the properties of another profile on top of this profile.
+    ///
+    /// Returns a profile that is a combination of both.
+    pub fn try_merge<P: AsRef<ModProfile>>(&self, other: &P) -> Result<Self, ProfileMergeError> {
+        Ok(Self {
+            name: self.name.clone(),
+            path: self.path.clone(),
+            profile: self.profile.try_merge(other.as_ref())?,
+        })
+    }
 
-        fn canonicalize<S: WithPackageSource>(base_dir: &Path, sources: &mut Vec<S>) {
+    /// Compile this profile into a load order of native DLLs, packages and files to be loaded.
+    pub fn compile(&self) -> color_eyre::Result<(Vec<Native>, Vec<Package>)> {
+        fn canonicalize<S: AsModFile>(base_dir: &Path, sources: &mut Vec<S>) {
             sources
                 .iter_mut()
-                .for_each(|pkg| pkg.source_mut().make_absolute(base_dir));
-            sources.retain(exists);
+                .for_each(|i| i.as_mod_file_mut().make_absolute(base_dir));
+
+            sources.retain(|s| match s.as_mod_file().as_ref().try_exists() {
+                Ok(true) => s.as_mod_file().enabled,
+                _ => {
+                    warn!(
+                        "path" = ?s.as_mod_file().as_ref(),
+                        "specified path does not exist or is inaccessible"
+                    );
+                    false
+                }
+            });
         }
 
         let mut packages = self.profile.packages();
@@ -118,10 +132,13 @@ impl Profile {
         canonicalize(base_dir, &mut packages);
         canonicalize(base_dir, &mut natives);
 
-        let ordered_natives = sort_dependencies(natives)?;
-        let ordered_packages = sort_dependencies(packages)?;
+        Ok((natives, packages))
+    }
+}
 
-        Ok((ordered_natives, ordered_packages))
+impl AsRef<ModProfile> for Profile {
+    fn as_ref(&self) -> &ModProfile {
+        &self.profile
     }
 }
 

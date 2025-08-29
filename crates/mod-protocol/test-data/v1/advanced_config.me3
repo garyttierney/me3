@@ -1,0 +1,34 @@
+profileVersion = "v1"
+disable_arxan = false
+start_online = true
+
+[[supports]]
+game = "nightreign"
+
+[[packages]]
+id = "my-mod"
+source = "./mod"
+
+[[packages]]
+source = "./unnamed-mod"
+load_after = [{ id = "my-mod", optional = false }]
+
+[[packages]]
+id = "my-other-mod"
+path = "./nr-mods/mod"
+enabled = true
+optional = true
+load_before = [{ id = "my-mod", optional = true }]
+
+[[packages]]
+id = "my-disabled-mod"
+source = "./unused-mod"
+enabled = false
+
+[[natives]]
+path = "my_native.dll"
+optional = true
+
+[[natives]]
+path = "./nr-mods/my_other_native.dll"
+initializer.function = "init_my_dll"

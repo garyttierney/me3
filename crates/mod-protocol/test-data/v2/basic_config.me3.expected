@@ -1,0 +1,37 @@
+V2(
+    ModProfileV2 {
+        supports: None,
+        natives: [
+            Native {
+                inner: ModFile {
+                    name: "my_dll",
+                    path: "./my-mod/my_dll.dll",
+                    enabled: true,
+                    optional: false,
+                },
+                initializer: None,
+            },
+        ],
+        packages: [
+            Package(
+                ModFile {
+                    name: "my_mod",
+                    path: "./my-mod",
+                    enabled: true,
+                    optional: false,
+                },
+            ),
+        ],
+        profiles: [
+            ModFile {
+                name: "my_profile",
+                path: "my_profile.me3",
+                enabled: true,
+                optional: false,
+            },
+        ],
+        savefile: None,
+        start_online: None,
+        disable_arxan: None,
+    },
+)

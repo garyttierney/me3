@@ -1353,6 +1353,7 @@ checksum = "f2481980430f9f78649238835720ddccc57e52df14ffce1c6f37391d61b563e9"
 dependencies = [
  "equivalent",
  "hashbrown",
+ "serde",
 ]
 
 [[package]]
@@ -1670,6 +1671,7 @@ dependencies = [
  "me3_telemetry",
  "minidump-writer",
  "sentry",
+ "serde_json",
  "toml 0.9.5",
  "tracing",
  "windows",
@@ -1684,7 +1686,6 @@ dependencies = [
  "eyre",
  "me3-mod-protocol",
  "serde",
- "serde_derive",
 ]
 
 [[package]]
@@ -2736,6 +2737,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82d20c4491bc164fa2f6c5d44565947a52ad80b9505d8e36f8d54c27c739fcd0"
 dependencies = [
  "dyn-clone",
+ "indexmap",
  "ref-cast",
  "schemars_derive",
  "serde",

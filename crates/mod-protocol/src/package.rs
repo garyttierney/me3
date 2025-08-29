@@ -1,126 +1,70 @@
 use std::{
-    ops::Deref,
+    ops::{Deref, DerefMut},
     path::{Path, PathBuf},
 };
 
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::dependency::{Dependency, Dependent};
+use crate::mod_file::{AsModFile, ModFile};
 
-pub trait WithPackageSource {
-    fn source(&self) -> &ModFile;
+/// A package is a source for files that override files within the existing games DVDBND archives.
+/// It points to a local path containing assets matching the hierarchy they would be served under in
+/// the DVDBND.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Package(pub(crate) ModFile);
 
-    fn source_mut(&mut self) -> &mut ModFile;
+impl Package {
+    #[inline]
+    pub fn new<P: AsRef<Path>>(path: P) -> Self {
+        ModFile::new(path).into()
+    }
 }
 
-/// A filesystem path to the contents of a package. May be relative to the [ModProfile] containing
-/// it.
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-pub struct ModFile(pub(crate) PathBuf);
+impl AsRef<Path> for Package {
+    #[inline]
+    fn as_ref(&self) -> &Path {
+        self.as_mod_file().as_ref()
+    }
+}
 
-impl Deref for ModFile {
-    type Target = PathBuf;
+impl Deref for Package {
+    type Target = ModFile;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl ModFile {
-    /// Returns whether or not the package's source description is relative to the mod profile.
-    pub fn is_relative(&self) -> bool {
-        self.0.is_relative()
-    }
-
-    pub fn make_absolute(&mut self, base: &Path) {
-        if self.0.is_relative() {
-            self.0 = base.join(&self.0);
-        }
+impl DerefMut for Package {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
-fn on() -> bool {
-    true
-}
-
-/// A package is a source for files that override files within the existing games DVDBND archives.
-/// It points to a local path containing assets matching the hierarchy they would be served under in
-/// the DVDBND.
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-pub struct Package {
-    /// The unique identifier for this package.
-    pub(crate) id: Option<String>,
-
-    /// Enable this package?
-    #[serde(default = "on")]
-    pub enabled: bool,
-
-    /// A path to the source of this package.
-    #[serde(alias = "source")]
-    pub(crate) path: ModFile,
-
-    /// A list of package IDs that this package should load after.
-    #[serde(default)]
-    pub(crate) load_after: Vec<Dependent<String>>,
-
-    /// A list of packages that this package should load before.
-    #[serde(default)]
-    pub(crate) load_before: Vec<Dependent<String>>,
-}
-
-impl Package {
-    pub fn new(path: PathBuf) -> Self {
-        Self {
-            id: None,
-            path: ModFile(path),
-            enabled: true,
-            load_after: vec![],
-            load_before: vec![],
-        }
+impl AsModFile for Package {
+    #[inline]
+    fn as_mod_file(&self) -> &ModFile {
+        &self.0
     }
 
-    /// Makes the package's source absolute using a given base directory (this is usually the mod
-    /// profile's parent path).
-    pub fn make_absolute(&mut self, base: &Path) {
-        self.path = ModFile(base.join(&self.path.0));
+    #[inline]
+    fn as_mod_file_mut(&mut self) -> &mut ModFile {
+        &mut self.0
     }
 }
 
-impl WithPackageSource for Package {
-    fn source(&self) -> &ModFile {
-        &self.path
-    }
-
-    fn source_mut(&mut self) -> &mut ModFile {
-        &mut self.path
+impl From<ModFile> for Package {
+    #[inline]
+    fn from(item: ModFile) -> Self {
+        Self(item)
     }
 }
 
-impl Dependency for Package {
-    type UniqueId = String;
-
-    fn id(&self) -> Self::UniqueId {
-        self.id
-            .clone()
-            .unwrap_or_else(|| self.path.to_string_lossy().into())
-    }
-
-    fn loads_after(&self) -> &[crate::dependency::Dependent<Self::UniqueId>] {
-        &self.load_after
-    }
-
-    fn loads_before(&self) -> &[crate::dependency::Dependent<Self::UniqueId>] {
-        &self.load_before
-    }
-}
-
-pub trait AssetOverrideSource {
-    fn asset_path(&self) -> &Path;
-}
-
-impl AssetOverrideSource for &Package {
-    fn asset_path(&self) -> &Path {
-        self.path.0.as_path()
+impl From<PathBuf> for Package {
+    #[inline]
+    fn from(path: PathBuf) -> Self {
+        ModFile::from(path).into()
     }
 }

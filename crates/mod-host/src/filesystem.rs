@@ -93,9 +93,9 @@ fn hook_create_file(kb: HMODULE, mapping: Arc<VfsOverrideMapping>) -> Result<(),
                 }
 
                 if let Ok(path) = p1.to_string()
-                    && let Some(mapped_override) = mapping.disk_override(path)
+                    && let Some(mapped_override) = mapping.disk_override(&path)
                 {
-                    info!("override" = %mapped_override);
+                    info!("override" = path, "source" = mapped_override.source());
 
                     return trampoline(mapped_override.into(), p2, p3, p4, p5, p6, p7);
                 }
@@ -118,8 +118,8 @@ fn hook_create_file(kb: HMODULE, mapping: Arc<VfsOverrideMapping>) -> Result<(),
 
                 let path = OsString::from_wide(p1.as_wide());
 
-                if let Some(mapped_override) = mapping.disk_override(path) {
-                    info!("override" = %mapped_override);
+                if let Some(mapped_override) = mapping.disk_override(&path) {
+                    info!("override" = %path.display(), "source" = mapped_override.source());
 
                     return trampoline(mapped_override.into(), p2, p3, p4, p5, p6, p7);
                 }
@@ -142,8 +142,8 @@ fn hook_create_file(kb: HMODULE, mapping: Arc<VfsOverrideMapping>) -> Result<(),
 
                 let path = OsString::from_wide(p1.as_wide());
 
-                if let Some(mapped_override) = mapping.disk_override(path) {
-                    info!("override" = %mapped_override);
+                if let Some(mapped_override) = mapping.disk_override(&path) {
+                    info!("override" = %path.display(), "source" = mapped_override.source());
 
                     return trampoline(mapped_override.into(), p2, p3, p4, p5);
                 }

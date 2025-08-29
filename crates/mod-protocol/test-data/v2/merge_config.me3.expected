@@ -1,0 +1,69 @@
+V2(
+    ModProfileV2 {
+        supports: Some(
+            EldenRing,
+        ),
+        natives: [
+            Native {
+                inner: ModFile {
+                    name: "my_dll",
+                    path: "./my-mod/my_dll.dll",
+                    enabled: true,
+                    optional: false,
+                },
+                initializer: None,
+            },
+            Native {
+                inner: ModFile {
+                    name: "test_dll",
+                    path: "test.dll",
+                    enabled: true,
+                    optional: false,
+                },
+                initializer: None,
+            },
+            Native {
+                inner: ModFile {
+                    name: "other_dll",
+                    path: "./other_mods/mod.dll",
+                    enabled: true,
+                    optional: true,
+                },
+                initializer: None,
+            },
+        ],
+        packages: [
+            Package(
+                ModFile {
+                    name: "my_mod",
+                    path: "./my-mod",
+                    enabled: true,
+                    optional: false,
+                },
+            ),
+        ],
+        profiles: [
+            ModFile {
+                name: "my_profile",
+                path: "my_profile.me3",
+                enabled: true,
+                optional: false,
+            },
+            ModFile {
+                name: "big_overhaul",
+                path: "./other_mods/overhaul.me3",
+                enabled: true,
+                optional: false,
+            },
+        ],
+        savefile: Some(
+            "ERMOD.sl2",
+        ),
+        start_online: Some(
+            true,
+        ),
+        disable_arxan: Some(
+            true,
+        ),
+    },
+)

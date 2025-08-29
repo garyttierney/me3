@@ -1,0 +1,78 @@
+V1(
+    ModProfileV1 {
+        supports: [
+            Supports {
+                game: Nightreign,
+                since_version: None,
+            },
+        ],
+        natives: [
+            Native {
+                inner: ModFile {
+                    name: "my_native-ac5db8a5",
+                    path: "my_native.dll",
+                    enabled: true,
+                    optional: true,
+                },
+                initializer: None,
+            },
+            Native {
+                inner: ModFile {
+                    name: "my_other_native-eae16c4a",
+                    path: "./nr-mods/my_other_native.dll",
+                    enabled: true,
+                    optional: false,
+                },
+                initializer: Some(
+                    NativeInitializerCondition {
+                        delay: None,
+                        function: Some(
+                            "init_my_dll",
+                        ),
+                    },
+                ),
+            },
+        ],
+        packages: [
+            Package(
+                ModFile {
+                    name: "my-mod",
+                    path: "./mod",
+                    enabled: true,
+                    optional: false,
+                },
+            ),
+            Package(
+                ModFile {
+                    name: "unnamed-mod-f0cb703b",
+                    path: "./unnamed-mod",
+                    enabled: true,
+                    optional: false,
+                },
+            ),
+            Package(
+                ModFile {
+                    name: "my-other-mod",
+                    path: "./nr-mods/mod",
+                    enabled: true,
+                    optional: false,
+                },
+            ),
+            Package(
+                ModFile {
+                    name: "my-disabled-mod",
+                    path: "./unused-mod",
+                    enabled: false,
+                    optional: false,
+                },
+            ),
+        ],
+        savefile: None,
+        start_online: Some(
+            true,
+        ),
+        disable_arxan: Some(
+            false,
+        ),
+    },
+)

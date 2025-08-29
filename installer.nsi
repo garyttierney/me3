@@ -195,13 +195,13 @@ Section "Main Application" SEC01
     nsExec::Exec '"$INSTDIR\bin\me3.exe" add-to-path'
 
     CreateDirectory "$LOCALAPPDATA\garyttierney\me3\config\profiles\darksouls3-mods"
-    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g ds3 --package darksouls3-mods darksouls3-default'
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g ds3 -u darksouls3-mods darksouls3-default'
 
     CreateDirectory "$LOCALAPPDATA\garyttierney\me3\config\profiles\eldenring-mods"
-    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er --package eldenring-mods eldenring-default'
-
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er -u eldenring-mods eldenring-default'
+    
     CreateDirectory "$LOCALAPPDATA\garyttierney\me3\config\profiles\nightreign-mods"
-    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr --package nightreign-mods nightreign-default'
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr -u nightreign-mods nightreign-default'
 
     CreateDirectory "$SMPROGRAMS\me3"
     CreateShortCut "$SMPROGRAMS\me3\DARK SOULS III (me3).lnk" "$INSTDIR\bin\me3.exe" \

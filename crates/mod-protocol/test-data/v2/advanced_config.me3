@@ -1,0 +1,16 @@
+profileVersion = "v2"
+
+[game]
+launch = "nightreign"
+savefile = "NRMOD.sl2"
+disable_arxan = true
+start_online = true
+
+[dependencies]
+my_mod.path = './my-mod'
+my_dll = { path = './my-mod/my_dll.dll', initializer.delay.ms = 3000 }
+hks_debug = { path = './hks_debug.me3', optional = true }
+my_other_mod = { path = './my-other-mod', disabled = true }
+my_profile = { path = 'my_profile.me3', optional = false, disabled = true }
+my_other_dll.path = 'other_dll.dll'
+my_other_dll.initializer.function = "init_my_dll"
