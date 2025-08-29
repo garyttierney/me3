@@ -42,7 +42,7 @@ For users who aren't on Windows (or users who just prefer a CLI) the `me3` comma
 ```
 
 !!! tip
-    The `--auto-detect` option can be used instead of `--game` to detect the game to run if the profile only supports a single game.
+    The `--game` option can be omitted if the profile only supports a single game.
 
 #### Organization of mods
 

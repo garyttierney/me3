@@ -198,11 +198,11 @@ Section "Main Application" SEC01
 
     CreateDirectory "$SMPROGRAMS\me3"
     CreateShortCut "$SMPROGRAMS\me3\ELDEN RING (me3).lnk" "$INSTDIR\bin\me3.exe" \
-      "launch --auto-detect -p eldenring-default" "$INSTDIR\assets\me3.ico" "" "" \
+      "launch -p eldenring-default" "$INSTDIR\assets\me3.ico" "" "" \
       "" "Launch ELDEN RING with the eldenring-default mod profile"
 
     CreateShortCut "$SMPROGRAMS\me3\NIGHTREIGN (me3).lnk" "$INSTDIR\bin\me3.exe" \
-      "launch --auto-detect -p nightreign-default" "$INSTDIR\assets\me3.ico" "" "" \
+      "launch -p nightreign-default" "$INSTDIR\assets\me3.ico" "" "" \
       "" "Launch NIGHTREIGN with the nightreign-default mod profile"
 
     !insertmacro CreateInternetShortcutWithIcon "$SMPROGRAMS\me3\Documentation.URL" "https://me3.readthedocs.io" "$INSTDIR\assets\me3.ico"
@@ -211,10 +211,10 @@ Section "Main Application" SEC01
     WriteUninstaller "$INSTDIR\uninstall.exe"
 
     !insertmacro APP_ASSOCIATE "me3" "me3.mod-profile" "me3 Mod Profile" \
-      "$INSTDIR\assets\me3.ico" "Open with me3" "$INSTDIR\bin\me3.exe launch --auto-detect -p $\"%1$\""
+      "$INSTDIR\assets\me3.ico" "Open with me3" "$INSTDIR\bin\me3.exe launch -p $\"%1$\""
 
     !insertmacro APP_ASSOCIATE_ADDVERB "me3.mod-profile" "open-with-diagnostics" "Open with me3 (diagnostics)" \
-      "$INSTDIR\bin\me3.exe launch --diagnostics --auto-detect -p $\"%1$\""
+      "$INSTDIR\bin\me3.exe launch --diagnostics -p $\"%1$\""
 
     IfFileExists "$INSTDIR\config\me3.toml" file_found file_not_found
 file_found:

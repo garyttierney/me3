@@ -61,7 +61,7 @@ Choose your platform above and follow the installation steps.
 Run the `.me3` profile you've configured, or launch a default profile from the start menu (Windows) or command-line:
 
 ```shell
-me3 launch --auto-detect -p eldenring-default
+me3 launch -p eldenring-default
 ```
 
 ## Need help?

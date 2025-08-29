@@ -3,5 +3,4 @@
 script_dir=$(dirname "$(realpath "$0")")
 "$script_dir/bin/me3" \
     --windows-binaries-dir "$script_dir/bin/win64" \
-    launch --auto-detect \
-    -p "$script_dir/eldenring-default.me3"
+    launch -p "$script_dir/eldenring-default.me3"

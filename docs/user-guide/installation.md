@@ -44,10 +44,10 @@ me3 will create a set of empty profiles for ELDEN RING by default.
 Check the installation is working correctly by having me3 launch an empty profile either from a command-line or by double-clicking a .me3 file in the Windows shell:
 
 ```shell
-> $ me3 launch --auto-detect -p eldenring-default
+> $ me3 launch -p eldenring-default
 ```
 
-See `me3 launch --help` for information about the `auto-detect` parameters and more.
+See `me3 launch --help` for information about the launch parameters and more.
 
 ## What's next?
 
