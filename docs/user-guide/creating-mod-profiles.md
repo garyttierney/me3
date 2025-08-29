@@ -57,7 +57,7 @@ This profile declares an asset replacement package named `nightmods` (using all 
 Now the profile has been setup it's time to run it. If you installed me3 with the Windows/Linux installer, you can simply double-click the `.me3` file to launch the game with that mod profile. Alternatively, you can use the command-line:
 
 ```shell
-> $ me3 launch --auto-detect -p myprofile.me3
+> $ me3 launch -p myprofile.me3
 ```
 
 ## Step 5: Play the modded game

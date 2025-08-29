@@ -25,7 +25,7 @@ The global configuration file for me3 can be found in `$HOME/.config/me3/me3.tom
 The `me3 launch` command can be used to point to a custom game executable. For example:
 
 ```shell
-> $ me3 launch --auto-detect --skip-steam-init --exe-path="C:/game-archive/eldenring.exe"
+> $ me3 launch --skip-steam-init --exe-path="C:/game-archive/eldenring.exe"
 ```
 
 ## Known Issues
