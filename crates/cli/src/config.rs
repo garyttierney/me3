@@ -30,11 +30,11 @@ pub struct Options {
     #[clap(long, help_heading = "Configuration", value_hint = clap::ValueHint::DirPath)]
     pub(crate) profile_dir: Option<Box<Path>>,
 
-    /// Optional path to a Steam installation, auto-detected if not provided
+    /// Use a different Steam installation than the one detected.
     #[clap(long, help_heading = "Configuration", value_hint = clap::ValueHint::DirPath)]
     pub(crate) steam_dir: Option<Box<Path>>,
 
-    /// Path to PE binaries used by Proton (Linux only)
+    /// Path to me3 Windows binaries for Proton (Linux only).
     #[clap(long, help_heading = "Configuration", value_hint = clap::ValueHint::DirPath)]
     pub(crate) windows_binaries_dir: Option<Box<Path>>,
 

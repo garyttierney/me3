@@ -15,15 +15,19 @@ use crate::{config::Config, db::DbContext, output::OutputBuilder, Game};
 #[derive(Subcommand, Debug)]
 #[command(flatten_help = true)]
 pub enum ProfileCommands {
-    /// Create a new profile with the given name.
+    /// Create a new ModProfile.
     Create(ProfileCreateArgs),
 
-    /// List all profiles stored in the ME3_PROFILE_DIR.
+    /// List profiles in the profile dir.
+    #[clap(disable_help_flag = true)]
     List,
 
-    /// Show information on a profile identified by a name.
+    /// Show information on a profile.
     #[clap(name = "show")]
-    Show { name: String },
+    Show {
+        /// Name of the profile.
+        name: String,
+    },
 }
 
 #[derive(Args, Debug)]
@@ -31,7 +35,7 @@ pub struct ProfileCreateArgs {
     /// Name of the profile.
     name: String,
 
-    /// An optional game to associate with this profile for one-click launches.
+    /// Game to associate with this profile for one-click launches.
     #[clap(
         short('g'),
         long,
@@ -41,12 +45,12 @@ pub struct ProfileCreateArgs {
     #[arg(value_enum)]
     game: Option<Game>,
 
-    /// Path to a list of packages to add to the profile.
+    /// Path to package directory (asset override mod) [repeatable option]
     #[clap(long("package"))]
     packages: Vec<PathBuf>,
 
-    /// Path to a list of native DLLs to add to the profile.
-    #[clap(long("native"))]
+    /// Path to DLL file (native DLL mod) [repeatable option]
+    #[clap(short('n'), long("native"))]
     natives: Vec<PathBuf>,
 
     /// Name of an alternative savefile to use (in the default savefile directory).
@@ -56,23 +60,30 @@ pub struct ProfileCreateArgs {
     #[clap(flatten)]
     options: ProfileOptions,
 
-    /// Optional flag to treat the input as a filename instead of a profile ID to store in
-    /// ME3_PROFILE_DIR.
+    /// Treat NAME as a file path, instead of creating the profile in the profile dir.
     #[clap(short, long, action = ArgAction::SetTrue)]
     file: bool,
 
-    /// Overwrite the profile if it already exists
+    /// Overwrite the profile if it already exists.
     #[clap(long, action = ArgAction::SetTrue)]
     overwrite: bool,
 }
 
 #[derive(Args, Clone, Debug, Default, PartialEq)]
 pub struct ProfileOptions {
-    /// Allow the game to connect to the multiplayer server?
+    /// Re-enable online matchmaking (ban risk)?
+    ///
+    /// Supported games are blocked from matchmaking servers by default to prevent accidental
+    /// online play with invalid (modded) data. Setting this option to true disables this
+    /// protection.
     #[clap(long("online"), default_missing_value = "true", num_args=0..=1)]
     pub start_online: Option<bool>,
 
-    /// Try to neutralize Arxan GuardIT code protection to improve mod stability?
+    /// Neutralize Arxan/GuardIT code protection?
+    ///
+    /// Arxan/GuardIT is a code tampering protection solution applied to most FromSoftware PC
+    /// games. Neutralizing it may help with stability of some mods that patch game executables and
+    /// allows for debugging the games without crashing.
     #[clap(long("disable-arxan"), default_missing_value = "true", num_args=0..=1)]
     pub disable_arxan: Option<bool>,
 }
