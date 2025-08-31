@@ -15,7 +15,7 @@ use me3_mod_protocol::package::AssetOverrideSource;
 use normpath::PathExt;
 use rayon::Scope;
 use thiserror::Error;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use windows::core::{PCSTR, PCWSTR};
 
 mod savefile;
@@ -102,7 +102,7 @@ impl VfsOverrideMapping {
                 loop {
                     match override_rx.try_recv() {
                         Ok((key, vfs_override)) => {
-                            info!("found {key:?}");
+                            debug!("found {key:?}");
                             self.map.insert(key, vfs_override);
                         }
                         Err(TryRecvError::Empty) => continue,
