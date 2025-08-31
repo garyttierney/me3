@@ -99,16 +99,6 @@ impl VfsOverrideMapping {
             let (override_tx, override_rx) = std::sync::mpsc::channel();
 
             scope.spawn(move |_| {
-                loop {
-                    match override_rx.try_recv() {
-                        Ok((key, vfs_override)) => {
-                            debug!("found {key:?}");
-                            self.map.insert(key, vfs_override);
-                        }
-                        Err(TryRecvError::Empty) => continue,
-                        Err(TryRecvError::Disconnected) => break,
-                    }
-                }
                 for (key, vfs_override) in override_rx.into_iter() {
                     self.map.insert(key, vfs_override);
                 }
