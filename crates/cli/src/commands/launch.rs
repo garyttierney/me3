@@ -1,7 +1,7 @@
 use std::{
     error::Error,
     fmt::Debug,
-    fs::{self, File},
+    fs::File,
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
     process::Command,
@@ -9,10 +9,9 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    time::{Duration, SystemTime},
+    time::Duration,
 };
 
-use chrono::Local;
 use clap::{
     builder::{BoolValueParser, MapValueParser, TypedValueParser},
     ArgAction, Args,
@@ -436,41 +435,9 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     std::fs::write(&attach_config_file, toml::to_string_pretty(&attach_config)?)?;
     info!(?attach_config_file, ?attach_config, "wrote attach config");
 
-    let now = Local::now();
-    let log_id = now.format("%Y-%m-%d_%H-%M-%S").to_string();
-
-    let log_folder = config
-        .log_dir()
-        .unwrap_or_else(|| PathBuf::from(".").into_boxed_path())
-        .join(profile.name());
-
-    info!(?log_folder, "creating profile log folder");
-    fs::create_dir_all(&log_folder)?;
-
-    let log_files: Vec<(SystemTime, PathBuf)> = fs::read_dir(&log_folder)
-        .map(|dir| {
-            dir.filter_map(|entry| {
-                let entry = entry.ok()?;
-                let metadata = entry.metadata().ok()?;
-                if metadata.is_file() && entry.path().extension().is_some_and(|ext| ext == "log") {
-                    Some((metadata.modified().ok()?, entry.path()))
-                } else {
-                    None
-                }
-            })
-            .collect()
-        })
-        .unwrap_or_default();
-
-    if log_files.len() >= 5 {
-        if let Some((_, path_to_delete)) = log_files.iter().min_by_key(|(time, _)| *time) {
-            let _ = fs::remove_file(path_to_delete);
-        }
-    }
-
-    let log_file_path = log_folder.join(format!("{log_id}.log"));
     let monitor_log_file = NamedTempFile::with_suffix(".log")?;
 
+    let log_file_path = db.logs.create_log_file(profile.name())?;
     // Ensure log file exists so `normalize()` succeeds on Unix
     let log_file = File::create(&log_file_path)?;
     drop(log_file);
@@ -546,7 +513,7 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     let _ = monitor_thread.join();
 
     if args.diagnostics {
-        open::that_detached(log_file_path)?;
+        open::that_detached(&*log_file_path)?;
     }
 
     Ok(())
