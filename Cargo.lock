@@ -1614,6 +1614,7 @@ dependencies = [
  "ctrlc",
  "directories",
  "is-terminal",
+ "keyvalues-serde",
  "me3-env",
  "me3-launcher-attach-protocol",
  "me3-mod-protocol",

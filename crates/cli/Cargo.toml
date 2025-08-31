@@ -25,6 +25,7 @@ color-eyre = { workspace = true, default-features = false, features = [
 ctrlc.workspace = true
 directories.workspace = true
 is-terminal.workspace = true
+keyvalues-serde = "0.2.2"
 me3-env.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
