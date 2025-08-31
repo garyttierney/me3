@@ -17,7 +17,7 @@ use clap::{
     ArgAction, Args,
 };
 use color_eyre::eyre::{eyre, OptionExt};
-use me3_env::{LauncherVars, TelemetryVars};
+use me3_env::{CommandExt, LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{native::Native, package::Package};
 use normpath::PathExt;
@@ -32,6 +32,22 @@ use crate::{
     db::{profile::Profile, DbContext},
     Game,
 };
+
+fn remap_slr_path(path: impl AsRef<Path>) -> PathBuf {
+    // <https://gitlab.steamos.cloud/steamrt/steam-runtime-tools/-/blob/4d85075e6240c839a3464fd97f22aa2253a9cea1/docs/shared-paths.md#never-shared>
+    const NON_SHARED_PATHS: [&'static str; 4] = ["/usr", "/etc", "/bin", "/lib"];
+
+    let path = path.as_ref();
+
+    if NON_SHARED_PATHS
+        .iter()
+        .any(|prefix| path.starts_with(prefix))
+    {
+        Path::new("/run/host").join(path)
+    } else {
+        path.to_path_buf()
+    }
+}
 
 #[derive(Debug, clap::Args)]
 #[group(multiple = false)]
@@ -387,8 +403,18 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
         .ok_or_eyre("Can't find location of windows-binaries-dir")?;
 
     let app_id = game.app_id();
-    let launcher_path = bins_dir.join("me3-launcher.exe");
-    let dll_path = bins_dir.join("me3_mod_host.dll");
+    let launcher_path = if cfg!(target_os = "linux") {
+        remap_slr_path(bins_dir.join("me3-launcher.exe"))
+    } else {
+        bins_dir.join("me3-launcher.exe")
+    };
+
+    let dll_path = if cfg!(target_os = "linux") {
+        remap_slr_path(bins_dir.join("me3_mod_host.dll"))
+    } else {
+        bins_dir.join("me3-launcher.exe")
+    };
+
     let game_exe_path = game_options
         .exe
         .map(color_eyre::eyre::Ok)
@@ -457,13 +483,13 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
         trace_id: me3_telemetry::trace_id(),
     };
 
-    me3_env::serialize_into_command(game.into_vars(), &mut injector_command);
-    me3_env::serialize_into_command(launcher_vars, &mut injector_command);
-    me3_env::serialize_into_command(telemetry_vars, &mut injector_command);
-
-    injector_command.env("SteamAppId", app_id.to_string());
-    injector_command.env("SteamGameId", app_id.to_string());
-    injector_command.env("SteamOverlayGameId", app_id.to_string());
+    injector_command
+        .with_env_vars(game.into_vars())
+        .with_env_vars(launcher_vars)
+        .with_env_vars(telemetry_vars)
+        .env("SteamAppId", app_id.to_string())
+        .env("SteamGameId", app_id.to_string())
+        .env("SteamOverlayGameId", app_id.to_string());
 
     info!(?injector_command, "running injector command");
 

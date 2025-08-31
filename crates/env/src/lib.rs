@@ -49,12 +49,13 @@ impl EnvVars for LauncherVars {
 }
 
 pub trait CommandExt {
-    fn with_env_vars(&mut self, vars: impl EnvVars + Serialize);
+    fn with_env_vars(&mut self, vars: impl EnvVars + Serialize) -> &mut Self;
 }
 
 impl CommandExt for Command {
-    fn with_env_vars(&mut self, vars: impl EnvVars + Serialize) {
+    fn with_env_vars(&mut self, vars: impl EnvVars + Serialize) -> &mut Self {
         serialize_into_command(vars, self);
+        self
     }
 }
 
