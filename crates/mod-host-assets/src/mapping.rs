@@ -1,6 +1,6 @@
 use std::{
     borrow::Borrow,
-    collections::{HashMap, VecDeque},
+    collections::HashMap,
     env,
     ffi::OsStr,
     fmt,
@@ -8,12 +8,14 @@ use std::{
     io,
     os::windows::ffi::OsStrExt as WinOsStrExt,
     path::{Path, PathBuf, StripPrefixError},
+    sync::mpsc::{Sender, TryRecvError},
 };
 
 use me3_mod_protocol::package::AssetOverrideSource;
 use normpath::PathExt;
+use rayon::Scope;
 use thiserror::Error;
-use tracing::error;
+use tracing::{error, info};
 use windows::core::{PCSTR, PCWSTR};
 
 mod savefile;
@@ -58,59 +60,71 @@ impl VfsOverrideMapping {
     /// Scans a set of directories, mapping discovered assets into itself.
     pub fn scan_directories<I, S>(&mut self, sources: I) -> Result<(), VfsOverrideMappingError>
     where
-        I: Iterator<Item = S>,
-        S: AssetOverrideSource,
+        I: Iterator<Item = S> + Send,
+        S: AssetOverrideSource + Send,
     {
-        sources
-            .map(|p| self.scan_directory(p.asset_path()))
-            .collect::<Result<Vec<_>, _>>()?;
+        pub fn scan_directory<P: AsRef<Path>>(
+            scope: &Scope<'_>,
+            root_key: VfsKey,
+            base_directory: P,
+            sender: Sender<(VfsKey, VfsOverride)>,
+        ) {
+            let base_dir = base_directory.as_ref();
+            info!(base_dir=?base_dir, "scanning for overrides");
 
-        Ok(())
-    }
-
-    /// Traverses a folder structure, mapping discovered assets into itself.
-    pub fn scan_directory<P: AsRef<Path>>(
-        &mut self,
-        base_directory: P,
-    ) -> Result<(), VfsOverrideMappingError> {
-        let base_directory = base_directory
-            .as_ref()
-            .to_path_buf()
-            .normalize()
-            .map_err(VfsOverrideMappingError::ReadDir)?
-            .into_path_buf();
-
-        if !base_directory.is_dir() {
-            return Err(VfsOverrideMappingError::InvalidDirectory(
-                base_directory.to_path_buf(),
-            ));
-        }
-
-        let base_directory_key =
-            VfsKey::for_disk_path(&base_directory).map_err(VfsOverrideMappingError::ReadDir)?;
-
-        let mut paths_to_scan = VecDeque::from(vec![base_directory.clone()]);
-        while let Some(current_path) = paths_to_scan.pop_front() {
-            let Ok(entries) = read_dir(&current_path) else {
-                error!(path = ?current_path, "unable to read asset override files in directory");
-                continue;
+            let Ok(entries) = read_dir(&base_dir) else {
+                error!(path = ?base_dir, "unable to read asset override files in directory");
+                return;
             };
 
             for dir_entry in entries.flatten().map(|e| e.path()) {
                 if dir_entry.is_dir() {
-                    paths_to_scan.push_back(dir_entry);
+                    let sender = sender.clone();
+                    let root_key = root_key.clone();
+
+                    scope.spawn(|scope| scan_directory(scope, root_key, dir_entry, sender));
                     continue;
                 }
 
-                let Ok(vfs_key) = VfsKey::for_asset_path(&dir_entry, &base_directory_key) else {
+                let Ok(vfs_key) = VfsKey::for_asset_path(&dir_entry, &root_key) else {
                     continue;
                 };
 
-                let archive_override = VfsOverride::new(dir_entry);
-
-                self.map.insert(vfs_key, archive_override);
+                let vfs_override = VfsOverride::new(dir_entry);
+                sender.send((vfs_key, vfs_override)).unwrap();
             }
         }
+
+        rayon::scope(|scope| {
+            let (override_tx, override_rx) = std::sync::mpsc::channel();
+
+            scope.spawn(move |_| {
+                loop {
+                    match override_rx.try_recv() {
+                        Ok((key, vfs_override)) => {
+                            info!("found {key:?}");
+                            self.map.insert(key, vfs_override);
+                        }
+                        Err(TryRecvError::Empty) => continue,
+                        Err(TryRecvError::Disconnected) => break,
+                    }
+                }
+                for (key, vfs_override) in override_rx.into_iter() {
+                    self.map.insert(key, vfs_override);
+                }
+            });
+
+            sources.for_each(|source| {
+                let source_path = source.asset_path().to_path_buf();
+                let root_key = VfsKey::for_disk_path(&source_path)
+                    .expect("couldn't create disk path from vfs source");
+                let override_tx = override_tx.clone();
+
+                scope.spawn(move |scope| {
+                    scan_directory(scope, root_key, source_path, override_tx.clone())
+                })
+            });
+        });
 
         Ok(())
     }
@@ -303,6 +317,7 @@ mod test {
 
     #[test]
     fn asset_path_lookup_keys() {
+        tracing_subscriber::fmt::init();
         const FAKE_MOD_BASE: &str = "D:/ModBase";
         let base_path = VfsKey::for_disk_path(Path::new(FAKE_MOD_BASE)).unwrap();
 
@@ -343,10 +358,13 @@ mod test {
 
     #[test]
     fn scan_directory_and_overrides() {
+        tracing_subscriber::fmt::init();
         let mut asset_mapping = VfsOverrideMapping::new().unwrap();
 
         let test_mod_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data/test-mod");
-        asset_mapping.scan_directory(test_mod_dir).unwrap();
+        asset_mapping
+            .scan_directories([test_mod_dir].into_iter())
+            .unwrap();
 
         assert!(
             asset_mapping

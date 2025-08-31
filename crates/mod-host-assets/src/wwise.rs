@@ -92,7 +92,9 @@ mod test {
         let mut asset_mapping = VfsOverrideMapping::new().unwrap();
 
         let test_mod_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data/test-mod");
-        asset_mapping.scan_directory(test_mod_dir).unwrap();
+        asset_mapping
+            .scan_directories([test_mod_dir].into_iter())
+            .unwrap();
 
         assert!(
             find_override(&asset_mapping, "sd:/init.bnk").is_some(),

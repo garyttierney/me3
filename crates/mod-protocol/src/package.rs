@@ -124,3 +124,9 @@ impl AssetOverrideSource for &Package {
         self.path.0.as_path()
     }
 }
+
+impl<P: AsRef<Path>> AssetOverrideSource for P {
+    fn asset_path(&self) -> &Path {
+        self.as_ref()
+    }
+}
