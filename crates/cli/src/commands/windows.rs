@@ -78,7 +78,7 @@ pub fn update() -> color_eyre::Result<()> {
 
         info!(installer_url, "Downloading installer");
 
-        let mut response = ureq::get(&installer_url)
+        let response = ureq::get(&installer_url)
             .header("User-Agent", "me3-cli")
             .call()?;
 

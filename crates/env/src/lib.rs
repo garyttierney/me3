@@ -48,6 +48,17 @@ impl EnvVars for LauncherVars {
     const PREFIX: &'static str = "ME3_LAUNCHER_";
 }
 
+pub trait CommandExt {
+    fn with_env_vars(&mut self, vars: impl EnvVars + Serialize) -> &mut Self;
+}
+
+impl CommandExt for Command {
+    fn with_env_vars(&mut self, vars: impl EnvVars + Serialize) -> &mut Self {
+        serialize_into_command(vars, self);
+        self
+    }
+}
+
 pub fn deserialize_from_env<'de, T: Deserialize<'de> + EnvVars>() -> Result<T, serde_json::Error> {
     deserialize(
         std::env::vars()

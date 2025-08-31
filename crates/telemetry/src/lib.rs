@@ -2,7 +2,6 @@ use std::fs::OpenOptions;
 
 use me3_env::TelemetryVars;
 use tracing::Level;
-use tracing_appender::non_blocking::WorkerGuard;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{
     fmt::{self, writer::BoxMakeWriter, MakeWriter},
