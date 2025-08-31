@@ -221,12 +221,21 @@ impl Launcher for CompatToolLauncher {
 
         // <https://gitlab.steamos.cloud/steamrt/steam-runtime-tools/-/blob/main/docs/steam-compat-tool-interface.md>
         command.env("STEAM_COMPAT_CLIENT_INSTALL_PATH", self.steam.path());
-        command.env(
-            "STEAM_COMPAT_DATA_PATH",
-            self.library
-                .path()
-                .join(format!("steamapps/compatdata/{}", self.app_id)),
-        );
+
+        let prefix_path = self
+            .steam
+            .library_paths()?
+            .into_iter()
+            .map(|path| path.join(format!("steamapps/compatdata/{}", self.app_id)))
+            .filter(|path| path.exists())
+            .next()
+            .unwrap_or_else(|| {
+                self.library
+                    .path()
+                    .join(format!("steamapps/compatdata/{}", self.app_id))
+            });
+
+        command.env("STEAM_COMPAT_DATA_PATH", prefix_path);
 
         // TODO(gtierney): unsure if this works for every scenario, but it shouldn't break anything
         // where it doesn't
