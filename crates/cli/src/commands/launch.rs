@@ -230,10 +230,18 @@ impl Launcher for CompatToolLauncher {
 
         // TODO(gtierney): unsure if this works for every scenario, but it shouldn't break anything
         // where it doesn't
-        command.env(
-            "LD_PRELOAD",
-            self.steam.path().join("ubuntu12_64/gameoverlayrenderer.so"),
-        );
+        let mut ld_preload = self
+            .steam
+            .path()
+            .join("ubuntu12_64/gameoverlayrenderer.so")
+            .into_os_string();
+
+        if let Some(existing_ld_preload) = std::env::var_os("LD_PRELOAD") {
+            ld_preload.push(" ");
+            ld_preload.push(&existing_ld_preload);
+        }
+
+        command.env("LD_PRELOAD", ld_preload);
 
         Ok(command)
     }
