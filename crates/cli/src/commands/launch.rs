@@ -420,7 +420,7 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     let dll_path = if cfg!(target_os = "linux") {
         remap_slr_path(bins_dir.join("me3_mod_host.dll"))
     } else {
-        bins_dir.join("me3-launcher.exe")
+        bins_dir.join("me3_mod_host.dll")
     };
 
     let game_exe_path = game_options
