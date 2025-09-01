@@ -1723,6 +1723,7 @@ dependencies = [
  "rayon",
  "rdvec",
  "regex",
+ "smallvec",
  "thiserror 2.0.16",
  "tracing",
  "undname",
