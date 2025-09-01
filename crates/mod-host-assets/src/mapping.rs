@@ -1,17 +1,19 @@
 use std::{
     borrow::Borrow,
-    collections::{HashMap, VecDeque},
+    collections::HashMap,
     env,
     ffi::OsStr,
     fmt,
     fs::read_dir,
-    io,
-    os::windows::ffi::OsStrExt as WinOsStrExt,
+    io, iter,
+    os::windows::{ffi::OsStrExt as WinOsStrExt, fs::FileTypeExt},
     path::{Path, PathBuf, StripPrefixError},
 };
 
-use me3_mod_protocol::package::AssetOverrideSource;
+use me3_mod_protocol::package::{AssetOverrideSource, Package};
 use normpath::PathExt;
+use rayon::iter::{ParallelBridge, ParallelIterator};
+use smallvec::{smallvec_inline, SmallVec};
 use thiserror::Error;
 use tracing::error;
 use windows::core::{PCSTR, PCWSTR};
@@ -56,63 +58,64 @@ impl VfsOverrideMapping {
     }
 
     /// Scans a set of directories, mapping discovered assets into itself.
-    pub fn scan_directories<I, S>(&mut self, sources: I) -> Result<(), VfsOverrideMappingError>
+    pub fn scan_directories<I>(&mut self, sources: I) -> Result<(), VfsOverrideMappingError>
     where
-        I: Iterator<Item = S>,
-        S: AssetOverrideSource,
+        I: Iterator<Item: AssetOverrideSource>,
     {
-        sources
-            .map(|p| self.scan_directory(p.asset_path()))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(())
-    }
-
-    /// Traverses a folder structure, mapping discovered assets into itself.
-    pub fn scan_directory<P: AsRef<Path>>(
-        &mut self,
-        base_directory: P,
-    ) -> Result<(), VfsOverrideMappingError> {
-        let base_directory = base_directory
-            .as_ref()
-            .to_path_buf()
-            .normalize()
-            .map_err(VfsOverrideMappingError::ReadDir)?
-            .into_path_buf();
-
-        if !base_directory.is_dir() {
-            return Err(VfsOverrideMappingError::InvalidDirectory(
-                base_directory.to_path_buf(),
-            ));
-        }
-
-        let base_directory_key =
-            VfsKey::for_disk_path(&base_directory).map_err(VfsOverrideMappingError::ReadDir)?;
-
-        let mut paths_to_scan = VecDeque::from(vec![base_directory.clone()]);
-        while let Some(current_path) = paths_to_scan.pop_front() {
-            let Ok(entries) = read_dir(&current_path) else {
-                error!(path = ?current_path, "unable to read asset override files in directory");
-                continue;
+        fn scan_directories_inner(
+            base_dir: &Path,
+            root_key: &VfsKey,
+        ) -> SmallVec<[Result<(VfsKey, VfsOverride), io::Error>; 1]> {
+            let entries = match read_dir(base_dir) {
+                Ok(entries) => entries,
+                Err(e) => return smallvec_inline![Err(e)],
             };
 
-            for dir_entry in entries.flatten().map(|e| e.path()) {
-                if dir_entry.is_dir() {
-                    paths_to_scan.push_back(dir_entry);
-                    continue;
-                }
+            let result = entries
+                .flatten()
+                .par_bridge()
+                .flat_map_iter(|dir_entry| match dir_entry.file_type() {
+                    Ok(file_type) if file_type.is_dir() || file_type.is_symlink_dir() => {
+                        scan_directories_inner(&dir_entry.path(), root_key)
+                    }
+                    Ok(_) => {
+                        let path = dir_entry.path();
 
-                let Ok(vfs_key) = VfsKey::for_asset_path(&dir_entry, &base_directory_key) else {
-                    continue;
-                };
+                        let result = VfsKey::for_asset_path(&path, root_key)
+                            .map(|vfs_key| (vfs_key, VfsOverride::new(&path)));
 
-                let archive_override = VfsOverride::new(dir_entry);
+                        smallvec_inline![result]
+                    }
+                    Err(e) => smallvec_inline![Err(e)],
+                })
+                .collect();
 
-                self.map.insert(vfs_key, archive_override);
+            SmallVec::from_vec(result)
+        }
+
+        for source in sources {
+            let source_path = source.asset_path();
+            let root_key =
+                VfsKey::for_disk_path(source_path).map_err(VfsOverrideMappingError::ReadDir)?;
+
+            let scanned_directories = scan_directories_inner(source_path, &root_key);
+            self.map.reserve(scanned_directories.len());
+
+            for result in scanned_directories {
+                let (vfs_key, vfs_override) = result.map_err(VfsOverrideMappingError::ReadDir)?;
+                self.map.insert(vfs_key, vfs_override);
             }
         }
 
         Ok(())
+    }
+
+    pub fn scan_directory<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+    ) -> Result<(), VfsOverrideMappingError> {
+        let package = Package::new(path.as_ref().to_owned());
+        self.scan_directories(iter::once(&package))
     }
 
     pub fn add_savefile_override<P, F>(&mut self, savefile_dir: P, f: F) -> Result<(), io::Error>

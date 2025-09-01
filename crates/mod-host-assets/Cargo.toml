@@ -14,6 +14,7 @@ undname = "2.1"
 pelite = "0.10"
 rayon.workspace = true
 regex = "1"
+smallvec = { version = "1.15.1", features = ["const_generics", "const_new", "union"] }
 rdvec.workspace = true
 normpath.workspace = true
 thiserror.workspace = true
