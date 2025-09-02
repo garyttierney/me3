@@ -123,6 +123,9 @@ plugins:
           - optimize
   - meta
   - search
+  - mermaid2:
+      arguments:
+        theme: 'dark'
   
   - meta-descriptions
   - git-committers:
