@@ -69,7 +69,7 @@ strum = "0.27"
 strum_macros = "0.27"
 tempfile = "3"
 thiserror = "2"
-toml = "0.8"
+toml = { version = "0.9.5", features = ["preserve_order"] }
 tracing = { version = "0.1", features = ["release_max_level_info"] }
 tracing-appender = "0.2"
 tracing-error = "0.2"
