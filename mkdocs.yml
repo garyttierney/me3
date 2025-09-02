@@ -249,6 +249,7 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.mark
   - pymdownx.smartsymbols
+  - pymdownx.superfences
   - pymdownx.snippets:
       base_path: [!relative $config_dir]
       check_paths: true
