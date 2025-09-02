@@ -164,7 +164,7 @@ impl<T> PartialEq for DependencyRun<T> {
 
 impl<T> PartialOrd for DependencyRun<T> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        other.max_index.partial_cmp(&self.max_index)
+        Some(self.cmp(other))
     }
 }
 
