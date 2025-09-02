@@ -123,7 +123,7 @@ jobs:
           cloudflare_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
           signing_pin: ${{ secrets.ME3_SIGNING_PIN }}
 
-      - uses: actions/attest-build-provenance@v2
+      - uses: actions/attest-build-provenance@v3
         id: attestation
         with:
           subject-path: |
