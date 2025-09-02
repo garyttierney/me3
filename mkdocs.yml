@@ -117,7 +117,7 @@ nav:
   - Download: https://github.com/garyttierney/me3/releases/latest
   - Changelog: changelog.md
   - Blog:
-      - blog/index.md
+      - Reversing Arxan (GuardIT): blog/posts/arxan-reversing-1.md
       - Release 0.2.0: blog/posts/me3-release.md
 plugins:
   - group:
@@ -156,6 +156,7 @@ plugins:
             - 下载: https://github.com/garyttierney/me3/releases/latest
             - 更新日志: changelog.md
             - 博客:
+              - Reversing Arxan (GuardIT): blog/posts/arxan-reversing-1.md
               - me3 已发布: blog/posts/me3-release.md
           extra:
             analytics:
@@ -198,6 +199,7 @@ plugins:
             - Pobierz: https://github.com/garyttierney/me3/releases/latest
             - Lista zmian: changelog.md
             - Blog: 
+              - Reversing Arxan (GuardIT): blog/posts/arxan-reversing-1.md
               - me3 wydany: blog/posts/me3-release.md
           extra:
             analytics:

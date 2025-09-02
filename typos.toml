@@ -3,7 +3,12 @@ extend-exclude = ["mkdocs.yml", "CHANGELOG.md", "docs/**/*.pl.md", "docs/**/*.zh
 
 [default]
 extend-ignore-words-re = [
-    "seh",    # structured exception handling
+    "(?i)seh",    # structured exception handling
     "intoto",
 ]
+extend-ignore-identifiers-re = [
+    # hexadecimal numbers
+    "(0x|0)[0-9a-fA-F]+h?|[0-9a-fA-F]+h"
+]
+
 extend-ignore-re = ["(?Rm)^.*(#|//)\\s*spellchecker:disable-line$"]
