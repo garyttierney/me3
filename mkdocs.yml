@@ -115,12 +115,12 @@ nav:
   - Changelog: changelog.md
   - Blog:
       - blog/index.md
+      - Release 0.2.0: blog/posts/me3-release.md
 plugins:
   - group:
       enabled: !ENV MKDOCS_MATERIAL_INSIDERS_ENABLED
       plugins:
           - optimize
-  - blog
   - meta
   - search
   
