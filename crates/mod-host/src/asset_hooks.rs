@@ -29,7 +29,7 @@ use tracing::{debug, error, info, info_span, instrument, warn};
 use windows::core::{PCSTR, PCWSTR};
 use xxhash_rust::xxh3;
 
-use crate::{executable::Executable, host::ModHost};
+use crate::{executable::Executable, hook, host::ModHost};
 
 static VFS_MOUNTS: Mutex<VfsMounts> = Mutex::new(VfsMounts::new());
 
@@ -130,9 +130,9 @@ fn hook_ebl_utility(
 
     debug!(?make_ebl_object);
 
-    ModHost::get_attached()
-        .hook(make_ebl_object)
-        .with_closure(move |p1, path, p3, trampoline| {
+    hook!(
+        pointer = make_ebl_object,
+        move |p1, path, p3, trampoline| {
             let mut device_manager = DlDeviceManager::lock(device_manager);
 
             let expanded = unsafe { device_manager.expand_path(path.as_wide()) };
@@ -147,8 +147,8 @@ fn hook_ebl_utility(
             let _guard = device_manager.push_vfs_mounts(&VFS_MOUNTS.lock().unwrap());
 
             unsafe { (trampoline)(p1, path, p3) }
-        })
-        .install()?;
+        }
+    )?;
 
     info!("applied asset override hook");
 
@@ -189,10 +189,9 @@ fn hook_device_manager(
             .is_ok()
     };
 
-    ModHost::get_attached()
-        .hook(open_disk_file)
-        .with_span(info_span!("hook"))
-        .with_closure(move |p1, path, p3, p4, p5, p6, trampoline| {
+    hook!(
+        pointer = open_disk_file,
+        move |p1, path, p3, p4, p5, p6, trampoline| {
             let file_operator = if let Some(path) = override_path(unsafe { path.as_ref() }) {
                 unsafe {
                     trampoline(
@@ -222,8 +221,8 @@ fn hook_device_manager(
                     .unwrap()
                     .try_open_file(path, p3, p4, p5, p6)
             }
-        })
-        .install()?;
+        }
+    )?;
 
     info!("applied asset override hook");
 

@@ -1,5 +1,13 @@
-use std::{collections::HashMap, mem, slice, sync::Arc};
+use std::{
+    collections::HashMap,
+    mem, slice,
+    sync::{Arc, Mutex},
+    vec::Vec as StdVec,
+};
 
+use bevy_app::PostStartup;
+use bevy_derive::{Deref, DerefMut};
+use bevy_ecs::{resource::Resource, system::Res};
 use eyre::OptionExt;
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_host_types::string::DlUtf16String;
@@ -7,69 +15,20 @@ use me3_mod_protocol::Game;
 use pelite::pe::Pe;
 use rdvec::Vec;
 use regex::bytes::Regex;
-use tracing::{error, instrument, Span};
 use windows::core::PCWSTR;
 
-use crate::{deferred::defer_until_init, executable::Executable, host::ModHost};
+use crate::{app::ExternalRes, executable::Executable, hook, plugins::Plugin};
+
+pub struct GamePropertiesPlugin;
+
+#[derive(Default, Deref, DerefMut, Resource)]
+pub struct GameProperties(Arc<Mutex<HashMap<StdVec<u16>, bool>>>);
 
 type GetBoolProperty = unsafe extern "C" fn(usize, *const (), bool) -> bool;
 
-pub fn start_offline() {
-    ModHost::get_attached().override_game_property("Menu.IsEnableOnlineMode", false);
-}
-
-#[instrument(skip_all)]
-pub fn attach_override(
-    attach_config: Arc<AttachConfig>,
-    exe: Executable,
-) -> Result<(), eyre::Error> {
-    let game = attach_config.game;
-
-    let do_override = move || {
-        let get_bool_property = bool_property_getter(attach_config, exe)?;
-
-        ModHost::get_attached()
-            .hook(get_bool_property)
-            .with_closure(move |p1, name, default, trampoline| unsafe {
-                if name.is_null() {
-                    return false;
-                }
-
-                let property = if game >= Game::ArmoredCore6 {
-                    let name = PCWSTR::from_raw(name as *const u16);
-                    slice::from_raw_parts(name.as_ptr(), name.len())
-                } else {
-                    let name = &*(name as *const DlUtf16String);
-                    name.get().unwrap().as_slice()
-                };
-
-                ModHost::get_attached()
-                    .property_overrides
-                    .lock()
-                    .unwrap()
-                    .get(property)
-                    .copied()
-                    .unwrap_or_else(|| trampoline(p1, name, default))
-            })
-            .install()?;
-
-        eyre::Ok(())
-    };
-
-    // Some games (Dark Souls 3) might employ Arxan encryption
-    // that is removed after running the Arxan entrypoint.
-    defer_until_init(Span::current(), move || {
-        if let Err(e) = do_override() {
-            error!("error" = %e, "failed to hook property getter");
-        }
-    })?;
-
-    Ok(())
-}
-
 fn bool_property_getter(
-    attach_config: Arc<AttachConfig>,
-    exe: Executable,
+    attach_config: &AttachConfig,
+    exe: &Executable,
 ) -> Result<GetBoolProperty, eyre::Error> {
     // Matches callsites for the boolean DLSystemProperty getter.
     //
@@ -120,4 +79,49 @@ fn bool_property_getter(
         .max_by_key(|(_, count)| *count)
         .map(|(ptr, _)| unsafe { mem::transmute::<_, GetBoolProperty>(ptr) })
         .ok_or_eyre("pattern returned no matches")
+}
+
+impl GamePropertiesPlugin {
+    pub fn hook_property_getter(
+        attach_config: ExternalRes<AttachConfig>,
+        exe: ExternalRes<Executable>,
+        properties: Res<GameProperties>,
+    ) -> bevy_ecs::error::Result {
+        let get_bool_property = bool_property_getter(&attach_config, &exe)?;
+        let game = attach_config.game;
+        let props = properties.clone();
+
+        hook!(
+            pointer = get_bool_property,
+            move |p1, name, default, trampoline| unsafe {
+                if name.is_null() {
+                    return false;
+                }
+
+                let property = if game >= Game::ArmoredCore6 {
+                    let name = PCWSTR::from_raw(name as *const u16);
+                    slice::from_raw_parts(name.as_ptr(), name.len())
+                } else {
+                    let name = &*(name as *const DlUtf16String);
+                    name.get().unwrap().as_slice()
+                };
+
+                props
+                    .lock()
+                    .unwrap()
+                    .get(property)
+                    .copied()
+                    .unwrap_or_else(|| trampoline(p1, name, default))
+            }
+        )?;
+
+        Ok(())
+    }
+}
+
+impl Plugin for GamePropertiesPlugin {
+    fn build(&self, app: &mut crate::app::Me3App) {
+        app.init_resource::<GameProperties>();
+        app.register_system(PostStartup, Self::hook_property_getter);
+    }
 }

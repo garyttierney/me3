@@ -3,9 +3,9 @@ use std::{
     fs, mem,
     path::{Path, PathBuf},
     ptr::NonNull,
-    sync::Arc,
 };
 
+use bevy_ecs::system::{NonSend, ResMut};
 use eyre::{eyre, OptionExt};
 use from_singleton::FromSingleton;
 use me3_binary_analysis::{fd4_step::Fd4StepTables, pe};
@@ -15,17 +15,38 @@ use me3_mod_host_types::{alloc::DlStdAllocator, vector::DlVector};
 use me3_mod_protocol::Game;
 use pelite::pe::{Pe, Va};
 use regex::bytes::Regex;
-use tracing::{error, info, instrument, warn, Span};
+use tracing::{error, instrument, warn, Span};
 
-use crate::{executable::Executable, host::ModHost};
+use crate::{
+    app::{ExternalRes, ExternalResource, Me3App, Startup},
+    executable::Executable,
+    host::ModHost,
+    plugins::Plugin,
+};
+
+pub struct SaveFilePlugin;
+
+impl Plugin for SaveFilePlugin {
+    fn build(&self, app: &mut Me3App) {
+        let config = app.resource::<ExternalResource<AttachConfig>>();
+
+        if config.game >= Game::EldenRing {
+            app.register_system(Startup, oversized_regulation_fix_after_er);
+        } else {
+            app.register_system(Startup, oversized_regulation_fix_for_sdt);
+        }
+
+        app.register_system(Startup, override_savefile);
+    }
+}
 
 const SL_FATAL_ERROR: &str = "could not load alternative savefile location";
 
 #[instrument(skip_all)]
-pub fn attach_override(
-    attach_config: &AttachConfig,
-    mapping: &mut VfsOverrideMapping,
-) -> Result<(), eyre::Error> {
+pub fn override_savefile(
+    attach_config: ExternalRes<AttachConfig>,
+    mut mapping: ResMut<ExternalResource<VfsOverrideMapping>>,
+) -> bevy_ecs::error::Result {
     if let Some(override_name) = &attach_config.savefile {
         let savefile_dir = attach_config
             .game
@@ -70,32 +91,15 @@ fn override_savefile_path(
     Ok(override_path)
 }
 
-#[instrument(skip_all)]
-pub fn oversized_regulation_fix(
-    attach_config: Arc<AttachConfig>,
-    exe: Executable,
-    step_tables: &Fd4StepTables,
-    _mapping: Arc<VfsOverrideMapping>,
-) -> Result<(), eyre::Error> {
-    if attach_config.game >= Game::EldenRing {
-        oversized_regulation_fix_after_er(exe, step_tables)?;
-    } else {
-        oversized_regulation_fix_for_sdt(exe)?;
-    }
-
-    info!("applied hooks");
-
-    Ok(())
-}
-
 fn oversized_regulation_fix_after_er(
-    exe: Executable,
-    step_tables: &Fd4StepTables,
-) -> Result<(), eyre::Error> {
+    exe: ExternalRes<Executable>,
+    step_tables: NonSend<Fd4StepTables>,
+) -> Result<(), bevy_ecs::error::BevyError> {
     let apply_fn = step_tables
         .by_name("CSRegulationStep::STEP_Idle")
         .ok_or_eyre("CSRegulationStep::STEP_Idle not found")?;
 
+    let exe = **exe;
     // Intercept and free the raw regulation to prevent writing it to the savefile.
     ModHost::get_attached()
         .hook(apply_fn)
@@ -132,9 +136,11 @@ fn oversized_regulation_fix_after_er(
     Ok(())
 }
 
-fn oversized_regulation_fix_for_sdt(exe: Executable) -> Result<(), eyre::Error> {
+fn oversized_regulation_fix_for_sdt(
+    exe: ExternalRes<Executable>,
+) -> Result<(), bevy_ecs::error::BevyError> {
     let text_section =
-        pe::section(exe, ".text").map_err(|e| eyre!("PE section \"{e}\" is missing"))?;
+        pe::section(**exe, ".text").map_err(|e| eyre!("PE section \"{e}\" is missing"))?;
     let text = exe.get_section_bytes(text_section)?;
 
     // matches:
