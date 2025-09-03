@@ -1,38 +1,34 @@
 use std::{
     collections::HashMap,
-    ffi::CString,
     fmt::Debug,
     marker::Tuple,
-    panic,
-    path::Path,
     sync::{Arc, Mutex, OnceLock},
-    time::Duration,
 };
 
+use bevy_ecs::{system::Res, world::Mut};
 use closure_ffi::traits::FnPtr;
-use libloading::{Library, Symbol};
 use me3_launcher_attach_protocol::AttachConfig;
-use me3_mod_protocol::{native::NativeInitializerCondition, Game, ModProfile};
+use me3_mod_protocol::Game;
 use retour::Function;
-use tracing::{error, info, warn, Span};
+use tracing::{info, Span};
 
 use self::hook::HookInstaller;
 use crate::{
+    app::{ExternalResource, Me3App},
     detour::UntypedDetour,
-    native::{ModEngineConnectorShim, ModEngineExtension, ModEngineInitializer},
+    plugins::properties::GameProperties,
 };
 
 mod append;
-pub mod game_properties;
+
+#[macro_use]
 pub mod hook;
 
 static ATTACHED_INSTANCE: OnceLock<ModHost> = OnceLock::new();
 
-#[derive(Default)]
 pub struct ModHost {
+    pub(crate) app: Mutex<Me3App>,
     hooks: Mutex<Vec<Arc<UntypedDetour>>>,
-    native_modules: Mutex<Vec<Library>>,
-    profiles: Vec<ModProfile>,
     property_overrides: Mutex<HashMap<Vec<u16>, bool>>,
 }
 
@@ -40,7 +36,6 @@ impl Debug for ModHost {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ModHost")
             .field("hooks", &self.hooks)
-            .field("profiles", &self.profiles)
             .field("property_overrides", &self.property_overrides)
             .finish()
     }
@@ -48,58 +43,19 @@ impl Debug for ModHost {
 
 #[allow(unused)]
 impl ModHost {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(app: Me3App) -> Self {
+        Self {
+            app: Mutex::new(app),
+            hooks: Default::default(),
+            property_overrides: Default::default(),
+        }
     }
 
-    pub fn load_native(
-        &self,
-        path: &Path,
-        condition: &Option<NativeInitializerCondition>,
-    ) -> eyre::Result<()> {
-        let result = panic::catch_unwind(|| {
-            let module = unsafe { libloading::Library::new(path)? };
+    pub fn with_app<R>(f: impl FnOnce(&ModHost, &mut Me3App) -> R) -> R {
+        let attached = Self::get_attached();
+        let mut app = attached.app.lock().expect("failed to lock app");
 
-            match &condition {
-                Some(NativeInitializerCondition::Delay { ms }) => {
-                    std::thread::sleep(Duration::from_millis(*ms as u64))
-                }
-                Some(NativeInitializerCondition::Function(symbol)) => unsafe {
-                    let sym_name = CString::new(symbol.as_bytes())?;
-                    let initializer: Symbol<unsafe extern "C" fn() -> bool> =
-                        module.get(sym_name.as_bytes_with_nul())?;
-
-                    if initializer() {
-                        info!(?path, symbol, "native initialized successfully");
-                    } else {
-                        error!(?path, symbol, "native failed to initialize");
-                    }
-                },
-                None => {
-                    let me2_initializer: Option<Symbol<ModEngineInitializer>> =
-                        unsafe { module.get(b"modengine_ext_init\0").ok() };
-
-                    let mut extension_ptr: *mut ModEngineExtension = std::ptr::null_mut();
-                    if let Some(initializer) = me2_initializer {
-                        unsafe { initializer(&ModEngineConnectorShim, &mut extension_ptr) };
-
-                        info!(?path, "loaded native with me2 compatibility shim");
-                    }
-                }
-            }
-
-            Ok(module)
-        });
-
-        match result {
-            Err(exception) => {
-                warn!("an error occurred while loading {path:?}, it may not work as expected");
-                Ok(())
-            }
-            Ok(result) => result.map(|module| {
-                self.native_modules.lock().unwrap().push(module);
-            }),
-        }
+        f(attached, &mut app)
     }
 
     pub fn get_attached() -> &'static ModHost {
@@ -119,14 +75,18 @@ impl ModHost {
     }
 
     pub fn override_game_property<S: AsRef<str>>(&self, property: S, state: bool) {
-        self.property_overrides
-            .lock()
-            .unwrap()
-            .insert(property.as_ref().encode_utf16().collect(), state);
+        let mut app = self.app.lock().expect("failed to lock app");
+
+        app.resource_scope(|world, props: Mut<GameProperties>| {
+            props
+                .lock()
+                .unwrap()
+                .insert(property.as_ref().encode_utf16().collect(), state)
+        });
     }
 }
 
-pub fn dearxan(attach_config: &AttachConfig) {
+pub fn dearxan(attach_config: Res<ExternalResource<AttachConfig>>) {
     if !attach_config.disable_arxan && attach_config.game != Game::DarkSouls3 {
         return;
     }

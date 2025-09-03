@@ -12,6 +12,56 @@ use crate::{
     host::append::{Append, WithAppended},
 };
 
+#[macro_export]
+macro_rules! hook {
+    {
+        module = $module:expr,
+        symbol = $symbol:literal,
+        signature: $signature:ty,
+        $closure:expr
+    } => {{
+            let fn_ptr = unsafe {
+                let s = ::std::ffi::CString::new($symbol)?;
+                ::windows::Win32::System::LibraryLoader::GetProcAddress(
+                    $module,
+                    ::windows::core::PCSTR::from_raw(s.as_ptr() as _)
+                )
+                .ok_or_eyre(concat!($symbol, " not found"))?
+            };
+
+            let fn_ptr = unsafe { ::std::mem::transmute::<_, $signature>(fn_ptr) };
+
+            $crate::host::ModHost::get_attached()
+                .hook(fn_ptr)
+                .with_span(::tracing::info_span!($symbol))
+                .with_closure($closure)
+                .install()
+    }};
+
+    (
+        pointer = $ptr:expr,
+        signature = $signature:ty,
+        $closure:expr
+    ) => {{
+        let fn_ptr = $ptr as $signature;
+
+        $crate::host::ModHost::get_attached()
+            .hook(fn_ptr)
+            .with_closure($closure)
+            .install()
+    }};
+
+    (
+        pointer = $ptr:expr,
+        $closure:expr
+    ) => {{
+        $crate::host::ModHost::get_attached()
+            .hook($ptr)
+            .with_closure($closure)
+            .install()
+    }};
+}
+
 pub enum HookSource<F: Function> {
     Function(F),
     Closure((F, &'static OnceCell<F>)),

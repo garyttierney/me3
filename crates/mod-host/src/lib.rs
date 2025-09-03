@@ -9,12 +9,10 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
-use me3_binary_analysis::{fd4_step::Fd4StepTables, rtti};
 use me3_env::TelemetryVars;
-use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, AttachResult, Attachment};
-use me3_mod_host_assets::mapping::VfsOverrideMapping;
+use me3_launcher_attach_protocol::{AttachRequest, AttachResult, Attachment};
 use me3_telemetry::TelemetryConfig;
-use tracing::{error, info, warn, Span};
+use tracing::{info, warn, Span};
 use windows::Win32::{
     Globalization::CP_UTF8,
     System::{
@@ -24,11 +22,17 @@ use windows::Win32::{
 };
 
 use crate::{
+    app::{ExternalResource, Me3App, PostStartup, PreStartup, Startup},
     deferred::defer_until_init,
     executable::Executable,
-    host::{game_properties, ModHost},
+    host::ModHost,
+    plugins::{
+        natives::NativesPlugin, properties::GamePropertiesPlugin, save_file::SaveFilePlugin,
+        skip_logos::SkipLogosPlugin, vfs::VfsPlugin,
+    },
 };
 
+pub mod app;
 mod asset_hooks;
 mod debugger;
 mod deferred;
@@ -37,8 +41,7 @@ mod executable;
 mod filesystem;
 mod host;
 mod native;
-mod savefile;
-mod skip_logos;
+pub mod plugins;
 
 static INSTANCE: OnceLock<usize> = OnceLock::new();
 static mut TELEMETRY_INSTANCE: OnceLock<me3_telemetry::Telemetry> = OnceLock::new();
@@ -87,100 +90,54 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     #[allow(static_mut_refs)]
     let _ = unsafe { TELEMETRY_INSTANCE.set(telemetry_guard) };
 
-    let result = me3_telemetry::with_root_span("host", "attach", move || {
-        info!("Beginning host attach");
-
-        if debugger::is_debugger_present()
-            && let Err(e) = debugger::prevent_hiding_threads()
-        {
-            warn!("error" = &*e, "may fail to debug some threads");
-        }
-
-        // SAFETY: process is still suspended.
-        let exe = unsafe { Executable::new() };
-
-        ModHost::new().attach();
-
-        host::dearxan(&attach_config);
-
-        skip_logos::attach_override(attach_config.clone(), exe)?;
-
-        game_properties::attach_override(attach_config.clone(), exe)?;
-
-        if !attach_config.start_online {
-            game_properties::start_offline();
-        }
-
-        let mut override_mapping = VfsOverrideMapping::new()?;
-
-        override_mapping.scan_directories(attach_config.packages.iter())?;
-        savefile::attach_override(&attach_config, &mut override_mapping)?;
-
-        let override_mapping = Arc::new(override_mapping);
-
-        filesystem::attach_override(override_mapping.clone())?;
-
-        info!("Host successfully attached");
-
-        defer_until_init(Span::current(), {
-            let override_mapping = override_mapping.clone();
-
-            move || {
-                if let Err(e) = deferred_attach(attach_config, exe, override_mapping) {
-                    error!("error" = &*e, "deferred attach failed!")
-                }
-            }
-        })?;
-
-        info!("Deferred me3 attach");
-
-        Ok(Attachment)
-    })?;
-
-    Ok(result)
-}
-
-fn deferred_attach(
-    attach_config: Arc<AttachConfig>,
-    exe: Executable,
-    override_mapping: Arc<VfsOverrideMapping>,
-) -> Result<(), eyre::Error> {
-    let class_map = Arc::new(rtti::classes(exe)?);
-    let step_tables = Fd4StepTables::from_initialized_data(exe)?;
-
-    savefile::oversized_regulation_fix(
-        attach_config.clone(),
-        exe,
-        &step_tables,
-        override_mapping.clone(),
-    )?;
-
-    for native in &attach_config.natives {
-        if let Err(e) = ModHost::get_attached().load_native(&native.path, &native.initializer) {
-            warn!(
-                error = &*e,
-                path = %native.path.display(),
-                "failed to load native mod",
-            );
-
-            if !native.optional {
-                return Err(e);
-            }
-        }
+    if debugger::is_debugger_present()
+        && let Err(e) = debugger::prevent_hiding_threads()
+    {
+        warn!("error" = &*e, "may fail to debug some threads");
     }
 
-    asset_hooks::attach_override(
-        attach_config,
-        exe,
-        class_map,
-        &step_tables,
-        override_mapping,
-    )
-    .map_err(|e| {
-        e.wrap_err("failed to attach asset override hooks; no files will be overridden")
+    // SAFETY: process is still suspended.
+    let exe = unsafe { Executable::new() };
+    let mut app = Me3App::new();
+
+    app.insert_resource(ExternalResource(exe));
+    app.insert_resource(ExternalResource(attach_config));
+
+    app.register_system(PreStartup, host::dearxan);
+    // app.register_system(
+    //     Startup,
+    //     (
+    //         game_properties::attach_override,
+    //         game_properties::start_offline.run_if(|| !start_online),
+    //         filesystem::attach_override,
+    //     ),
+    // );
+
+    app.register_plugin(GamePropertiesPlugin);
+    app.register_plugin(NativesPlugin);
+    app.register_plugin(SaveFilePlugin);
+    app.register_plugin(SkipLogosPlugin);
+    app.register_plugin(VfsPlugin);
+
+    // TODO: could load systems from dylibs here
+
+    app.run_schedule(PreStartup);
+    app.run_schedule(Startup);
+
+    let host = ModHost::new(app);
+    host.attach();
+
+    info!("Host successfully attached");
+
+    defer_until_init(Span::current(), {
+        move || {
+            ModHost::with_app(|_, app| {
+                app.run_schedule(PostStartup);
+            });
+        }
     })?;
 
-    Ok(())
+    Ok(Attachment)
 }
 
 #[unsafe(no_mangle)]
