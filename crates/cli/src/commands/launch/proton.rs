@@ -165,7 +165,6 @@ struct CompatToolVdf {
 
 #[derive(Deserialize, Debug)]
 #[cfg_attr(test, derive(serde::Serialize))]
-
 struct CompatToolInfo {
     install_path: PathBuf,
     display_name: String,
