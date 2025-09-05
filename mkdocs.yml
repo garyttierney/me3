@@ -53,7 +53,8 @@ edit_uri: edit/main/docs/
 # Include extra JS to setup Read the Docs addons integrations
 extra_javascript:
   - javascripts/readthedocs.js
-
+extra_css:
+  - assets/stylesheets/custom.css
 extra:
   social:
     - icon: fontawesome/brands/github
@@ -246,7 +247,11 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.mark
   - pymdownx.smartsymbols
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.snippets:
       base_path: [!relative $config_dir]
       check_paths: true
