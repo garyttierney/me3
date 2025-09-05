@@ -4,6 +4,196 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
+## me3 - [v0.8.0](https://github.com/garyttierney/me3/releases/v0.8.0) - 2025-09-05
+
+### 🚀 Features
+
+- [1f2f438](https://github.com/garyttierney/me3/commit/1f2f438f2cdd368ea6273b9aae1fc4ca47d05b3c)  *(cli)* Make `--auto-detect` optional when launching a profile in [#454](https://github.com/garyttierney/me3/pull/454)
+
+
+
+- [4c0db4e](https://github.com/garyttierney/me3/commit/4c0db4e33380dcc1cc9b0531a8ad31ba192a4445) Parallel recursive override discovery
+
+
+
+- [3516037](https://github.com/garyttierney/me3/commit/3516037691afcbfe3fe689929fda2c0255cd1ed3) Allow for changing default savefile name and location for supported games
+
+
+
+- [a4466e4](https://github.com/garyttierney/me3/commit/a4466e4a58ef7320bfb14cdfc104fc11e8972999) More anti-anti-debug features in [#452](https://github.com/garyttierney/me3/pull/452)
+
+
+  > Address SteamStubDRM calling `NtSetInformationThread` with
+  > `ThreadHideFromDebugger` on the main thread (and block
+  > `ThreadHideFromDebugger` period)
+
+
+- [dde3047](https://github.com/garyttierney/me3/commit/dde304739fe4d54efd5d49ee4df756937437376a) Dark Souls 3 support with `dearxan` and online play protection
+
+
+
+### 🐛 Bug Fixes
+
+- [94b375f](https://github.com/garyttierney/me3/commit/94b375f012bc92104a688c3b7f4be22286f95bd6)  *(host)* Add missing ANSI filesystem functions in [#400](https://github.com/garyttierney/me3/pull/400)
+
+
+
+- [a423c73](https://github.com/garyttierney/me3/commit/a423c73fccc11a0ef49e36950df9357841247c99)  *(linux)* Support proper compatibility tool lookup in [#473](https://github.com/garyttierney/me3/pull/473)
+
+
+  > All valid directories that can contain a compatibilitytool.vdf file are
+  > now queried for a manifest matching the tool we're interested in.
+  > Additionally, we also check the actual name contained in the manifest
+  > instead of relying on the name of the directory.
+
+  > Fixes #425, #426
+  > 
+  > ---------
+
+- [8e16791](https://github.com/garyttierney/me3/commit/8e167915ac38b2cab76eedfd089621271c8efe69)  *(linux)* Check all Steam libraries for Proton prefix in [#474](https://github.com/garyttierney/me3/pull/474)
+
+
+  > This resolves an issue on Steam Deck where Steam keeps Proton prefixes
+  > in the main Steam root when the game is located on an SD card.
+
+  > Fixes #269
+
+- [7c7c75b](https://github.com/garyttierney/me3/commit/7c7c75b813ed2a151589f5c816d3b9f6cb6a0762)  *(linux)* Remap launcher/DLL paths under /usr in [#472](https://github.com/garyttierney/me3/pull/472)
+
+
+  > Partially resolves #416
+
+
+- [44a6859](https://github.com/garyttierney/me3/commit/44a6859a346b6418f6ae75b9353f4a4fe310f9e9)  *(linux)* Allow existing values in LD_PRELOAD in [#471](https://github.com/garyttierney/me3/pull/471)
+
+
+  > Merges any existing paths put in LD_PRELOAD into the value set by me3 to
+  > allow other external tools like MangoHud and gamemode to run.
+
+  > Fixes #456
+
+- [0812fd4](https://github.com/garyttierney/me3/commit/0812fd4937a33acbad714a66b4c8c700f5f8279d) Consistent native and package load order in [#484](https://github.com/garyttierney/me3/pull/484)
+
+
+  > Fixes a bug where profiles with multiple packages and natives did not
+  > have a deterministic load order without using the
+  > `load_before`/`load_after` keys.
+
+  > ---------
+
+
+- [05ad74e](https://github.com/garyttierney/me3/commit/05ad74e3df893d10eb5452c9dd54c83137fd9c51) Crash in DllMain, to be flushed in the crash handler
+
+
+
+- [39d7922](https://github.com/garyttierney/me3/commit/39d7922a6ee23c345f21166d3c8ab9331c812c0f) Unowned dirs in [#417](https://github.com/garyttierney/me3/pull/417)
+
+
+
+- [41f6b13](https://github.com/garyttierney/me3/commit/41f6b13f96412c6b1e4ee2572a82c0cb9ffcf2f9) Prepend to Windows PATH instead of append in [#396](https://github.com/garyttierney/me3/pull/396)
+
+
+  > A new path entry added by Windows seems to be interfering with PATH
+  > resolution. Prepend our path to the front of the list until Microsot
+  > deal with this.
+
+
+- [76eabf9](https://github.com/garyttierney/me3/commit/76eabf9fe79b579247eaeface9a550b00e43e62b) Missing nightreign-mods folder in Windows dist in [#392](https://github.com/garyttierney/me3/pull/392)
+
+
+
+### Other
+
+- [f02d788](https://github.com/garyttierney/me3/commit/f02d78854630802d862c431bbd34437825a76923) Quote var in [#420](https://github.com/garyttierney/me3/pull/420)
+
+
+  > In the unlikely event that NEXT_VERSION contains spaces
+
+
+- [8d3454e](https://github.com/garyttierney/me3/commit/8d3454ed5c218aa10534cb743e1d6379d504c396) Truncate old versions
+
+
+  > Resulting list will have: prerelease, NEXT_VERSION, and last 4 versions
+
+
+- [481c774](https://github.com/garyttierney/me3/commit/481c774139ed9cb9983dd9006ce17cdafe6d8009) Insert NEXT_VERSION after prerelease
+
+
+  > .[0:1] means from index 0, length 1
+  > .[1:] means from index 1 until end
+
+  > See https://mikefarah.gitbook.io/yq/operators/slice-array
+
+
+- [7ff9d7a](https://github.com/garyttierney/me3/commit/7ff9d7a333d3af85860252644d93c5055f1a2da6) Safer yq
+
+
+  > Target by id, not index
+
+
+- [57cb74e](https://github.com/garyttierney/me3/commit/57cb74ecf42d3f7dabf18268cb72d946dd754c3c) Cleanup versions in bug report template
+
+
+  > Keep it simple so we don't need to overengineer the yq command in release.yml.
+  > Right now it just adds the next version on top.
+
+  > Maybe remove old versions at some point (>1 minor version ago)?
+
+
+### 🚜 Refactor
+
+- [adf7f41](https://github.com/garyttierney/me3/commit/adf7f414047b3882d674ea393526b2363ef80276) Move `disable_arxan` to the mod profile in [#457](https://github.com/garyttierney/me3/pull/457)
+
+
+  > Introduces a special behavior for `disable_arxan`, making it required if
+  > either the mod profile or the command line requires it.
+
+
+- [4170e30](https://github.com/garyttierney/me3/commit/4170e3088a6537bb6da16dc06a04ea9921079da5) Override savefile name instead of the full path
+
+
+
+- [e756aae](https://github.com/garyttierney/me3/commit/e756aae0e01c0a021b7d1923f8fe838d0da139d9) Target latest stable version with `RUSTC_BOOTSTRAP=1`
+
+
+
+- [d7889d1](https://github.com/garyttierney/me3/commit/d7889d185fb994d43a2169e2c3b3a96d787db963) Find FD4 step function tables in the binary analysis crate in [#408](https://github.com/garyttierney/me3/pull/408)
+
+
+
+- [009bf6e](https://github.com/garyttierney/me3/commit/009bf6e08e764a04c146a77791341e325bcd0ffd) Split out C++ types in mod-host-types and replace cxx-stl in [#424](https://github.com/garyttierney/me3/pull/424)
+
+
+  > Drop cxx-stl and its C dependencies in favor of
+  > [rdvec](https://github.com/dasaav-dsv/rdvec). Use it to provide a
+  > generic interface over C++ `std::vector` and `std::string` for future
+  > game support (Dark Souls 3 and earlier games).
+
+  > Also split out basic STL types into a separate mod-host-types workspace
+  > crate.
+
+
+### 📚 Documentation
+
+- [15ad781](https://github.com/garyttierney/me3/commit/15ad7810dacb03776baea6d0580be493396ee251)  *(cli)* Improved command-line help formatting and language in [#440](https://github.com/garyttierney/me3/pull/440)
+
+
+  > Edited CLI help for typos, errors, length, language. There is now
+  > extended `--help` vs short `-h` for some options. Option descriptions
+  > wrap nicely based on terminal width.
+
+
+- [ee1bc36](https://github.com/garyttierney/me3/commit/ee1bc36d83353c4d7a59d40107dcc21737fdab5c) Update configuration reference
+
+
+
+- [b62d3e2](https://github.com/garyttierney/me3/commit/b62d3e2ec6901c13b7378d07b0962fc0deacc090) Update docs for 0.7.0 in [#398](https://github.com/garyttierney/me3/pull/398)
+
+
+
+- [0da622c](https://github.com/garyttierney/me3/commit/0da622cb1aed670c21ae8c51d5bb81beaa6fcd5b) Add linkback to GitHub/bsky in [#393](https://github.com/garyttierney/me3/pull/393)
+
+
 ## me3 - [v0.7.0](https://github.com/garyttierney/me3/releases/v0.7.0) - 2025-07-28
 
 ### 🚀 Features
@@ -2330,6 +2520,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
+[0.8.0]: https://github.com/garyttierney/me3/compare/v0.7.0..v0.8.0
 [0.7.0]: https://github.com/garyttierney/me3/compare/v0.6.1..v0.7.0
 [0.6.1]: https://github.com/garyttierney/me3/compare/v0.6.0..v0.6.1
 [0.6.0]: https://github.com/garyttierney/me3/compare/v0.5.0..v0.6.0
