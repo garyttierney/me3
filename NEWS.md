@@ -1,5 +1,10 @@
 # NEWS
 
+## v0.8.0
+
+v0.8.0 comes with support for Dark Souls 3 and the ability to use a different savefile per me3 profile.
+As Dark Souls 3 does not come with any anti-cheat software to prevent you from loading into an online session with mods a new `start_online` option is available in profiles and will be disabled by default.
+
 ## v0.7.0
 
 The highlights of v0.7.0 are BootBoost, a startup time improvement technique by [TKGP](https://www.nexusmods.com/darksouls3/mods/303) originally for Dark Souls 3, the ability to launch .me3 files on Linux desktop environments, and localization of our documentation to Chinese and Polish.
