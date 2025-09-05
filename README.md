@@ -60,10 +60,11 @@ me3 is a tool that extends the functionality of FROMSOFTWARE games.
 
 ### Supported games
 
-- ELDEN RING
-- ELDEN RING NIGHTREIGN
-- Armored Core VI: Fires of Rubicon
+- DARK SOULS III
 - Sekiro: Shadows Die Twice
+- ELDEN RING
+- Armored Core VI: Fires of Rubicon
+- ELDEN RING NIGHTREIGN
 
 ## Installation
 
