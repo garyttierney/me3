@@ -17,19 +17,21 @@
     }
   ],
   "$defs": {
-    "Dependent": {
+    "Supports": {
       "type": "object",
       "properties": {
-        "id": {
-          "type": "string"
+        "game": {
+          "$ref": "#/$defs/Game"
         },
-        "optional": {
-          "type": "boolean"
+        "since": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
-        "id",
-        "optional"
+        "game"
       ]
     },
     "Game": {
@@ -80,77 +82,36 @@
         }
       ]
     },
-    "ModFile": {
-      "description": "A filesystem path to the contents of a package. May be relative to the [ModProfile] containing\nit.",
-      "type": "string"
-    },
-    "ModProfileV1": {
-      "type": "object",
-      "properties": {
-        "disable_arxan": {
-          "description": "Try to neutralize Arxan GuardIT code protection to improve mod stability.",
-          "type": [
-            "boolean",
-            "null"
-          ],
-          "default": null
-        },
-        "natives": {
-          "description": "Native modules (DLLs) that will be loaded.",
-          "type": "array",
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/Native"
-          }
-        },
-        "packages": {
-          "description": "A collection of packages containing assets that should be considered for loading\nbefore the DVDBND.",
-          "type": "array",
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/Package"
-          }
-        },
-        "savefile": {
-          "description": "Name of an alternative savefile to use (in the default savefile directory).",
-          "type": [
-            "string",
-            "null"
-          ],
-          "default": null
-        },
-        "start_online": {
-          "description": "Starts the game with multiplayer server connectivity enabled.",
-          "type": [
-            "boolean",
-            "null"
-          ],
-          "default": null
-        },
-        "supports": {
-          "description": "The games that this profile supports.",
-          "type": "array",
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/Supports"
-          }
-        }
-      }
-    },
     "Native": {
       "type": "object",
       "properties": {
+        "path": {
+          "description": "Path to the DLL. Can be relative to the mod profile.",
+          "$ref": "#/$defs/ModFile"
+        },
+        "optional": {
+          "description": "If this native fails to load and this value is false, treat it as a critical error.",
+          "type": "boolean",
+          "default": false
+        },
         "enabled": {
           "description": "Should this native be loaded?",
           "type": "boolean",
           "default": true
         },
-        "finalizer": {
-          "description": "An optional symbol to be called when this native successfully is queued for unload.",
-          "type": [
-            "string",
-            "null"
-          ]
+        "load_before": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Dependent"
+          },
+          "default": []
+        },
+        "load_after": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Dependent"
+          },
+          "default": []
         },
         "initializer": {
           "description": "An optional symbol to be called after this native successfully loads.",
@@ -163,32 +124,35 @@
             }
           ]
         },
-        "load_after": {
-          "type": "array",
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/Dependent"
-          }
-        },
-        "load_before": {
-          "type": "array",
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/Dependent"
-          }
-        },
-        "optional": {
-          "description": "If this native fails to load and this value is false, treat it as a critical error.",
-          "type": "boolean",
-          "default": false
-        },
-        "path": {
-          "description": "Path to the DLL. Can be relative to the mod profile.",
-          "$ref": "#/$defs/ModFile"
+        "finalizer": {
+          "description": "An optional symbol to be called when this native successfully is queued for unload.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
         "path"
+      ]
+    },
+    "ModFile": {
+      "description": "A filesystem path to the contents of a package. May be relative to the [ModProfile] containing\nit.",
+      "type": "string"
+    },
+    "Dependent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "optional": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "optional"
       ]
     },
     "NativeInitializerCondition": {
@@ -210,10 +174,10 @@
               ]
             }
           },
-          "additionalProperties": false,
           "required": [
             "delay"
-          ]
+          ],
+          "additionalProperties": false
         },
         {
           "type": "object",
@@ -222,10 +186,10 @@
               "type": "string"
             }
           },
-          "additionalProperties": false,
           "required": [
             "function"
-          ]
+          ],
+          "additionalProperties": false
         }
       ]
     },
@@ -233,11 +197,6 @@
       "description": "A package is a source for files that override files within the existing games DVDBND archives.\nIt points to a local path containing assets matching the hierarchy they would be served under in\nthe DVDBND.",
       "type": "object",
       "properties": {
-        "enabled": {
-          "description": "Enable this package?",
-          "type": "boolean",
-          "default": true
-        },
         "id": {
           "description": "The unique identifier for this package.",
           "type": [
@@ -245,47 +204,88 @@
             "null"
           ]
         },
-        "load_after": {
-          "description": "A list of package IDs that this package should load after.",
-          "type": "array",
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/Dependent"
-          }
-        },
-        "load_before": {
-          "description": "A list of packages that this package should load before.",
-          "type": "array",
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/Dependent"
-          }
+        "enabled": {
+          "description": "Enable this package?",
+          "type": "boolean",
+          "default": true
         },
         "path": {
           "description": "A path to the source of this package.",
           "$ref": "#/$defs/ModFile"
+        },
+        "load_after": {
+          "description": "A list of package IDs that this package should load after.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Dependent"
+          },
+          "default": []
+        },
+        "load_before": {
+          "description": "A list of packages that this package should load before.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Dependent"
+          },
+          "default": []
         }
       },
       "required": [
         "path"
       ]
     },
-    "Supports": {
+    "ModProfileV1": {
       "type": "object",
       "properties": {
-        "game": {
-          "$ref": "#/$defs/Game"
+        "supports": {
+          "description": "The games that this profile supports.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Supports"
+          },
+          "default": []
         },
-        "since": {
+        "natives": {
+          "description": "Native modules (DLLs) that will be loaded.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Native"
+          },
+          "default": []
+        },
+        "packages": {
+          "description": "A collection of packages containing assets that should be considered for loading\nbefore the DVDBND.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Package"
+          },
+          "default": []
+        },
+        "savefile": {
+          "description": "Name of an alternative savefile to use (in the default savefile directory).",
           "type": [
             "string",
             "null"
-          ]
+          ],
+          "default": null
+        },
+        "start_online": {
+          "description": "Starts the game with multiplayer server connectivity enabled.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
+        },
+        "disable_arxan": {
+          "description": "Try to neutralize Arxan GuardIT code protection to improve mod stability.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
         }
-      },
-      "required": [
-        "game"
-      ]
+      }
     }
   }
 }
