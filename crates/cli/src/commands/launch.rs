@@ -1,3 +1,5 @@
+pub mod proton;
+
 use std::{
     error::Error,
     fmt::Debug,
@@ -27,7 +29,7 @@ use tempfile::NamedTempFile;
 use tracing::{error, info};
 
 use crate::{
-    commands::profile::ProfileOptions,
+    commands::{launch::proton::CompatTools, profile::ProfileOptions},
     config::Config,
     db::{profile::Profile, DbContext},
     Game,
@@ -198,38 +200,17 @@ impl Launcher for CompatToolLauncher {
             .find_app(sniper_id)?
             .ok_or_eyre("unable to find Steam Linux Runtime")?;
 
-        let tool_name = self.tool.name.ok_or_eyre("compat tool must have a name")?;
-        let custom_tool_path = self
-            .steam
-            .path()
-            .join(format!("compatibilitytools.d/{tool_name}"));
-
-        let proton_path = if std::fs::exists(&custom_tool_path)? {
-            custom_tool_path
-        } else {
-            let proton_id = match tool_name.as_str() {
-                "proton_experimental" => 1493710,
-                "proton_hotfix" => 2180100,
-                "proton_9" => 2805730,
-                _ => return Err(eyre!("unrecognised compat tool")),
-            };
-
-            let (proton_app, proton_library) = self
-                .steam
-                .find_app(proton_id)?
-                .ok_or_eyre("configured compat tool isn't installed")?;
-
-            proton_library.resolve_app_dir(&proton_app)
-        };
-
+        let compat_tools = CompatTools::new(&self.steam);
+        let compat_tool = compat_tools
+            .find(self.tool.name.expect("compat tools must be named"))
+            .ok_or_eyre("unable to find compatibility tool installation")?;
         let sniper_path = sniper_library.resolve_app_dir(&sniper_app);
-
         let mut command = Command::new(sniper_path.join("run"));
 
         command.args([
             "--batch",
             "--",
-            &*proton_path.join("proton").to_string_lossy(),
+            &*compat_tool.install_path.join("proton").to_string_lossy(),
             "waitforexitandrun",
             &*launcher.to_string_lossy(),
         ]);
