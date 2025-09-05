@@ -112,7 +112,7 @@ pub enum CompatToolLoadError {
     TooManyEntries,
 
     #[error("failed to parse vdf")]
-    ParseError(#[from] keyvalues_serde::Error),
+    ParseError(#[from] Box<keyvalues_serde::Error>),
 
     #[error("unexpected IO error: {inner}")]
     Other {
@@ -126,7 +126,7 @@ impl CompatTool {
         let vdf_path = path.as_ref();
         let file = File::open(vdf_path)?;
 
-        let mut vdf: CompatToolVdf = keyvalues_serde::from_reader(file)?;
+        let mut vdf: CompatToolVdf = keyvalues_serde::from_reader(file).map_err(Box::from)?;
         if vdf.compat_tools.len() > 1 {
             return Err(CompatToolLoadError::TooManyEntries);
         }
