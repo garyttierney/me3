@@ -53,6 +53,9 @@ edit_uri: edit/main/docs/
 # Include extra JS to setup Read the Docs addons integrations
 extra_javascript:
   - javascripts/readthedocs.js
+extra_css:
+  - assets/stylesheets/custom.css
+  - assets/stylesheets/collapse-code.css
 
 extra:
   social:
@@ -114,13 +117,13 @@ nav:
   - Download: https://github.com/garyttierney/me3/releases/latest
   - Changelog: changelog.md
   - Blog:
-      - blog/index.md
+      - Reversing Arxan (GuardIT): blog/posts/arxan-reversing-1.md
+      - Release 0.2.0: blog/posts/me3-release.md
 plugins:
   - group:
       enabled: !ENV MKDOCS_MATERIAL_INSIDERS_ENABLED
       plugins:
           - optimize
-  - blog
   - meta
   - search
   
@@ -224,6 +227,9 @@ plugins:
   - git-revision-date-localized:
       enable_creation_date: true
 
+hooks:
+  - docs/overrides/hooks/register_local_mdx.py
+
 markdown_extensions:
   - abbr
   - admonition
@@ -246,7 +252,11 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.mark
   - pymdownx.smartsymbols
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.snippets:
       base_path: [!relative $config_dir]
       check_paths: true
