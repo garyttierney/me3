@@ -59,7 +59,7 @@ jobs:
       - name: Checkout Actions Repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Spell Check Repo
-        uses: crate-ci/typos@a4c3e43aea0a9e9b9e6578d2731ebd9a27e8f6cd # v1.35.5
+        uses: crate-ci/typos@85f62a8a84f939ae994ab3763f01a0296d61a7ee # v1.36.2
   check-dead-links:
     runs-on: ubuntu-latest
     permissions:
@@ -135,7 +135,7 @@ jobs:
         shell: bash
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.5
+        uses: github/codeql-action/upload-sarif@f1f6e5f6af878fb37288ce1c627459e94dbf7d01 # v3.29.5
         with:
           sarif_file: results.sarif
 
