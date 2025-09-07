@@ -12,7 +12,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     groups:
-      cargo-deps:
+      actions-deps:
         patterns:
           - "*"
     schedule:
