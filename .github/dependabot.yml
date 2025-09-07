@@ -3,10 +3,17 @@ updates:
   - package-ecosystem: 'cargo'
     directory: '/'
     schedule:
-      interval: 'weekly'
+      interval: 'daily'
     rebase-strategy: 'disabled'
-
+    groups:
+      cargo-deps:
+        patterns:
+          - "*"
   - package-ecosystem: github-actions
     directory: /
+    groups:
+      cargo-deps:
+        patterns:
+          - "*"
     schedule:
       interval: daily
