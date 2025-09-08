@@ -75,7 +75,7 @@ tracing-appender = "0.2"
 tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", default-features = false }
 ureq = "3"
-windows = "0.61"
+windows = "0.62"
 
 [profile.dev.package."*"]
 opt-level = 3
