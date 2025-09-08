@@ -20,6 +20,7 @@
  List of games supported by me3.
 
   - **One of**
+    - : DARK SOULS III (Steam App ID: 374320). Must be one of: `["darksouls3", "ds3"]`.
     - : Sekiro: Shadows Die Twice (Steam App ID: 814380). Must be one of: `["sekiro", "sdt"]`.
     - : Elden Ring (Steam App ID: 1245620). Must be one of: `["eldenring", "er", "elden-ring"]`.
     - : Armored Core VI: Fires of Rubicon (Steam App ID: 1888160). Must be one of: `["armoredcore6", "ac6"]`.
@@ -32,7 +33,8 @@ it.
 
 ### <a id="ModProfileV1"></a>**`ModProfileV1`** *(object)*
 
-
+  - **`savefile`** *(['string', 'null'])*: This optional field specifies the file name of the savefile the game will use instead of the default one (e.g. `ER0000.sl2` in Elden Ring).
+  - **`start_online`** *(boolean)*: By default, me3 prevents the game from connecting to the official multiplayer matchmaking servers. This functionality can be reenabled. Default: `false`.
   - **`natives`** *(array)*: Native modules (DLLs) that will be loaded. Default: `[]`.
   - **`packages`** *(array)*: A collection of packages containing assets that should be considered for loading
 before the DVDBND. Default: `[]`.
