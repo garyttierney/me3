@@ -155,7 +155,17 @@ fn deferred_attach(
         override_mapping.clone(),
     )?;
 
-    for native in &attach_config.natives {
+    let first_delayed_offset = attach_config
+        .natives
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, native)| native.initializer.is_some().then_some(idx))
+        .next()
+        .unwrap_or(attach_config.natives.len());
+
+    let (immediate, delayed) = attach_config.natives.split_at(first_delayed_offset);
+
+    for native in immediate {
         if let Err(e) = ModHost::get_attached().load_native(&native.path, &native.initializer) {
             warn!(
                 error = &*e,
@@ -164,10 +174,27 @@ fn deferred_attach(
             );
 
             if !native.optional {
-                return Err(e);
+                return Err(e.into());
             }
         }
     }
+
+    let delayed = delayed.to_vec();
+    std::thread::spawn(move || {
+        for native in delayed {
+            if let Err(e) = ModHost::get_attached().load_native(&native.path, &native.initializer) {
+                warn!(
+                    error = &*e,
+                    path = %native.path.display(),
+                    "failed to load native mod",
+                );
+
+                if !native.optional {
+                    panic!("{:#?}", e);
+                }
+            }
+        }
+    });
 
     asset_hooks::attach_override(
         attach_config,
