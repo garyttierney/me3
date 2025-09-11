@@ -9,7 +9,7 @@ description = "Schema definition for me3 mod profiles"
 publish = false
 
 [dependencies]
-indexmap = "2.11.0"
+indexmap = "2.11.1"
 schemars.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, features = ["preserve_order"] }
