@@ -101,7 +101,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         ModHost::new().attach();
 
-        host::dearxan(&attach_config);
+        host::dearxan(&attach_config, exe);
 
         skip_logos::attach_override(attach_config.clone(), exe)?;
 
