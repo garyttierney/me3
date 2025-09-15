@@ -28,13 +28,13 @@ Souls模组与游戏修改(cheating)社区曾多次尝试突破Arxan的保护机
 #### 《黑暗之魂3》与《黑暗之魂：重制版》的"反作弊绕过方案"
 《黑暗之魂3》和《黑暗之魂：重制版》曾拥有非常活跃的在线游戏修改社区。许多修改手段需要挂钩受Arxan保护的游戏函数。在线游戏时若检测到此类篡改行为会导致封禁，因此部分开发者尝试通过半手动方式移除了大部分完整性检查。由此产生的"绕过方案"最初仅在小型修改者群体内部分享，但最终不可避免地泄露给越来越多的人。这些方案也被早期社区反作弊工具采用，例如[DS3 PvP Watchdog](https://www.nexusmods.com/darksouls3/mods/352)。
 
-#### [MetalCrow](https://github.com/metal-crow)的DS1全面改造模组反制措施
+#### [MetalCrow](https://github.com/metal-crow)的DS1全面改造模组反制措施 {#metalcrows-ds1-overhaul-anti-anti-cheat}
 [Dark Souls 1 Overhaul](https://github.com/metal-crow/Dark-Souls-1-Overhaul)旨在显著提升《黑暗之魂：重制版》的在线PvP体验。为防止用户因模组实施的代码修改遭到封禁，开发人员手动定位了代码完整性检查程序并通过补丁予以绕过([源码](https://github.com/metal-crow/Dark-Souls-1-Overhaul/blob/master/OverhaulDLL/src/AntiAntiCheat.cpp))。
 
-#### [Yui](https://github.com/LukeYui)的防代码恢复补丁
+#### [Yui](https://github.com/LukeYui)的防代码恢复补丁 {#yuis-anti-code-restoration-patches}
 [Yui](https://github.com/LukeYui)开发的[Seamless Co-op](https://www.nexusmods.com/eldenring/mods/510)需要数百个挂钩点才能正常运行，其中多数目标代码受Arxan防篡改代码恢复功能保护。她发现从《艾尔登法环》开始，这些检查例程（几乎？）全部通过常规游戏代码中的定时检查触发，很可能是出于性能优化考虑。判定是否执行单个检查的代码逻辑如下：
 
-<a name="timed_restoration_check"></a>
+[](){#timed_restoration_check}
 ```c linenums="1"
 if (TIME_LEFT == 0.0f) {
     TIME_LEFT = get_random_delay_seconds(CHECK_FLAG);
@@ -243,7 +243,7 @@ JMP     LAB_1404e6f39
 
 此代码段的首部与部分上下文保存的实现高度相似。通过进一步分析各分支路径并进行去混淆处理，我们得到以下控制流图，该图证实了这一推断：
 
-<a name="stub_cfg"></a>
+[](){#stub_cfg}
 
 ``` mermaid
 stateDiagram-v2
@@ -306,7 +306,7 @@ stateDiagram-v2
 - **基础块分割策略**：原始的基础块通常被分割成由少量指令组成的小块，这种设计很可能旨在防御基于模式的扫描检测。
 - **未混淆存根大量存在**：值得注意的是，大量存根完全未进行混淆处理，其控制流结构与上文展示的[去混淆后CFG](#stub_cfg)高度相似。这些未混淆的存根省略了三个用于引导至上下文保存阶段的混淆性"虚假"调用。
 
-### 返回指令片段分析
+### 返回指令片段分析 {#return-gadgets}
 在获得定位所有存根的方法后，我重返《黑暗之魂：重制版》继续分析，因为该游戏是我需要优先支持的目标。通过`TEST RSP, 0xf`模式匹配，在该游戏中发现了2976处匹配（这个数量恰好高于FS社其他所有游戏）。为查明覆盖伪造返回地址的写入操作，我使用Rust绑定的[Unicorn](https://www.unicorn-engine.org/)模拟器从`TEST RSP, 0xf`指令开始单步执行存根代码，同时记录所有向原始RSP上方栈地址执行写入操作的指令，最终发现了如下指令块（高位栈写入操作已高亮）：
 
 ```nasm hl_lines="4 9 14"
@@ -556,7 +556,7 @@ pub enum StepKind<I: ImageView, D: Clone = (), R = ()> {
 
 该方案在《黑暗之魂：重制版》和《黑暗之魂2》中表现卓越——单线程仅用不到1秒就完成了DSR全部2976个存根的返回指令片段提取。这项技术已应用于[`arxan-disabler`](https://github.com/tremwil/arxan-disabler)组件（即dearxan的前身，初期仅支持上述两款游戏）。
 
-### 遍历存根完整控制流图
+### 遍历存根完整控制流图 {#visiting-the-stubs-full-cfg}
 
 然而，当我决定支持其他FS社游戏时，该方案显现出局限性。新游戏的存根结构变得更加复杂，分支深度显著增加，遍历所有执行路径的计算成本已变得难以承受。因此我必须设计一种与指令数量呈线性关系的新方案。标准解决方案是维护已访问指令集合并在遇到重复指令时终止当前分叉，但需针对混淆控制流进行若干调整：
 
