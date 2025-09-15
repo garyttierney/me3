@@ -37,7 +37,7 @@ jobs:
         run: |
           set -x
           echo "current_version=v$(cargo pkgid -p me3-mod-host | cut -d '@' -f2)" >> "$GITHUB_OUTPUT"
-          echo "next_version=$(git cliff --bumped-version)" >> "$GITHUB_OUTPUT"  
+          echo "next_version=$(git cliff --bumped-version --unreleased)" >> "$GITHUB_OUTPUT"
         
   create-release-draft:
     needs:
