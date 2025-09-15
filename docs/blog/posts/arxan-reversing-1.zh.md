@@ -1,38 +1,38 @@
-# Reversing Arxan (now GuardIT)
-This article focuses on the reverse engineering and declawing of the Arxan anti-debug and tamper protection software as it is used in FROMSOFTWARE games. It assumes basic x86 assembly, low-level reverse engineering, C and Rust knowledge.
+# 逆向 Arxan（现称 GuardIT）
+本文重点探讨针对FROMSOFTWARE游戏中所采用的Arxan反调试与防篡改保护软件的逆向工程及去爪化(解除保护机制)技术。内容预设读者具备x86汇编语言、底层逆向工程、C语言及Rust编程的基础知识。
 
-## Introduction
-If you've ever tried to attach a debugger to a FROMSOFTWARE game, you probably experienced random crashes. Likewise, modders that need to hook or patch native game code have likely experienced crashes and/or their patches being reverted by the game after a random amount of time.
+## 引言
+如果你曾尝试将调试器附加到FROMSOFTWARE的游戏上，多半遭遇过随机崩溃的情况。同样，需要挂钩或修补游戏原生代码的模组开发者，很可能也经历过游戏崩溃，和/或他们植入的补丁在随机时间段后被游戏自动恢复的现象。
 
-The source of these problems is an anti-debug and tamper protection product now called GuardIT. However, it is better known in the community by its older name, Arxan, which I will use to refer to it throughout this article. FROMSOFTWARE has applied it to all of their PC releases since Dark Souls II: SOTFS, excluding Sekiro. Some of its features include:
+这些问题的根源是一款名为GuardIT的反调试与防篡改保护产品。不过该产品在玩家社区中更广为人知的是其旧称——Arxan（本文后续将沿用此名称进行指代）。自《黑暗之魂II：原罪学者》(Dark Souls II: SOTFS) 以来，FROMSOFTWARE已为其所有PC版本游戏部署了该保护系统（仅《只狼》除外）。其核心功能包括：
 
-- Instruction mutations and control flow obfuscation to confuse decompilers and make reverse engineering harder
-- Encryption of sensitive functions at rest, decrypting them ephemerally when they are being executed
-- A varied suite of anti-debug checks
-- Integrity checks on functions marked as sensitive by the game developer, with the ability to a combination of the following when tampering is detected:
-    - Silently writing flags to a buffer that the game developer can read to integrate with their anti-cheat solution. FROMSOFTWARE uses this to ban players that try to tamper with the game's code while playing online.
-    - Crashing the game by corrupting the stack or control flow in a way that is difficult to debug
-    - Repairing the function's code
+- **指令变异与控制流混淆**：通过改变指令结构及扰乱代码逻辑流，干扰反编译器工作并大幅增加逆向工程难度
+- **敏感函数静态加密**：对静态存储中的关键函数进行加密，仅在执行时进行临时解密
+- **多维度反调试检测**：采用多样化反调试手段检测调试器活动
+- **敏感函数完整性校验**：对开发者标记的关键函数进行完整性验证，并在检测到篡改时执行以下组合应对措施：
+    - 静默标记写入：将检测标记静默写入缓冲区供开发者读取，以便与反作弊系统联动。FROMSOFTWARE利用此功能封禁在线游戏中试图篡改代码的玩家
+    - 可控崩溃触发：通过破坏栈空间或控制流的方式引发难以调试的崩溃
+    - 代码自修复：自动恢复被修改的函数代码
 
 <!-- markdown-link-check-disable -->
 
-Running into these protections when reverse engineering the game or when modding it can be a serious hassle. In fact, Dark Souls III support in me3 was, for a long time, blocked by the need to hook a function whose code integrity is checked by Arxan. As such, a way to fully disable it and ensure that no Arxan logic is running would be highly desirable. This blog will cover my journey through reversing how Arxan inserts its code into executables, how it protects itself from tampering attempts and how its function encryption mechanism works, culminating in the release of [dearxan](https://crates.io/crates/dearxan), a Rust crate that is able to neuter it at runtime in all FROMSOFTWARE games.
+在逆向工程或制作模组过程中遭遇这些保护机制会带来严重阻碍。事实上，me3工具对《黑暗之魂III》的长期支持受阻，正是由于需要挂钩一个受Arxan代码完整性检查的函数。因此，找到能完全禁用该保护系统并确保所有Arxan逻辑停止运行的方法显得尤为重要。本文将详细阐述我逆向分析Arxan的核心历程：包括其代码注入可执行文件的原理、自我防护机制对抗篡改的策略，以及函数加密技术的运作方式，最终发布能够实时中和所有FROMSOFTWARE游戏中Arxan保护的Rust工具库——[dearxan](https://crates.io/crates/dearxan)。
 
 <!-- markdown-link-check-enable -->
 
-Since 0.8.0, **me^3^** now ships with `dearxan`, allowing you to use the `disable_arxan` flag in your mod profile or from the CLI.
+自0.8.0版本起， **me^3^** 已内置集成 `dearxan`功能, 用户可通过mod配置文件或命令行界面使用 `disable_arxan` 参数来禁用Arxan保护系统。
 
-## Prior Art
-There has been a few attempts to counter Arxan's protections by the Souls modding and cheating community. Most focus on a specific feature, such as code integrity checks, code restoration or anti-debug, support a limited set of games, or require manually finding offsets to problematic Arxan code (which has to be done for every supported game version).
+## 现有技术方案
+Souls模组与游戏修改(cheating)社区曾多次尝试突破Arxan的保护机制。现有方案大多存在以下局限性：或仅针对特定功能（如代码完整性验证、代码修复或反调试），或仅支持有限游戏版本，或需手动定位Arxan问题代码的偏移量（且每个游戏版本都需重新定位）。
 
-#### DS3 and DSR "anti cheat bypasses"
-Dark Souls III and Dark Souls Remastered had a very active online cheating community. Many cheats required hooking game functions that are protected by Arxan. Detection of this tampering while playing online would lead to bans, so some have taken a crack at semi-manually patching out most of the integrity checks. The resulting "bypasses" were kept private and distributed among small groups of cheaters before inevitably getting leaked to more and more people. They were also used by early community anti cheats such as the [DS3 PvP Watchdog](https://www.nexusmods.com/darksouls3/mods/352).
+#### 《黑暗之魂3》与《黑暗之魂：重制版》的"反作弊绕过方案"
+《黑暗之魂3》和《黑暗之魂：重制版》曾拥有非常活跃的在线游戏修改社区。许多修改手段需要挂钩受Arxan保护的游戏函数。在线游戏时若检测到此类篡改行为会导致封禁，因此部分开发者尝试通过半手动方式移除了大部分完整性检查。由此产生的"绕过方案"最初仅在小型修改者群体内部分享，但最终不可避免地泄露给越来越多的人。这些方案也被早期社区反作弊工具采用，例如[DS3 PvP Watchdog](https://www.nexusmods.com/darksouls3/mods/352)。
 
-#### [MetalCrow](https://github.com/metal-crow)'s DS1 Overhaul anti-anti cheat
-The [Dark Souls 1 Overhaul](https://github.com/metal-crow/Dark-Souls-1-Overhaul) mod is meant to dramatically improve the online PvP experience in Dark Souls Remastered. To prevent users being banned due to the code patches made by the mod, code integrity checks where manually found so they can be patched out ([source](https://github.com/metal-crow/Dark-Souls-1-Overhaul/blob/master/OverhaulDLL/src/AntiAntiCheat.cpp)). 
+#### [MetalCrow](https://github.com/metal-crow)的DS1全面改造模组反制措施
+[Dark Souls 1 Overhaul](https://github.com/metal-crow/Dark-Souls-1-Overhaul)旨在显著提升《黑暗之魂：重制版》的在线PvP体验。为防止用户因模组实施的代码修改遭到封禁，开发人员手动定位了代码完整性检查程序并通过补丁予以绕过([源码](https://github.com/metal-crow/Dark-Souls-1-Overhaul/blob/master/OverhaulDLL/src/AntiAntiCheat.cpp))。
 
-#### Yui's anti code restoration patches
-[Yui](https://github.com/LukeYui)'s [Seamless Co-op](https://www.nexusmods.com/eldenring/mods/510) mods require hundreds of hooks to function, many of which target code that is protected by Arxan's anti-tamper code restoration feature. She found that since Elden Ring, these routines are (almost?) all triggered from timed checks in regular game code, most likely for performance reasons. The code determining if it's time to run an individual check looks like this:
+#### [Yui](https://github.com/LukeYui)的防代码恢复补丁
+[Yui](https://github.com/LukeYui)开发的[Seamless Co-op](https://www.nexusmods.com/eldenring/mods/510)需要数百个挂钩点才能正常运行，其中多数目标代码受Arxan防篡改代码恢复功能保护。她发现从《艾尔登法环》开始，这些检查例程（几乎？）全部通过常规游戏代码中的定时检查触发，很可能是出于性能优化考虑。判定是否执行单个检查的代码逻辑如下：
 
 <a name="timed_restoration_check"></a>
 ```c linenums="1"
@@ -47,7 +47,7 @@ else {
 }
 ```
 
-Or, in assembly:
+或者，在汇编中：
 ```nasm linenums="1" hl_lines="14"
 MOVSS      XMM0,dword ptr [TIME_LEFT]
 UCOMISS    XMM0,XMM6
@@ -70,28 +70,28 @@ CALL       arxan_code_restoration_check
 check_end:
 ```
 
-It happens to be very easy to scan for this instruction pattern and replace the final `JC` above with an unconditional jump to skip the check ([example implementation](https://github.com/tremwil/param_field_mapper/blob/master/src/arxan_disabler.cpp)).
+值得关注的是，这种指令模式非常易于扫描识别，通过将最后的`JC`（条件跳转）指令替换为无条件跳转即可跳过检查([示例实现](https://github.com/tremwil/param_field_mapper/blob/master/src/arxan_disabler.cpp)).
 
-Given its simplicity and ease of implementation, I would still recommend this technique if your mod targets Elden Ring or more recent FROMSOFTWARE games and all you need is to make sure your hooks aren't tampered with.
+鉴于该方案的简易性和实现便利性，若您的模组针对《艾尔登法环》或更新的FS社游戏，且仅需确保挂钩代码不被篡改，我们仍推荐采用此技术方案。
 
-#### Dasaav's [ProDebug](https://github.com/Dasaav-dsv/ProDebug)
-This DLL mod by [Dasaav](https://github.com/Dasaav-dsv) uses pattern scanning to identify timers in the game code that trigger some of Arxan's anti debug checks. In Elden Ring and Armored Core VI, this seems to be the only place from which the anti-debug routines run, making the technique sufficient to disable (almost?) all anti-debug features.
+#### Dasaav的[ProDebug](https://github.com/Dasaav-dsv/ProDebug)方案
+该DLL模组由[Dasaav](https://github.com/Dasaav-dsv)开发，通过模式扫描技术定位游戏代码中触发Arxan反调试检查的计时器。在《艾尔登法环》与《装甲核心6》中，这似乎是反调试例程运行的唯一入口点，使得该技术足以禁用（几乎？）全部反调试功能。
 
-#### Maurice Heumann's BO3 reversing work
-[This excellent blog post](https://momo5502.com/posts/2022-11-17-reverse-engineering-integrity-checks-in-black-ops-3/) by [Maurice Heumann](https://github.com/momo5502/) showcases patching out Arxan integrity checks in Call of Duty: Black Ops III. Since I was not aware of this before having come up with my own technique for disabling Arxan, I did not investigate his method and whether it works in FROMSOFTWARE titles. Note that it only addresses the integrity checks, and not the anti-debug routines or runtime function encryption.
+#### Maurice Heumann 的《黑色行动3》逆向工程研究
+[Maurice Heumann](https://github.com/momo5502/)撰写的[这篇精彩技术文章](https://momo5502.com/posts/2022-11-17-reverse-engineering-integrity-checks-in-black-ops-3/)详细介绍了在《使命召唤：黑色行动3》中修补Arxan完整性检查的方案。由于我在自主研发Arxan禁用方案时未曾注意到这项研究，因此未验证该方法是否适用于FROMSOFTWARE旗下游戏。需要特别说明的是，该方案仅针对完整性检查机制，不涉及反调试例程或运行时函数加密功能。
 
-## Motivation
-I began this project a few months ago at the request of [Yui](https://github.com/LukeYui), when she was working on porting her [Seamless Co-op](https://www.nexusmods.com/eldenring/mods/510) mod to Dark Souls Remastered. The technique [outlined above](#yuis-anti-code-restoration-patches) for preventing Arxan to restore modified code regions does not work in DSR, as the code restoration checks are inserted in random functions as opposed to being put into dedicated timer routines. Furthermore, many code integrity checks immediately crash the game, so patching the restoration step out would not be sufficient.
+## 项目动机
+本项目启动于数月前应[Yui](https://github.com/LukeYui)的请求，当时她正将[无缝联机模组](https://www.nexusmods.com/eldenring/mods/510)移植至《黑暗之魂：重制版》。此前[所述](#yuis-anti-code-restoration-patches)的防止Arxan恢复已修改代码区域的技术在DSR中并不适用，因为代码恢复检查被植入到随机函数中，而非集中于专用的定时器例程。此外，多数代码完整性检查会直接导致游戏崩溃，因此仅修补恢复步骤仍不足够。
 
-Thus, the mod was blocked on being able to disable Arxan code integrity checks in general. I knew of [MetalCrow's prior work](#metalcrows-ds1-overhaul-anti-anti-cheat) on this, but did not want to rely on a hardcoded list of check addresses. I thus started from scratch by inspecting the structure of the code restoration routines that the Elden Ring specific pattern could find.
+这使得该模组的开发受阻于如何全面禁用Arxan的代码完整性检查机制。虽然我了解[MetalCrow的先期研究](#metalcrows-ds1-overhaul-anti-anti-cheat)，但不愿依赖硬编码的检查地址列表。因此，我通过分析《艾尔登法环》特定模式所能发现的代码恢复例程结构，从零开始展开研究。
 
-## The Arxan Stub
+## Arxan存根（Stub）机制剖析
 
-It turns out that Arxan inserts its code in the original binary in a way that is reminiscent to that of runtime instrumentation tools. I've dubbed these individual insertion points "Arxan stubs".
+经分析发现，Arxan将其代码植入原始二进制文件的方式与运行时插桩（Runtime Instrumentation）工具的实现方式高度相似。我将这些独立的代码插入点命名为"Arxan存根"（Arxan stubs）。
 
-### General Structure
+### 总体结构
 
-Looking at `arxan_code_restoration_check` in one of [the timer-based code restoration check pattern](#timed_restoration_check) matches, we see the following (ER 1.16.0 @ `145c62312`):
+通过分析[基于定时器的代码恢复检查模式](#timed_restoration_check)中`arxan_code_restoration_check`的实例（《艾尔登法环》v1.16.0 @ 145c62312），可观察到如下结构：
 
 ```nasm linenums="1" hl_lines="3 7 13 15 17"
 MOV     qword ptr [RSP + -0x8],RBX
@@ -113,13 +113,13 @@ POP     R12
 RET     =>LAB_1459bfddb ; (5)
 ```
 
-1. Return address `14040e11c` is loaded into `RBX`.
-2. Return address is written to `INIT_RSP - 8`.
-3. Call address `1459bfddb` is loaded into `R12`.
-4. Call address is temporarily pushed to the stack.
-5. Call address is popped from the stack and jumped to.
+1. 返回地址 `14040e11c` 被加载到 `RBX` 寄存器。
+2. 返回地址被写入 `INIT_RSP - 8` 栈位置。
+3. 调用地址 `1459bfddb` 被加载到 `R12` 寄存器。
+4. 调用地址被临时压入栈中。
+5. 调用地址从栈中弹出并跳转至该地址。
 
-This is heavily obfuscated using Arxan's instruction substitution based obfuscation engine. However, by keeping track of the stack pointer and the two referenced addresses (lines 3 and 13) and their uses, we can see that we end up writing `LAB_14040e11c` to `RSP-8` and jumping to `LAB_1459bfddb`. In fact, going through the operations symbolically we can drastically simplify the code:
+这段代码通过Arxan基于指令替换的混淆引擎进行了重度混淆。然而，通过跟踪栈指针及两个被引用的地址（第3和13行）及其用途，我们可以发现其最终执行结果是将`LAB_14040e11c`写入`RSP-8`位置，并跳转至`LAB_1459bfddb`。实际上，通过符号化执行这些操作，我们可以大幅简化这段代码：
 
 ```nasm
 MOV     [RSP-0x08], LAB_14040e11c
@@ -129,18 +129,18 @@ LEA     RSP, [RSP - 8]
 JMP     LAB_1459bfddb
 ```
 
-Ignoring the `R12` stack clobbers, note that we're pushing an address on the stack and jumping. This is essentially what a call instruction does! In fact, all of these instructions are effectively obfuscation for
+若忽略对`R12`寄存器的栈破坏操作，可以观察到其核心行为是向栈中压入地址后执行跳转——这本质上正是调用(call)指令的功能！实际上，所有这些指令最终都等效于对以下代码的混淆伪装：
 
 ```nasm
 CALL    LAB_1459bfddb
 JMP     LAB_14040e11c
 ```
 
-This general pattern (move the return and call address to the stack, then jump using a `RET`) turns out to be great for identifying Arxan obfuscated calls.
+这种通用模式（将返回地址和调用地址移入栈中，然后通过`RET`指令跳转）被证明是识别Arxan混淆调用的有效特征。
 
-The return address, `LAB_14040e11c`, points to a seemingly random instruction which turns out to be in the middle of a function related to [Havok](https://en.wikipedia.org/wiki/Havok_(software)) script execution. Jumping here is not valid and would certainly crash the program in a hard-to-debug way.
+其中，返回地址`LAB_14040e11c`指向一个看似随机的指令——该指令实际位于[Havok](https://en.wikipedia.org/wiki/Havok_(software))脚本执行相关函数的中间位置。跳转至该地址不仅无效，还必然会导致程序以难以调试的方式崩溃。
 
-Looking at the call address, `LAB_1459bfddb`, we find another obfuscated call: 
+而当查看调用地址`LAB_1459bfddb`时，我们发现这又指向另一个混淆调用：
 
 ```nasm linenums="1" hl_lines="3 6"
 LEA     RSP,[RSP + -0x8]
@@ -157,10 +157,10 @@ POP     RAX
 RET     =>LAB_144ff7fde
 ```
 
-1. Return address
-2. Call address
+1. 返回地址
+2. 调用地址
 
-Again, the return address (`141f3e1b3`, line 3) points to a random instruction in the STL code for `std::error_category::equivalent`. The call address points to a third obfuscated call:
+同样地，返回地址（`141f3e1b3`，第3行）指向STL代码中`std::error_category::equivalent`函数内的随机指令。而调用地址则指向第三层混淆调用：
 
 ```nasm linenums="1" hl_lines="3 9"
 LEA     RSP,[RSP + -0x8]
@@ -178,10 +178,10 @@ POP     R11
 RET     =>LAB_14515620d
 ```
 
-1. Return address
-2. Call address
+1. 返回地址
+2. 调用地址
 
-The return address for this one, `145c97b12` (line 3), was more difficult to identify, as the code it points to is extremely obfuscated. However, upon a closer look it again seems to be in the middle of a regular game function. The call address, `14515620d` (line 9), however, now points to something more interesting:
+此处使用的返回地址`145c97b12`（第3行）较难识别，因其指向的代码段经过高度混淆处理。但经过仔细分析后可再次确认，该地址同样指向常规游戏函数中的某个中间指令。而调用地址`14515620d`（第9行）则指向了更值得关注的内容：
 
 ```nasm hl_lines="11 14 16 23-26 32"
 PUSHFQ
@@ -218,16 +218,16 @@ LEA     RSP,[RSP + 0x8]
 JMP     qword ptr [RSP + -0x8] ; (8)
 ```
 
-1. Sets the `Z` (zero) flag if `RSP` is a multiple of 16.
-2. Loads the "zero" path (`1404e6f39`) into `RSI`.
-3. Moves the zero path onto the stack.
-4. Loads the zero path from the stack into `RBX`.
-5. Loads the "nonzero" path (`140bd28e4`) into `RAX`.
-6. Moves the nonzero path (currently `RAX`) into `RBX` (current the zero path) if the `Z` flag is not set, i.e. if `RSP` is not a multiple of 16. `RBX` is now the conditional branch address.
-7. Moves the conditional branch address (currently `RBX`) onto the stack.
-8. Jumps to the conditional branch address that was written to the stack.
+1. 若`RSP`是 16 的倍数，则设置`Z`零）标志位。
+2. 将“零(zero)”路径地址(`1404e6f39`)加载到`RSI`寄存器。
+3. 将零(zero)路径地址移至栈上。
+4. 从栈中将零(zero)路径地址加载到`RBX`寄存器。
+5. 将“非零(nonzero)”路径地址 (`140bd28e4`) 加载到`RAX`寄存器。
+6. 若`Z`标志位未设置（即`RSP`不是 16 的倍数），则将非零路径地址（当前位于`RAX`）移动到`RBX`（当前持有零路径地址）。此时`RBX`包含条件分支的目标地址。
+7. 将条件分支地址（当前位于`RBX`）移至栈上。
+8. 跳转至写入栈中的条件分支地址。
 
-This block is heavily obfuscated, but again, we can painstakingly go through the instructions to see that it's mostly an obfuscated conditional jump:
+该代码块经过深度混淆，但我们仍可通过逐一解析指令艰难地识别出其本质——这主要是一个经过混淆处理的条件跳转指令：
 
 ```nasm
 PUSHFQ
@@ -241,7 +241,7 @@ JNZ     LAB_140bd28e4
 JMP     LAB_1404e6f39
 ```
 
-The first part of this looks very much like a partial context save. Inspecting the branches further and deobfuscating leaves us with the following graph, confirming this suspicion:
+此代码段的首部与部分上下文保存的实现高度相似。通过进一步分析各分支路径并进行去混淆处理，我们得到以下控制流图，该图证实了这一推断：
 
 <a name="stub_cfg"></a>
 
@@ -291,23 +291,23 @@ stateDiagram-v2
     rsp_unaligned --> context_pop:::text
 ```
 
-Tracking the stack carefully, we can see that the `PUSH 0x10` and `PUSH 0x18` instructions serve to restore the original alignment of the stack through the `ADD RSP, [RSP+8]` instruction in `context_pop`. While I've never seen this stack alignment technique before (usually it's done branchlessly by saving `RSP` in a temporary register and clearing its lowest 4 bits), this is a very common pattern for instrumentation: save the existing CPU state on the stack, call the instrumentation routine (in this case, the call to `FUN_1458d2c3d` which presumably handles the code restoration logic), and restore the original state.
+通过仔细跟踪栈操作过程，我们可以发现`PUSH 0x10`和`PUSH 0x18`指令的作用是通过`context_pop`中的`ADD RSP, [RSP+8]`指令恢复栈的原始对齐状态。虽然这种栈对齐技术并不常见（通常采用无分支方式，即将`RSP`暂存至临时寄存器并清除其最低4位），但这确实是插桩技术的典型模式：将当前CPU状态保存到栈中，调用插桩例程（此处即调用`FUN_1458d2c3d`，该函数很可能负责代码恢复逻辑），最后恢复原始状态。
 
-However, there is a problem here: because of the first three obfuscated calls with bogus return addresses, the final `RET` will redirect execution to the middle of an unrelated function and inevitably crash the game. Thus, I guessed that there must be something in `FUN_1458d2c3d` that writes over these "fake" return addresses. I tried to manually follow the logic of this function, but the obfuscation successfully prevented Ghidra and IDA decompilers / CFG viewers from working, and proved too annoying to go through manually. 
+然而，这里存在一个关键问题：由于前三次混淆调用使用了伪造的返回地址，最终的`RET`指令会将执行流重定向到无关函数的中间地址，这必然导致游戏崩溃。因此我推测，在`FUN_1458d2c3d`函数中必然存在会覆盖这些"虚假"返回地址的写入操作。虽然我尝试手动跟踪该函数的逻辑，但其混淆手段成功阻断了Ghidra和IDA反编译器/控制流图分析工具的工作流程，使得手动分析难以继续进行。
 
-### Identification
-Instead of immediately coming up with a better analysis workflow or deobfuscation strategy, I wondered if I could find simpler "Arxan stubs". From the above CFG, it seemed plausible that this was *the* way Arxan inserted logic into existing game code, so I started pattern scanning.
+### 模式识别
+在尚未找到更优分析方案或去混淆策略时，我转而尝试寻找更简单的"Arxan存根"。从上述控制流图可以推断，这很可能是Arxan向游戏代码插入逻辑的标准方式，因此我开始进行模式扫描。
 
-This is where Arxan's use of the `TEST RSP, 0xf` instruction comes back to haunt them. As I've said before, it's a very unusual way to align the stack, and I can't think of any other scenarios where such an instruction would be emitted. Sure enough, a search for the bytes `48 f7 c4 0f 00 00 00` gives 1598 matches. Going through a few dozen, they all follow the same context save/restore pattern! With more examples, it becomes evident that Arxan developers did try to make it harder to find these stubs:
+此时，Arxan对`TEST RSP, 0xf`指令的使用反而成了他们的阿喀琉斯之踵。正如前文所述，这是一种非常罕见的栈对齐方式，我难以想象还有其他场景会生成这样的指令。果不其然，在二进制文件中搜索其字节序列`48 f7 c4 0f 00 00 00`后，得到了1598个匹配结果。在逐一检查了数十个样本后，我发现它们都遵循完全相同的上下文保存与恢复模式！通过分析更多样本，事实变得显而易见：Arxan开发者确实试图增加这些存根的查找难度。
 
-- The order in which registers are pushed and popped to the stack is randomized.
-- The number of registers saved depends on the stub. Sometimes it's a few GPRs, sometimes it's all of them, sometimes it's also XMM registers.
-- Even when the same amount of registers are pushed, there can be random "gaps" in the stack-saved context.
-- Basic blocks are regularly split into smaller blocks of few instructions, likely to defend against pattern scans.
-- Surprisingly, many of them are not obfuscated at all, and look very much like the [deobfuscated CFG shown above](#stub_cfg). The non-obfuscated ones lack the 3 obfuscated "fake" calls leading to the context save.
+- **寄存器操作随机化**：存根中对寄存器进行压栈（PUSH）和出栈（POP）操作的顺序是随机化的。
+- **保存寄存器数量不定**：不同存根保存的寄存器数量各不相同，有时仅保存少量通用寄存器（GPRs），有时会保存全部通用寄存器，甚至有时还会额外保存XMM寄存器。
+- **栈帧布局随机填充**：即使压入相同数量的寄存器，存根也可能在栈中保存的上下文数据之间随机插入"空隙"（填充数据）。
+- **基础块分割策略**：原始的基础块通常被分割成由少量指令组成的小块，这种设计很可能旨在防御基于模式的扫描检测。
+- **未混淆存根大量存在**：值得注意的是，大量存根完全未进行混淆处理，其控制流结构与上文展示的[去混淆后CFG](#stub_cfg)高度相似。这些未混淆的存根省略了三个用于引导至上下文保存阶段的混淆性"虚假"调用。
 
-### Return Gadgets
-Now that I had a way to find all stubs, I returned to Dark Souls Remastered to continue my analysis there, as it was the game I needed to support first and foremost. The `TEST RSP, 0xf` pattern matched 2976 times in that game (which happens to be higher than all other FROMSOFTWARE games). To find what was writing over the bogus return addresses, I used the Rust bindings for the [Unicorn](https://www.unicorn-engine.org/) emulator to step through a stub starting at the `TEST RSP, 0xf` instruction while logging instructions that wrote to a stack address above the original RSP, which lead me to blocks like this (high stack writes highlighted):
+### 返回指令片段分析
+在获得定位所有存根的方法后，我重返《黑暗之魂：重制版》继续分析，因为该游戏是我需要优先支持的目标。通过`TEST RSP, 0xf`模式匹配，在该游戏中发现了2976处匹配（这个数量恰好高于FS社其他所有游戏）。为查明覆盖伪造返回地址的写入操作，我使用Rust绑定的[Unicorn](https://www.unicorn-engine.org/)模拟器从`TEST RSP, 0xf`指令开始单步执行存根代码，同时记录所有向原始RSP上方栈地址执行写入操作的指令，最终发现了如下指令块（高位栈写入操作已高亮）：
 
 ```nasm hl_lines="4 9 14"
 MOV     RAX,qword ptr [LAB_14009f568]       = 0x32
@@ -326,39 +326,39 @@ MOV     RCX,qword ptr [PTR_LAB_14012f813]   = 0x14026c7d5
 MOV     qword ptr [RDX + RAX*0x8],RCX=>LAB_14026c7d5
 ```
 
-Inspecting `LAB_1400e0f5a`, we find a `JMP` instruction to the beginning of another obfuscated Arxan stub (i.e. the 3 repeated obfuscated calls with bogus return addresses). The other two gadgets, `LAB_140997167` and `LAB_14026c7d5`, are simply obfuscated return instructions, such as `LEA RSP, [RSP + 8]; JMP qword ptr [RSP - 8]`. Letting the emulator execute shows that indeed, once the context restoration part of the stub finishes, we jump from one return gadget to the next, ending up at the true exit address of `LAB_1400e0f5a`.
+通过分析`LAB_1400e0f5a`可以发现，该处含有一条`JMP`(跳转)指令，指向另一个混淆化Arxan存根的起始位置（即包含三个重复混淆调用及伪造返回地址的结构）。另外两个指令片段`LAB_140997167`和`LAB_14026c7d5`实质上是经过混淆处理的返回指令，其表现形式类似`LEA RSP, [RSP + 8]; JMP qword ptr [RSP - 8]`。通过模拟执行可验证：当存根的上下文恢复部分执行完毕后，系统会依次跳转经过这些返回指令片段，最终抵达`LAB_1400e0f5a`的真实出口地址。
 
-Doing this for a few more stubs, the pattern for these writes is consistent: Add an hardcoded offset (in `RAX`) to the original frame (in `RDX` / `[RBP + 0x50]`) to get the stack location where the bogus call return address was written, and overwrite it with the gadget's address. Although my sample size was somewhat small due to my primitive Unicorn configuration not being able to go through *all* the stubs, I made the following observations:
+在对更多存根进行分析后，发现其写入模式具有一致性：通过将固定偏移量（存于`RAX`）与原始栈帧地址（存于`RDX`/`[RBP + 0x50]`)相加，可定位到伪造调用返回地址的栈位置，并用指令片段的地址覆盖该值。尽管由于初始配置的Unicorn模拟器无法遍历所有存根导致样本量有限，但我仍观察到以下现象：
 
-- There are always 3 bogus obfuscated calls, and thus 3 addresses to overwrite.
-- The first two (in stack order) are just an obfuscated `RET` instruction.
-- The last one jumps is a trampoline that returns execution to non-Arxan code.
-- The writes to each address are not always made together; in more complex stubs they might be split with large amounts of complex logic and control flow in between.
-- Stubs can be chained together, where the first one's exit trampoline jumps straight to the beginning of another.
+- **固定三次伪造调用**：始终存在三个经过混淆的伪造调用，因此需要覆盖三个返回地址。
+- **前两个为混淆化返回指令**：按栈顺序排列的前两个地址会被替换为经过混淆处理的`RET`指令片段。
+- **末位执行跳转中转**：最后一个地址实际作为跳板，负责将执行流返还至非Arxan的正常代码区域。
+- **写入操作具有离散性**：对这些地址的写入操作并非集中进行，在复杂存根中可能被大量控制流混淆逻辑分隔。
+- **存根链式调用机制**：存根之间可形成链式调用，前一个存根的出口跳板会直接跳转至下一个存根的起始位置。
 
-Although not perfect, combined with Arxan's control flow obfuscation this is an effective protection against nopping calls to the stub's main routine by making it very hard to find the exit trampoline address without emulation-aided CFG analysis. 
+尽管并非完美，但结合Arxan的控制流混淆技术，这种机制能有效防止通过简单NOP调用存根主例程的攻击——因为若不借助模拟器辅助的控制流分析，几乎不可能定位到出口跳板地址。 
 
-### Summary
-We've found that Arxan inserts its code into a program as individual units I've named "Arxan stubs". Each stub runs a specific routine, be it anti-debug checks, code integrity checks, etc. Some stubs protect against nopping the routine, which I've designated as *obfuscated* stubs as opposed to *unobfuscated* stubs since whether obfuscation is applied to the context save/restore parts of the stubs is conditional on this protection mechanism being present. The structure of a stub is as follows:
+### 总结
+通过分析我们发现，Arxan通过名为"Arxan存根"的独立代码单元将保护逻辑注入目标程序。每个存根执行特定功能，包括反调试检测、代码完整性验证等。部分存根具有防NOP攻击保护机制——这类存根我称之为混淆化存根，以区别于非混淆化存根，因为存根中上下文保存/恢复部分是否采用混淆处理，完全取决于是否存在此类保护机制。存根的基本结构如下：
 
-1. If it's an *obfuscated stub*, the stub begins with a sequence of 3 nested `CALL ..., JMP {bogus address}` obfuscated blocks.
-2. Registers that must be saved are pushed to the stack, which is then aligned to 16 bytes.
-3. The actual logic of the stub is invoked using a `CALL` (which may be obfuscated). If it's an *obfuscated stub*, successful completion of this routine will write correct return gadgets over the 3 bogus return addresses from step 1.
-4. The original stack pointer before alignment is restored, as are saved registers.
-5. Execution returns to non-Arxan code using either a relative `JMP` (if non-obfuscated) or a possibly-obfuscated `RET` (if obfuscated).
+1. **混淆化存根起始结构**：若属*混淆化存根*，存根起始处为3层嵌套的`CALL ..., JMP {伪造地址}`混淆指令块序列
+2. **寄存器保存与栈对齐**：将需要保存的寄存器压入栈中，随后将栈指针按16字节对齐
+3. **核心逻辑执行机制**：通过`CALL`指令（可能被混淆）调用存根的实际逻辑例程。若为*混淆化存根*，该例程成功执行后会覆盖第1步中3个伪造返回地址，写入正确的返回指令片段
+4. **上下文恢复阶段**：恢复对齐前的原始栈指针，并还原所有已保存的寄存器
+5. **执行流返回方式**：通过相对偏移`JMP`（非混淆化存根）或可能被混淆的`RET`指令（混淆化存根）将执行权交还非Arxan代码
 
-## Stub Analysis
-Now that I knew how Arxan stubs are structured and how to effectively find them, it was time to come up with a way to prevent them from running. The idea is straightforward:
+## 存根分析
+在掌握Arxan存根的结构特征与有效定位方法后，下一步是制定阻止其运行的方案。思路非常明确：
 
-1. Search for `TEST RSP, 0xf` instructions to find the stubs.
-2. Follow the control flow up to the maybe-obfuscated `CALL` instruction to extract the main stub function and its return address (which will be the context restoration part). 
-3. If the stub is obfuscated, visit the control flow graph of the main function to find the 3 correct return gadgets.
-4. Hook at the `TEST RSP, 0xf` instruction and emit code that writes the correct return gadgets to the stack before jumping directly to the stub's context restore, skipping all of its protection logic. 
+1. **定位存根**：通过搜索`TEST RSP, 0xf`指令定位所有存根入口。
+2. **解析核心逻辑**：沿控制流回溯至可能被混淆的`CALL`指令，提取存根主函数及其返回地址（即上下文恢复段起始点）。
+3. **处理混淆化存根**：若存根经过混淆，需分析主函数的控制流图以定位3个正确的返回指令片段。
+4. **植入拦截逻辑**：在`TEST RSP, 0xf`指令处植入钩子代码，使其在跳转至上下文恢复段前。
 
-The challenge with this approach is that Arxan's control flow obfuscation prevents naive DFS CFG building from working. To accurately follow branches, the machine state must be partially emulated.
+此方案的核心挑战在于：Arxan的控制流混淆技术会阻止传统的深度优先搜索（DFS）控制流图构建方法。要准确追踪分支路径，必须对机器状态进行部分模拟分析。
 
-### Attempt 1: Simple Heuristics
-My first idea was to visit the CFG based on static control flow, and to optimistically assume that any visited `LEA`s or `MOV`s that load an address pointing into a code section of the executable do so as part of a branch obfuscation, pushing the address to the to-visit stack. The return gadgets can then be identified by the instruction pattern discovered in [the previous section](#return-gadgets):
+### 尝试一：简单启发式方法
+我的初步构想是基于静态控制流遍历控制流图（CFG），并乐观假设所有访问到的加载到代码区地址的`LEA`或`MOV`指令均属于分支混淆机制的一部分，将这些地址压入待访问栈。随后可通过[前文](#return-gadgets)发现的指令模式来识别返回指令片段：
 
 ```nasm
 MOV     RAX,qword ptr [RIP+?]
@@ -367,48 +367,43 @@ MOV     RCX,qword ptr [PTR_TO_GADGET_ADDR]
 MOV     qword ptr [RDX + RAX*0x8],RCX
 ```
 
-The nice thing about this approach is the simplicity of implementation. However, there are some hurdles that made it rather impractical:
+这种方法的优势在于实现简单。然而，存在若干难以规避的障碍导致其实际应用受限：
 
-- Arxan often splits up basic blocks into small parts, and sometimes the jumps linking these blocks are obfuscated. This can happen to the above pattern of 4 instructions, in which case matching fails. While it's easy to ignore regular a regular `jmp` in the middle, an obfuscated one would require partial emulation which we are specifically trying to avoid with this technique.
+- **基础块分割干扰**：Arxan经常将基础块分割成细小的片段，且连接这些片段的跳转指令可能被混淆。上述4指令模式同样可能遭遇这种分割，导致模式匹配失败。虽然常规的`jmp`指令容易识别，但遇到混淆跳转时仍需部分模拟——而这正是本技术试图规避的。
 
-- Arxan uses code caves in the `.text` sections to store hashes to compare to and some state data. The addresses to some of these would be incorrectly considered to point to code. In most situations this wasn't a problem as the disassembler would eventually encounter an invalid instruction. However, there were rare cases where the data could be read as valid x86 instructions for long enough to enter a completely unrelated function or stub in which the above pattern could be found.
+- Arxan会利用`.text`节中的空隙区域（code caves）存储用于比对的哈希值及某些状态数据。这些数据区域的地址可能被错误识别为代码指针。多数情况下这不会造成问题，因为反汇编器最终会遇到无效指令。但在极少数情况下，这些数据可能被解析为足够长的有效x86指令序列，从而跳转至完全无关的函数或存根——并在其中错误匹配上述指令模式。
 
-### Attempt 2: Unicorn Emulator
-Another option was to simply use a proper x86 emulator, configuring it with the minimal state and mocks to successfully step through the stub until `RSP` increased past the initial value set at the `TEST RSP, 0xf` instruction. The stack could then be scanned to extract the return gadgets and generate the patch.
+### 尝试二：Unicorn模拟器方案
+另一种方案是直接采用专业的x86模拟器（Unicorn Emulator），通过配置最小化状态和模拟环境，逐步执行存根代码直至`RSP`指针超越`TEST RSP, 0xf`指令设置的初始值。随后可通过扫描栈空间提取返回指令片段并生成补丁。
 
-I already had a minimal working example using the Unicorn emulator that I used to figure out how the true return addresses were being written to the stack. The game executable was mapped to its preferred base address, along with a large block to serve as the stack. Every register was initialized to 0 outside of RSP, and emulation started at the `TEST RSP, 0xf` instruction. This turned out to be sufficient for quite a few stubs, but doing it for *all* of them quickly lead to problems: 
+实际上，我已经利用Unicorn模拟器构建了一个最小化可行方案，此前正是通过该方案发现了真实返回地址被写入栈的机制。具体配置包括：将游戏可执行文件映射到其首选基地址，并分配大容量内存块作为模拟栈空间。除`RSP`外所有寄存器初始化为0，从`TEST RSP, 0xf`指令开始执行模拟。这种配置对相当数量的存根有效，但当试图覆盖所有存根时，问题迅速显现：
 
-- It's quite slow: Some of the stubs would take a few hundred milliseconds to fully execute, which isn't ideal when you have to go through 3000 of them at runtime when the game boots (of course static analysis would still be within reach).
-- Some stubs use the heap through the game's own `malloc`, which would have to be mocked.
-- It turns out that the anti-debug stubs use a lot of techniques that would require substantial WinAPI or SEH mocking: [`INT3`](https://anti-debug.checkpoint.com/techniques/assembly.html#int3), [`INT 2d`](https://anti-debug.checkpoint.com/techniques/assembly.html#int2d), [`IsDebuggerPresent`](https://anti-debug.checkpoint.com/techniques/debug-flags.html#using-win32-api-isdebuggerpresent), [`NtQueryInformationProcess`](https://anti-debug.checkpoint.com/techniques/debug-flags.html#using-win32-api-ntqueryinformationprocess), [`NtGlobalFlag`](https://anti-debug.checkpoint.com/techniques/debug-flags.html#manual-checks-ntglobalflag), [`GetThreadContext`](https://anti-debug.checkpoint.com/techniques/process-memory.html#hardware-breakpoints), Add/RemoveVectoredExceptionHandler, etc. It also often gets function addresses from a combination of `GetModuleHandleA` and   `GetProcAddress`.
+- 该方案存在明显局限性：首先执行效率较低——部分存根需数百毫秒才能完成模拟，对于需要在游戏启动时实时处理3000个存根的场景而言显然不适用（当然静态分析仍可行）。
+- 某些存根会通过游戏自身的`malloc`函数进行堆内存操作，这就需要模拟堆分配机制。
+- 更关键的是，反调试存根大量使用了需要深度模拟WinAPI或结构化异常处理（SEH）的技术，包括：[`INT3`](https://anti-debug.checkpoint.com/techniques/assembly.html#int3), [`INT 2d`](https://anti-debug.checkpoint.com/techniques/assembly.html#int2d), [`IsDebuggerPresent`](https://anti-debug.checkpoint.com/techniques/debug-flags.html#using-win32-api-isdebuggerpresent), [`NtQueryInformationProcess`](https://anti-debug.checkpoint.com/techniques/debug-flags.html#using-win32-api-ntqueryinformationprocess), [`NtGlobalFlag`](https://anti-debug.checkpoint.com/techniques/debug-flags.html#manual-checks-ntglobalflag), [`GetThreadContext`](https://anti-debug.checkpoint.com/techniques/process-memory.html#hardware-breakpoints)，以及添加/删除向量化异常处理程序等。此外，存根还经常通过组合调用`GetModuleHandleA`和`GetProcAddress`来动态获取函数地址。
 
-I worked on configuring Unicorn with the proper hooks and such to create a sandbox in which all the stubs could run to completion for a day or two but eventually realized that it was probably a waste of time as fully accurate emulation of the stubs isn't needed for anything.
+我花费了一两天时间配置Unicorn模拟器的钩子函数，试图构建能完全运行所有存根的沙箱环境，但最终意识到这可能是徒劳的——因为对于实际需求而言，并不需要对存根进行百分之百精确的模拟。
 
-### Attempt 3: Partial Forking Emulator
-Using the [`iced-x86`](https://docs.rs/iced-x86) disassembler, I ended up deciding to create my own cut-down x86 emulator specifically designed to defeat Arxan control flow obfuscation. It is able to work with partial information (registers and memory can have an unknown/invalidated value) and to fork on conditional branches so that all execution paths can be explored.
+### 尝试三：部分分支模拟器方案
+最终我决定基于[`iced-x86`](https://docs.rs/iced-x86)反汇编器构建一个专用于破解Arxan控制流混淆的定制化x86模拟器。该模拟器能处理部分信息（允许寄存器或内存值处于未知/无效状态），并在条件分支处进行执行路径分叉，从而探索所有可能的执行路径。
 
-The CPU model is extremely simplified, but sufficient:
+该CPU模型极度简化但满足需求：
 
-- All memory is lazily mapped and is both readable and writable.
-- Only general purpose registers (RAX-R15) are modeled. Segment registers CS, DS, ES and SS are
-  assumed to be zero. Reads from other segments invalidate the destination operand.
-- Instructions can only be read from the *immutable* executable image; self-modifying code is
-  not supported.
-- `EFLAGS` is not modeled; conditional branch and data instructions (such as `Jcc` and `CMOVcc`) always fork
-  the execution of the program into two paths.
-- Interrupts are not modeled and simply kill the current fork.
-- A very small subset of instructions are fully modeled: `MOV`, `MOVZX`, `LEA`, `XCHG`, `ADD`,
-  `SUB`, `PUSH`, `POP`, `JMP`, `CALL` and `RET`. Other instructions invalidate the registers and memory
-  that they would write to according to the output of iced's [`InstructionInfoFactory`](https://docs.rs/iced-x86/latest/iced_x86/struct.InstructionInfoFactory.html).
+- **内存管理**：采用惰性内存映射机制，所有内存区域均可读写。
+- **寄存器建模**：仅模拟通用寄存器（RAX-R15），段寄存器CS/DS/ES/SS预设为零值，从其他段读取数据会使目标操作数失效。
+- **指令读取**：仅允许从*不可变*的可执行镜像中读取指令，不支持自修改代码。
+- **标志位处理**：不模拟`EFLAGS`寄存器，条件分支指令（如`Jcc`）和数据指令（如`CMOVcc`）始终将程序执行分叉为两条路径。
+- **中断处理**：不模拟中断机制，遇到中断指令直接终止当前分叉。
+- **指令集支持**：完整模拟最小指令子集（`MOV`, `MOVZX`, `LEA`, `XCHG`, `ADD`, `SUB`, `PUSH`, `POP`, `JMP`, `CALL`, `RET`），其他指令会根据iced的[`InstructionInfoFactory`](https://docs.rs/iced-x86/latest/iced_x86/struct.InstructionInfoFactory.html)输出结果使其写入的寄存器/内存失效
 
-#### Program State Layout
-General-purpose registers are stored in an fixed array of `Option<u64>`s and indexed according to their offset to `RAX` in iced's `Registers` enumeration. 
+#### 程序状态布局
+通用寄存器存储在固定的`Option<u64>`类型数组中，根据其在iced的`Registers`枚举中相对于`RAX`的偏移量进行索引。
 ```rs
 #[derive(Default, Clone)]
 pub struct Registers([Option<u64>; Self::GPR_COUNT]);
 ```
 
-The executable image is abstracted to the minimum that is required using the following trait: 
+可执行镜像被抽象至所需最小程度，通过以下特征实现： 
 ```rs
 /// Abstraction over an immutable view of a mapped executable image.
 pub trait ImageView: Clone {
@@ -433,9 +428,9 @@ pub trait ImageView: Clone {
 }
 ```
 
-For now, the `relocs64()` may seem useless but it will come into play when dealing with runtime-encrypted functions.
+目前`relocs64()`方法看似无用，但在处理运行时加密函数时将发挥关键作用。
 
-Memory state is represented as a `HashMap` of 64-byte blocks indexed by their virtual addresses. Each block has a 64-bit bitmask keeping track of known and unknown bytes:
+内存状态通过虚拟地址索引的64字节块`HashMap`来表示。每个块使用64位位掩码来追踪已知字节与未知字节的状态：
 
 ```rs
 #[derive(Debug, Clone)]
@@ -451,9 +446,9 @@ pub struct MemoryStore<I: ImageView> {
 }
 ```
 
-Blocks from the executable image are lazily copied to the hash map when read, and reads only succeed when all bytes in the slice are known.
+来自可执行镜像的内存块在读取时会惰性复制到哈希映射中，且仅当切片内所有字节均为已知状态时读取操作才会成功。
 
-The program state is a combination of memory, registers, instruction pointer and optional user data: 
+程序状态由内存状态、寄存器值、指令指针及可选用户数据组合而成： 
 
 ```rs
 /// The full state of an emulated program.
@@ -473,11 +468,11 @@ pub struct ProgramState<I: ImageView, D: Clone = ()> {
 }
 ```
 
-#### The Forking Algorithm
+#### 分叉算法
 
-The idea is simply to perform depth-first search on all CFG execution paths. Maintain a stack of program states and emulate one instruction in the top one. If it's a conditional branch or move instruction, clone the state and push it on the stack. If we encounter an interrupt or `state.rip` becomes `None` as a result, pop the state from the stack. While doing so we can keep track of other metadata, such as the current execution path and fork points. 
+核心思路是对所有控制流图（CFG）执行路径进行深度优先搜索。维护一个程序状态栈，每次模拟栈顶状态的单条指令。若遇到条件分支或条件移动指令，则克隆当前状态并将其压入栈中。若遇到中断或导致`state.rip`变为`None`的情况，则从栈中弹出该状态。在此过程中可同步记录其他元数据，如当前执行路径和分叉点。
 
-All state and additional information is mutably passed to a user callback through this `RunStep` struct:
+所有状态及附加信息通过以下`RunStep`结构体以可变引用形式传递给用户回调函数：
 
 //// collapse-code
 ```rs
@@ -531,7 +526,7 @@ pub struct PastFork<I: ImageView, D: Clone = ()> {
 
 </details>
 
-To implement higher-level analysis, the callback can directly mutate fields of the `RunStep` and decide how execution will continue through the `StepKind` struct:
+为实现更高层次的分析，回调函数可直接修改`RunStep`的字段，并通过`StepKind`结构体决定后续执行流程：
 
 ```rs
 #[derive(Debug, Clone)]
@@ -555,18 +550,18 @@ pub enum StepKind<I: ImageView, D: Clone = (), R = ()> {
 }
 ```
 
-The problem with the forking emulator approach is that it explores every unique path through the Arxan stub. There are either infinitely many such paths (if loops are present), or a number potentially exponential in the amount of conditional branching instructions. We can't keep a global set of visited instructions, as it would prevent one of the branches of obfuscated conditional jumps from being taken. 
+分叉模拟器方案的核心问题在于需要穷尽Arxan存根中的所有独立执行路径。若存在循环结构则会产生无限路径，否则路径数量可能随条件分支指令呈指数级增长。由于不能使用全局已访问指令集合（这会阻碍混淆化条件跳转的分支探索），我采用的初级解决方案是：根据当前执行路径动态追踪访问记录，并通过硬编码合理的分支深度和分叉深度限制来控制指数级复杂度。
 
-My first low-effort solution was to track this set according to the current execution path, and dealing with the exponential complexity by hardcoding reasonable limits to the branch and fork depths. When reaching the context save part of the stub on any execution path, the memory above `RSP` would be scanned to extract the return gadgets. Once I had all 3, the search could be stopped. 
+当任意执行路径抵达存根的上下文保存段时，立即扫描`RSP`上方的栈内存以提取返回指令片段。一旦集齐3个片段即可终止搜索。
 
-This turned out to work great for Dark Souls Remastered and Dark Souls 2, taking less than a second to find all return gadgets of DSR's 2976 stubs on a single thread. It is the technique used in [`arxan-disabler`](https://github.com/tremwil/arxan-disabler) crate, the precursor to `dearxan` that only supported these two games.
+该方案在《黑暗之魂：重制版》和《黑暗之魂2》中表现卓越——单线程仅用不到1秒就完成了DSR全部2976个存根的返回指令片段提取。这项技术已应用于[`arxan-disabler`](https://github.com/tremwil/arxan-disabler)组件（即dearxan的前身，初期仅支持上述两款游戏）。
 
-### Visiting the Stub's Full CFG
+### 遍历存根完整控制流图
 
-When I decided to support other FROMSOFTWARE games, however, this turned out to be insufficient. The stubs had gotten more complex with deeper branching and it was prohibitively expensive to go through all execution paths, so I had to design an approach which scales linearly in the number of instructions. The canonical approach is to keep a set of visited instructions and kill the current fork when one is encountered, but required a few adjustments to work with obfuscated control flow:
+然而，当我决定支持其他FS社游戏时，该方案显现出局限性。新游戏的存根结构变得更加复杂，分支深度显著增加，遍历所有执行路径的计算成本已变得难以承受。因此我必须设计一种与指令数量呈线性关系的新方案。标准解决方案是维护已访问指令集合并在遇到重复指令时终止当前分叉，但需针对混淆控制流进行若干调整：
 
-#### RSP-based conditional branches
-Recall that the context save part of the stub branches on the result of `TEST RSP, 0xf` as part of its stack alignment mechanism. Because we don't model `EFLAGS`, the forking emulator will eventually visit the branch that is incorrect for the initial RSP value we chose. This is always the first branch, so luckily it's rather easy to detect:
+#### 基于RSP的条件分支
+需要重申的是：存根的上下文保存部分会根据`TEST RSP, 0xf`的结果进行分支跳转，这是其栈对齐机制的组成部分。由于未模拟`EFLAGS`寄存器，分叉模拟器最终会访问到与初始RSP值不匹配的错误分支路径。这种情况始终发生在首个分支处，幸运的是其检测机制相对简单：
 
 ```rs
 // Ignore the RSP-aligning first branch path that doesn't correspond to the
@@ -586,7 +581,7 @@ init_state.run(move |mut step| {
 })
 ```
 
-In obfuscated stubs, there is a second branch that depends on RSP, when computing the stack address of the original frame to write the return gadgets to. It checks whether `0x18` was pushed to the stack prior to the call to the stub's main routine. We can still ignore it based on `branch_count` and `past_forks.len()`, but the fact that this branch doesn't exist in unobfuscated stubs makes it more hacky:
+在混淆化存根中，当计算原始栈帧地址以写入返回指令片段时，会存在第二个依赖于RSP的分支。该分支会检查在调用存根主例程前是否已向栈中压入`0x18`字节。虽然我们仍可通过`branch_count`和`past_forks.len()`参数忽略此分支，但由于该分支在非混淆化存根中根本不存在，使得解决方案显得更为取巧：
 
 ```rs
 // Obfuscated stub call routines will first check if we pushed 18 earlier.
@@ -604,8 +599,8 @@ if step.branch_count == 2 && Some(step.past_forks.len()) == bad_cmp_rax_branch {
 }
 ```
 
-#### Obfuscated Conditional Jumps
-Obfuscated conditional branches using `CMOVxx` instructions require re-visiting the common path after the `CMOV` until the instruction pointer diverges from the previous branch. To handle this, we store a global (i.e. per emulation) map of visited instruction IPs to a "cmov ID", as well as a global `is_double_stepping` flag. Every time we visit a cmov instruction with known values for both the true and false branch, new IDs are assigned as follows:
+#### 混淆化条件跳转
+对于使用`CMOVxx`指令的混淆化条件分支，需要在执行`CMOV`后重新访问公共路径，直到指令指针与前次分支发生偏离。为此，我们维护一个全局（即每次模拟独享的）已访问指令IP到"cmov ID"的映射表，以及一个全局的`is_double_stepping`（双重步进）标志位。每次处理已知真假分支值的cmov指令时，按如下规则分配新ID：
 
 ```rs
 cmov_id_counter += 3;
@@ -613,7 +608,7 @@ true_branch_id = cmov_id_counter;
 false_branch_id = cmov_id_counter + 1;
 ```
 
-This ID is stored in the `ProgramState`'s `user_data`. When a previously visited instruction is encountered, we can check if we're executing the false branch by checking if its assigned cmov ID is exactly one less than the current state's, and allow re-executing the instruction until the execution path diverges:
+该ID会被存储在`ProgramState`的`user_data`字段中。当遇到已访问过的指令时，通过检查其分配的cmov ID是否恰好比当前状态ID小1，即可判断是否处于假分支执行路径。此时允许重新执行该指令，直到执行路径发生分离：
 
 //// collapse-code
 ```rs
@@ -647,10 +642,10 @@ match visited.entry(step.instruction.ip()) {
 ```
 ////
 
-#### Obfuscated calls
-The way `CALL` instructions are implemented in the forking emulator is akin to that of a real x86 CPU: The address of the next instruction is pushed on the stack, and `RIP` is set to the call target. Hence to return from a `CALL` instruction the emulator must follow an execution path through it that hits a `RET`. 
+#### 混淆化调用
+分叉模拟器对`CALL`指令的实现方式与真实x86 CPU一致：将下一条指令地址压入栈中，并将`RIP`设置为调用目标地址。因此要从`CALL`指令返回，模拟器必须沿着执行路径通过`RET`指令完成返回。
 
-This becomes a problem when the same function is called multiple times, as the current fork will be killed without jumping to the call's return address. Fixing this requires detecting calls obfuscated using indirect `JMP` or `RET` instructions. [Dasaav](https://github.com/Dasaav-dsv) had the great idea to use stack alignment for this, which ended up working great:
+当同一函数被多次调用时，当前分叉会在未跳转到调用返回地址的情况下被终止，这就产生了问题。解决此问题需要检测通过间接`JMP`或`RET`指令实现的混淆化调用。[Dasaav](https://github.com/Dasaav-dsv)提出了利用栈对齐进行检测的创新方案，最终取得显著成效：
 
 //// collapse-code
 ```rs
@@ -714,7 +709,7 @@ impl CallInfo {
 ```
 ////
 
-Now, when an resolvable indirect branch is found to be an obfuscated `CALL`, the target address can be eagerly checked against the visited list to decide if we should continue to the return address:
+现在，当检测到可解析的间接分支实质为混淆化`CALL`指令时，可主动检查其目标地址是否存在于已访问列表，从而决定是否继续执行至返回地址：
 
 ```rs
 if oob_or_visited {
@@ -730,10 +725,10 @@ if oob_or_visited {
 }
 ```
 
-#### Anti-Debug Return Address Clobbering
-For the Arxan versions present in games past Dark Souls Remastered, anti-debug stubs have a new mechanism for crashing the process: overwriting the return address of their main logic function with one that points to invalid memory. This is a problem as this function has a common "end" block, so if the "bad" path is taken first (which is the case), the "good" path won't return either as it will stop on previously visited instructions.
+#### 反调试返回地址破坏技术
+在《黑暗之魂重制版》之后版本游戏中使用的Arxan保护方案，其反调试函数存根采用了一种新的进程崩溃机制：通过使用指向无效内存的地址覆盖主逻辑函数的返回地址。这个问题尤为棘手，因为该函数采用通用的"结束"代码块——如果先执行"异常"路径（实际执行情况），那么即使后续执行"正常"路径，由于会再次经过已执行的指令，函数同样无法正常返回。
 
-This is where tracking the full execution path along with fork and branch points in the `RunStep` became useful. We can store an additional `is_unresolved_branch` boolean flag along with the cmov ID for each visited instruction. If we encounter an unresolved indirect branch or `RET`, the flag is set on all instructions of the current basic block:
+此时在`RunStep`过程中追踪完整执行路径及分叉点与分支点的价值就得以体现。我们可以为每个已执行指令额外存储一个`is_unresolved_branch`布尔标志位（与条件cmov ID关联）。当遇到未解析的间接分支或`RET`指令时，当前基本块内的所有指令都会被打上这个标志。
 
 //// collapse-code
 ```rs
@@ -761,7 +756,7 @@ if maybe_fork.is_none() && indirect && step.state.rip.is_none() {
 ```
 ////
 
-The visited instruction check can then be amended to clear the flag and allow re-visiting the instruction if it's set:
+随后，可对已访问指令的检查机制进行修订：若发现未解析分支标志被设置，则清除该标志并允许重新访问该指令：
 
 //// collapse-code
 ```rs hl_lines="5-9 18 20-28"
@@ -806,19 +801,19 @@ match visited.entry(step.instruction.ip()) {
 ```
 ////
 
-While this was enough to return from anti-debug stubs in games up to Elden Ring, it proved insufficient for Armored Core 6 and Elden Ring: Nightreign. The Arxan developers likely changed the logic to a point where the return address is clobbered earlier, many conditional branches before the return. 
+虽然该方法足以应对直至《艾尔登法环》时期游戏中的反调试函数存根，但在处理《装甲核心6》和《艾尔登法环：黑夜君临》时则显不足。Arxan开发者很可能调整了逻辑机制，使得返回地址的破坏时机大幅提前——早在真正返回前的多个条件分支处就已发生。 
 
-I tried to fix this by detecting the above-initial-stack writes as they are emulated instead of waiting for the main stub routine to successfully return. This partially worked, but for some stubs in AC6 and Nightreign, one of the return gadgets was not being detected, likely due to a nested anti-debug check that was called *before* the instruction writing the gadget could be visited.
+我尝试通过实时检测模拟过程中的"初始栈帧之上写入"操作来修复该问题，而非被动等待主存根例程执行返回。这种方法取得部分成效，但在处理《装甲核心6》和《艾尔登法环：黑夜君临》的某些存根时，有一个返回指令片段始终无法被检测到，这很可能是由于在访问写入该指令片段的指令*之前*，系统就先调用了嵌套的反调试检查。
 
-Luckily, it turns out that I didn't need this gadget's address anyway.
+幸运的是，事实证明我实际上并不需要这个指令片段的地址。
 
-### An Important Realization
-So far, I worked under the conservative assumption that the 3 return gadgets could be written by the stub's main routine in any order. Well, after taking a closure look, they...
+### 一个重要发现
+迄今为止，我的工作始终基于一个保守假设：三个返回指令片段可能以任意顺序被存根主例程写入。然而经过仔细分析后发现，它们...
 
-- always write them in descending stack address order, and
-- always make the second and third one `RET`-like instruction sequences, so only the first one is relevant :facepalm:
+- 总是按照栈地址降序进行写入
+- 始终将第二和第三个指令片段设置为类`RET`指令序列，因此实际上只有第一个指令片段具有关键意义 :facepalm:
 
-This makes analysis significantly easier. We just need to grab the first above-initial-stack write, so it doesn't matter if some obscure deeply nested paths of the stub's CFG aren't visited:
+这使得分析工作大幅简化。我们只需捕获第一个"初始栈帧之上"的写入操作即可，因此即使存根控制流图（CFG）中某些深奥的嵌套路径未被访问也无关紧要：
 
 //// collapse-code
 ```rs
@@ -847,9 +842,9 @@ fn extract_return_gadget<I: ImageView, D: Clone>(
 ```
 ////
 
-## Neutering Arxan
+## 禁用Arxan保护机制
 
-Using the information obtained from the above analysis, it's now possible to prevent *all* Arxan code from running by installing hooks like this at each stub's `TEST RSP, 0xf` instruction before the game's entry point runs:
+利用上述分析获得的信息，我们现在可以在游戏入口点运行之前，通过在每个存根的`TEST RSP, 0xf`指令处安装如下钩子来完全阻止*所有*Arxan代码的执行：
 
 ```nasm
 LEA     RAX, [return_thunk]
@@ -863,11 +858,11 @@ LEA     RSP, [RSP + 0x10]
 JMP     {return gadget address}
 ```
 
-Trying to launch Dark Souls Remastered like this, however, instantly crashes.
+然而，若尝试以此方式启动《黑暗之魂：重制版》，游戏会立即崩溃。
 
-### Problem 1: The Entry Point
+### 问题一：入口点
 
-Debugging the first crash, we find that the C++ static initializer array is filled with garbage bytes. These initializers are called in the `__scrt_common_main_seh` function of the MSVC runtime, so Arxan must be inserting a stub somewhere before this function is called to decode them. The MSVC runtime entry point looks like this:
+调试首次崩溃时，我们发现C++静态初始化器数组中填充了垃圾数据。这些初始化器会在MSVC运行时的`__scrt_common_main_seh`函数中被调用，因此Arxan必定是在该函数被调用前的某个位置插入了存根来对它们进行解码。MSVC运行时入口点的结构如下所示：
 
 ```nasm
 SUB     RSP, 28
@@ -876,20 +871,20 @@ ADD     RSP, 28
 JMP     __scrt_common_main_seh
 ```
 
-Sure enough, going through `__security_init_cookie` it's obvious that Arxan inserted a stub into it. When running the game without our patcher and putting a breakpoint after the `__security_init_cookie` call, the static initializer array is filled with correct pointers. 
+果然，在分析`__security_init_cookie`函数时，可以明显发现Arxan在其中插入了一个存根。当未使用我们的补丁程序运行游戏并在`__security_init_cookie`调用之后设置断点时，可以观察到静态初始化器数组中已填充了正确的指针。
 
-Instead of spending a significant amount of time to reverse engineer the entry point (which I might still do at a later time), I opted to call hook it and defer the patching after `__security_init_cookie` has run. This *almost* works: The game starts, but crashes when loading the main menu. 
+与其花费大量时间逆向工程入口点（虽然我后续可能仍会进行这项工作），我选择采用调用钩子的方式，将修补操作推迟到`__security_init_cookie`运行之后。这个方法几乎奏效：游戏能够启动，但在加载主菜单时会发生崩溃。
 
-### Problem 2: Decryption Stubs
-This crash was quite difficult to debug. It was a random access violation in one of the game's file loading routines caused by incorrectly parsed data. Since all anti-debug stubs were neutralized by the patch, I was able to record a time-travel debugging session with WinDbg and manually do backwards taint analysis to find out where the invalid data came from, ending up at the main DLRuntime initialization function. This function read static data that, just like the C++ static initializers, seemed totally random.
+### 问题二：解密存根
+这次崩溃的调试过程相当困难。这是一个在游戏文件加载例程中因数据解析错误导致的随机访问冲突。由于所有反调试存根都已被补丁程序中和，我能够使用WinDbg录制时间旅行调试（time-travel debugging）会话，并通过手动反向污点分析来追踪无效数据的来源，最终定位到主要的DLRuntime初始化函数。该函数读取的静态数据——与C++静态初始化器类似——看起来完全随机。
 
-Carefully stepping through the function until the data matches that of a runtime dump, the "decryption" routine is isolated to be within the function at address `140d84bb5` (DSR 1.03.1). Stepping through it, we eventually arrive at an Arxan stub. Luckily, there seemed to be only one such stub in DSR, as exempting its its `TEST RSP, 0xf` address, `143001ed0`, from patching, the game runs successfully!
+通过逐步跟踪该函数直至数据与运行时转储匹配，最终将"解密"例程隔离在地址`140d84bb5`（DSR 1.03.1版本）处的函数内。逐步执行后，我们最终进入了一个Arxan存根。幸运的是，在《黑暗之魂：重制版》中似乎只有一个这样的存根，只要将其`TEST RSP, 0xf`指令的地址`143001ed0`从修补中排除，游戏就能成功运行！
 
-It turns out that unlike DSR and DS2 (which has no "encrypted" regions whatsoever), other FROMSOFTWARE games make extensive use of this Arxan feature. I would have to reverse engineer these stubs and either come up with a way to detect them or to extract the decrypted code and data regions from their code.
+事实证明，与《黑暗之魂：重制版》和《黑暗之魂2》（后者完全没有"加密"区域）不同，其他FromSoftware游戏广泛使用了这个Arxan功能。我需要逆向工程这些存根，并找出检测它们的方法，或者从其代码中提取出已解密的代码和数据区域。
 
-## Encrypted Regions
+## 加密区域
 
-I began to analyze this supposed "decryption" stub present in Dark Souls Remastered. To do so, I repurposed my Unicorn emulator setup and had it trace instruction execution, printing out each instruction and any registers/memory it accessed. In particular, I logged writes to the executable's text and data sections, getting 
+我开始分析这个存在于《黑暗之魂：重制版》中的所谓"解密"存根。为此，我重新配置了Unicorn模拟器环境，让其追踪指令执行过程，打印每条指令及其访问的寄存器/内存信息。我特别记录了向可执行文件文本段和数据段的写入操作，从而获取......
 
 //// collapse-code
 ```
@@ -1069,7 +1064,7 @@ I began to analyze this supposed "decryption" stub present in Dark Souls Remaste
 ```
 ////
 
-Grouping this into regions (excluding the last write by a different address), we get
+将这些数据按区域分组（排除由不同地址执行的最后一次写入）后，我们得到：
 
 //// collapse-code
 ```
@@ -1125,13 +1120,13 @@ rva = 1403a20 size = 504 (0x1f8)
 ```
 ////
 
-So this stub decrypts (or otherwise writes) what appears to be encryption keys, server URLs and other misc. static data.
+因此，该存根会解密（或以其他方式写入）看似加密密钥、服务器URL及其他杂项静态数据的内容。
 
-### Stub Structure
+### 存根结构
 
-#### Encryption Algorithm
+#### 加密算法
 
-The instruction performing this write (`142e4d399`) seems to be part of an obfuscated generic `memcpy`-like routine, which doesn't provide much information. Since I had a full trace execution, though, I could simply search for the first instance of the first 4 decrypted bytes (`0x450041`), which led me to more heavily obfuscated code. The Ghidra decompiler was output for it was pretty terrible, but after manually fixing some of the branches I got this (still very bad) decomp:
+执行此写入操作的指令（`142e4d399`）似乎是一个经过混淆的通用类`memcpy`例程的组成部分，这并未提供太多信息。但由于我获得了完整的执行跟踪记录，我可以直接搜索前4个解密字节（`0x450041`）的首个出现位置，这引导我找到了混淆程度更深的代码。Ghidra反编译器对其输出的反编译结果相当不理想，但在手动修复部分分支后，我得到了以下（仍然质量很差的）反编译代码：
 
 ```c
 void FUN_1420350a2(void)
@@ -1154,17 +1149,17 @@ void FUN_1420350a2(void)
 }
 ```
 
-Around this time, I had started collaborating with [Dasaav](https://github.com/Dasaav-dsv) who was working on reverse engineering the DS3 Arxan entry point stubs. I shared my existing work and the emulation trace I had with him. He identified the above algorithm as a [TEA](https://en.wikipedia.org/wiki/Tiny_Encryption_Algorithm "Tiny Encryption Algorithm (Wikipedia)") round. TEA is a very simple encryption algorithm that uses a 128-bit key and operates on blocks of two 32-bit integers that is surprisingly secure for its complexity, but using an existing algorithm without any customizations makes reverse engineering much easier. Sure enough, going back through the trace we find that `142d3fb86` is the stub's TEA block decrypt, with the following signature:
+差不多在这个时候，我开始与正在逆向工程《黑暗之魂3》Arxan入口点存根的[Dasaav](https://github.com/Dasaav-dsv)展开合作。我与他分享了我已有的研究成果和模拟跟踪数据。他识别出上述算法是一个[TEA](https://en.wikipedia.org/wiki/Tiny_Encryption_Algorithm "Tiny Encryption Algorithm (Wikipedia)")轮函数。TEA是一种非常简单的加密算法，使用128位密钥并以两个32位整数组成的块为单位进行操作——其安全性相对于复杂度而言出人意料地高，但使用现成算法且没有任何自定义修改使得逆向工程工作变得容易得多。果然，回溯跟踪记录后我们发现`142d3fb86`就是该存根的TEA块解密函数，其签名如下：
 
 ```rs
 extern "C" fn tea_block_decrypt(block: &mut [u32; 2], key: &[u32; 4])
 ```
 
-Going through the emulation trace to find all invocations of this function, I was able to find the blocks passed to it in the game binary, which means that this is the only obfuscation applied to that data.
+通过分析模拟执行跟踪记录并查找该函数的所有调用实例，我成功定位到游戏二进制文件中传递给该函数的数据块——这意味着这是应用于该数据的唯一混淆层。
 
-#### Region Encoding
+#### 区域编码机制
 
-Now that we knew how the ciphertext for these regions is decrypted, we had to find out how the encrypted regions themselves are encoded. The emulated instructions do not directly refer to any of the addresses or RVAs that were written to. So, back to doing manual taint analysis. Looking for the virtual address of the first region, `1412cb410`, we get
+既然我们已经掌握密文区域的解密方式，接下来需要弄清加密区域本身的编码规则。模拟执行的指令并未直接引用任何被写入的地址或相对虚拟地址（RVA）。因此我们需要回归手动污点分析：通过搜索第一个区域`1412cb410`的虚拟地址，我们发现其来源可追溯至存根初始化阶段通过特定偏移量计算生成的指针。这表明加密区域采用了一种基于基地址动态计算的编码方式，其结构通常包含以下元数据：
 
 ```nasm linenums="1" hl_lines="17"
 RIP = 0x1423c1b60    add rax,[rbp+48h]
@@ -1178,7 +1173,7 @@ RIP = 0x1423c1b64    mov [rbp+8h],rax
     [W] mem[0x9431fdf58] = 0 
 ```
 
-So the address is computed from its RVA, `12cb410`. Doing the same with that, we find this code with a surprisingly useful (by the low standards of Arxan code) Ghidra decomp:
+该地址是根据其相对虚拟地址（RVA）`12cb410`计算得出的。使用相同方法分析该地址时，我们发现了这段代码——其Ghidra反编译结果出乎意料地有用（以Arxan代码的低标准而言）：
 
 //// collapse-code
 ```c
@@ -1205,7 +1200,7 @@ void FUN_140325ed5(void)
 ```
 ////
 
-It's already possible to tell what's going on, but after fixing up more obfuscated branches to get the full function and naming parameters it's even cleaner:
+已经能够大致理解其运作原理，但在修复更多被混淆的分支以获取完整函数并为参数命名后，代码逻辑变得更为清晰：
 
 ```c
 uint32_t FUN_1422982a0(undefined8 param_1,uint8_t *varint,uint *n_read)
@@ -1227,13 +1222,13 @@ uint32_t FUN_1422982a0(undefined8 param_1,uint8_t *varint,uint *n_read)
 }
 ```
 
-This is common algorithm for variable-length integers I will refer to as *varint* encoding, based on how it is called in the [Protobuf](https://protobuf.dev/programming-guides/encoding/#varints) encoding spec: The number is split into groups of 7 bits, with the high-bit of each byte being used as a continuation flag (0 = end, 1 = more data). 
+这是一种常见的可变长度整数编码算法，我将其称为*varint*编码——该命名源于[Protobuf](https://protobuf.dev/programming-guides/encoding/#varints)编码规范中的称呼：数字被分割为7位一组，每个字节的最高位用作 continuation 标志位（0表示结束，1表示还有后续数据）。
 
-Tracking down the first invocation of this function in the trace, the pointer to `varint` turns out to be a stack address. Its data is written through two 32-bit integers moves: `9b2e890` (which makes sense as it's the varint encoding for `12cb410`) and `2d0e070`. Tracking these constants brings us right back to the the TEA block decrypt routine, which means these varints are also encrypted at rest.
+通过追踪执行记录中该函数的首次调用，我们发现指向`varint`的指针实际上是一个栈地址。其数据通过两个32位整数移动操作写入：`9b2e890`（这很合理，因为它对应`12cb410`的varint编码）和`2d0e070`。追踪这些常量直接将我们带回到TEA块解密例程，这意味着这些varint数据在静态时同样处于加密状态。
 
-Although the ciphertext blocks are copied on the stack before being decrypted, working backwards through the trace we find that the above plaintexts come from a ciphertext block at `142a8c5d0`, which is decrypted using the key at address `142f5638d`.
+虽然密文块在解密前会被复制到栈中，但通过反向追踪执行记录，我们发现上述明文数据来源于地址`142a8c5d0`处的密文块，该密文块使用地址`142f5638d`处的密钥进行解密。
 
-We can write some simple code to decrypt this data and convert it to varints:
+我们可以编写简单代码来解密这些数据并将其转换为varint格式：
 
 //// collapse-code
 ```rs
@@ -1308,7 +1303,7 @@ fn main() {
 ```
 ////
 
-Running it gives
+运行后得到：
 
 ```
 decrypted block: [90, e8, b2, 09, 70, e0, d0, 02]
@@ -1323,7 +1318,7 @@ varint: 1f8
 varint: febfc3e7
 ```
 
-Compare this with the encrypted contiguous regions we recovered using the emulator:
+将此结果与我们通过模拟器恢复的加密连续区域进行对比：
 
 ```
 rva = 12cb410 size = 112 (0x70)
@@ -1331,27 +1326,27 @@ rva = 12d5ce0 size = 72 (0x48)
 rva = 1403a20 size = 504 (0x1f8)
 ```
 
-The sizes match, but not all the RVAs. However, note that `12cb410 + 70 + a860 = 12d5ce0`. So each contiguous region appears to be encoded as (offset from last region, size), where the initial offset is relative to the executable's base address. This leaves two questions unanswered, though:
+大小完全匹配，但并非所有RVA都一致。不过请注意：`12cb410 + 70 + a860 = 12d5ce0`。由此可见，每个连续区域的编码格式为（相对于上一区域的偏移量，本区域大小），其中初始偏移量是相对于可执行文件基地址计算的。但这里仍有两个未解之谜：
 
-- How does Arxan know when the contiguous regions end?
-- What about the last offset, `febfc3e7`? is it just garbage data?
-  
-Both questions were answered when we noticed that adding this last offset as if computing the next region's RVAs yields a classic sentinel value: `1403a20 + 1f8 + febfc3e7 = ffffffff`!
+- Arxan如何判断连续区域的结束？
+- 最后一个偏移量`febfc3e7`是什么？仅仅是垃圾数据吗？
 
-#### Ciphertext Location
+当我们注意到若将此最终偏移量作为下一个区域的RVA进行运算时，会得到一个经典的哨兵值：`1403a20 + 1f8 + febfc3e7 = ffffffff`！这两个问题便迎刃而解。
 
-Now that we knew how the stub gets the contiguous regions of memory it must write the decrypted plaintext to, it was time to figure out how this plaintext is stored. My initial assumption was that it would be decrypted in-place, i.e. the ciphertext is the data that is present in these regions at rest.
+#### 密文存储位置
 
-Examining the calls to `tea_block_decrypt` in the trace showed this to be false, however. It turns out that the ciphertext for all regions is stored in one large contiguous static data block which is directly referenced by the stub's code. Furthermore, the key used to decrypt this ciphertext is not the same as the one used to decrypt the contiguous regions to write. Said key can also be extracted from the arguments to `tea_block_decrypt` in the trace, and is also static data. 
+既然已经明确存根获取需写入解密明文的连续内存区域的方式，接下来需要弄清明文数据的存储机制。我最初假设这些数据会就地解密，即静态存在于这些区域中的本身就是密文。
 
-#### Encryption Stubs
-Some stubs are also responsible for "encrypting" function code after it has returned, such as `142ff5d21` in DSR. These stubs appear identical to the decryption ones, except that the bytes that they write appear to be completely random. I also noticed that one of the instantiations of these stubs (if multiple are emitted for the same set of regions) will write the same bytes that are present in the static binary. 
+然而，通过检查跟踪记录中对`tea_block_decrypt`的调用，发现事实并非如此。实际上，所有区域的密文都存储在一个大型连续静态数据块中，该数据块由存根代码直接引用。此外，用于解密密文的密钥与写入连续区域时使用的密钥并不相同。该密钥同样可以从跟踪记录中`tea_block_decrypt`的参数提取，同样属于静态数据。
 
-Curious as to how this data was generated, I computed its byte-level [Shannon entropy](https://en.wikipedia.org/wiki/Entropy_(information_theory) "Wikipedia") and got around 7.9 bits, very close to the theoretical maximum for a completely uniform random distribution of 8 bits.
+#### 加密存根
+部分存根还负责在函数返回后"加密"代码，例如DSR中的`142ff5d21`。这些存根与解密存根外观相似，但它们写入的字节看起来完全随机。我还注意到，这些存根的某个实例（如果为同一组区域生成多个存根）会写入与静态二进制文件中完全相同的字节。 
 
-#### Summary
+为探究这些数据的生成原理，我计算了其字节级[Shannon entropy](https://en.wikipedia.org/wiki/Entropy_(information_theory) "Wikipedia")，结果约为7.9比特，非常接近完全均匀随机分布的理论最大值8比特。
 
-Arxan encryption/decryption stubs refer to two distinct TEA ciphertexts, each with their own decryption keys: the *regions* ciphertext and the *data* ciphertext. They are structured according to the following state diagram:
+#### 总结
+
+Arxan加密/解密存根涉及两个不同的TEA密文块，每个密文块都有各自的解密密钥：*区域*描述密文和*数据*密文。它们按照以下状态转换图的结构进行组织：
 
 ```mermaid
 stateDiagram-v2
@@ -1387,11 +1382,11 @@ stateDiagram-v2
     cptrinc --> getofs
 ```
 
-### Extracting Plaintexts
+### 提取明文数据
 
-Now that we've reverse engineered the structure of a decryption stub, it's time to come up with an automated analysis to extract the encrypted regions and their associated plaintexts. 
+既然我们已经逆向工程了解密存根的结构，接下来需要设计自动化分析方法来提取加密区域及其关联的明文数据。
 
-I ended up using the `CallInfo` primitive developed in [the CFG section](#visiting-the-stubs-full-cfg) to detect function calls and identify candidates for the `tea_block_decrypt` function while visiting the CFG. This works by inspecting `RCX` and `RDX`, i.e. the potential ciphertext block and key, respectively. The search is divided into two stages (with a third success state):
+最终我采用了在[控制流图章节](#visiting-the-stubs-full-cfg)中开发的`CallInfo`原语：在遍历控制流图（CFG）时，通过检测函数调用并识别`tea_block_decrypt`函数的候选对象。该方法通过检查`RCX`和`RDX`寄存器（分别作为可能的密文块和密钥）实现，整个搜索过程分为两个阶段（以及第三个成功状态）：
 
 ```rs
 #[derive(Debug, Clone)]
@@ -1402,9 +1397,9 @@ enum EncryptionState<'a> {
 }
 ```
 
-#### Region List Search
+#### 区域列表搜索
 
-In the first stage, `SearchingRegions`, we keep track of potential *weak* `tea_block_decrypt` candidates along with potential encryption keys:
+在第一阶段`SearchingRegions`中，我们会追踪潜在的*弱*`tea_block_decrypt`候选函数及其可能的加密密钥：
 
 ```rs
 #[derive(Debug, Clone)]
@@ -1416,7 +1411,7 @@ struct RegionsKeyCandidate<'a> {
 }
 ```
 
-Since ciphertext blocks are copied to the stack in 8-byte blocks before being passed to this function and we want to find the static address these blocks are sourced from, I keep a reverse `IndexMap` of `LEA r64, [static memory]` instructions addresses to the first 8-byte block at their static address. The candidate functions calls matching this are stored in a *strong* `tea_candidates` list:
+由于密文块在传递给该函数前会以8字节为单位被复制到栈中，而我们需要定位这些块在静态内存中的源地址，因此我维护了一个反向的`IndexMap`，将`LEA r64, [static memory]`指令地址映射到其静态地址首部的8字节块。匹配此模式的候选函数调用会被存储在一个*强*`tea_candidates`列表中：
 
 //// collapse-code
 ```rs
@@ -1439,7 +1434,7 @@ log::trace!("possible tea ciphertext at {ctext_va:x}");
 ```
 ////
 
-Ideally, this would allow the value of the block on the stack to be matched to the stack address, but due to the register clobberring behavior of the emulator when skipping calls to an already visited function, this isn't always possible. So we check all static `LEA` targets instead, and rely on the fact that the valid contiguous regions list will end with a varint that makes the offset `u32::MAX`. Here is the code:
+理想情况下，这种方法可以将栈上的块值与栈地址进行匹配，但由于模拟器在跳过对已访问函数的调用时会产生寄存器破坏行为，这种方法并不总是可行。因此我们转而检查所有静态`LEA`指令的目标地址，并依赖于有效的连续区域列表总会以生成`u32::MAX`最大偏移量的varint值作为结束这一特性。具体实现代码如下：
 
 //// collapse-code
 ```rs
@@ -1472,8 +1467,8 @@ for key_info in key_candidates {
 ```
 ////
 
-#### Data Ciphertext Search
-Once the region list has been found, we remember the following from the previous stage and begin searching for the data ciphertext and key addresses:
+#### 数据密文搜索
+当成功获取区域列表后，我们会记录前一阶段得到的以下信息，并开始搜索数据密文及密钥地址：
 
 ```rs
 #[derive(Debug, Clone)]
@@ -1484,7 +1479,7 @@ struct RegionListInfo {
 }
 ```
 
-To do so, we simply pick the first strong `tea_block_decrypt` candidate matching the region list one but whose key is different:
+为此，我们只需选取第一个与区域列表匹配但密钥不同的强`tea_block_decrypt`候选函数：
 
 //// collapse-code
 ```rs
@@ -1511,12 +1506,12 @@ if let Some(ctext_decrypt) = self.tea_candidates.first() {
 ```
 ////
 
-Although this analysis uses pretty weak heuristics and makes a lot of assumptions, it turns out to be good enough to extract the plaintexts and regions for all Arxan encryption/decryption stubs present in FROMSOFTWARE games.
+尽管该分析采用了相对宽松的启发式方法并基于大量假设，但实践证明其足以提取所有FromSoftware游戏中Arxan加密/解密存根的明文数据和内存区域。
 
-### Runtime Patching
-All that is left to neuter arxan in `DS3` and later games is to preemptively write the plaintexts of decryption stubs obtained from the above analysis to the executable before we nop out all Arxan stubs.
+### 运行时修补
+要彻底禁用`《黑暗之魂3》`及后续作品中的Arxan保护，我们只需在将所有Arxan存根替换为NOP指令前，将上述分析获得的解密存根明文数据预先写入可执行文件即可。
 
-Remember that some of the stubs actually write back the "encrypted" (read: random) data, so we need to differentiate them from the "decryption" ones. To achieve this, we take the plaintext with the lowest [Shannon entropy](https://en.wikipedia.org/wiki/Entropy_(information_theory) "Wikipedia") whose bytes don't match the existing data in the static binary: 
+需要注意的是，部分存根实际上会回写"加密"（实为随机）数据，因此我们需要将其与"解密"存根区分开来。为实现这一目标，我们选择[Shannon entropy](https://en.wikipedia.org/wiki/Entropy_(information_theory) "Wikipedia")最低且字节内容与静态二进制文件中现有数据不匹配的明文：
 
 //// collapse-code
 ```rs
@@ -1559,9 +1554,9 @@ for conflicts in decrypt_conflicts.values() {
 ```
 ////
 
-After implementing this and removing my hardcoded patch for DSR, the game launched successfully! As I was testing other games, however, the excitement quickly turned into disappointment as DS3 crashed, ER crashed, AC6 crashed, and NR... booted successfully. What?
+实现该功能并移除我为《黑暗之魂：重制版》设置的硬编码补丁后，游戏成功启动了！然而当我测试其他游戏时，兴奋很快转为失望——《黑暗之魂3》崩溃、《艾尔登法环》崩溃、《装甲核心6》崩溃，而《艾尔登法环:黑夜君临》却...成功运行了？怎么回事？
 
-I was quite confused at first until I realized that DS3, ER and AC6 have [ASLR](https://en.wikipedia.org/wiki/Address_space_layout_randomization "Address space layout randomization (Wikipedia)") enabled, while DSR and NR don't. For games with ASLR, any decrypted code would have to be relocated. I wasn't sure how Arxan stubs did this and still don't know because I just checked if there were relocs in the PE `.reloc` section for these regions, which turned out to be the case. I thus updated the code to go over the writes and apply relocs to the decrypted plaintexts:
+起初我感到十分困惑，直到意识到《黑暗之魂3》《艾尔登法环》和《装甲核心6》启用了地址空间布局随机化（[ASLR](https://en.wikipedia.org/wiki/Address_space_layout_randomization "Address space layout randomization (Wikipedia)")），而《黑暗之魂：重制版》和《艾尔登法环:黑夜君临》则没有。对于启用ASLR的游戏，任何解密后的代码都需要进行重定位。我不确定Arxan存根如何实现这一点（至今仍不清楚），因为我只是检查了这些区域在PE文件的`.reloc`节中是否存在重定位项——结果确实存在。因此我更新了代码，使其在处理写入操作时对解密后的明文数据应用重定位：
 
 //// collapse-code
 ```rs
@@ -1595,20 +1590,20 @@ for (rva, mut bytes) in writes {
 ```
 ////
 
-After this, all games booted. I played each for about an hour to quickly verify the stability of the patches and got no crashes or otherwise unexpected behavior. Mission accomplished!
+至此，所有游戏均能正常启动。我对每款游戏进行了约一小时的试玩以快速验证补丁的稳定性，未出现任何崩溃或异常行为。任务完成！
 
-## Future work
+## 未来工作
 
-### Reversing Entry Point Stubs
-The Arxan entry point stubs need to run to unpack various kinds of data and code required by the game, but do not follow the same pattern as the encryption/decryption stubs. This issue is mitigated by the fact that it's easy to defer patching after their execution, but it would still be nice to prevent Arxan code from running *at all*.
+### 逆向工程入口点存根
+Arxan入口点存根需要运行以解包游戏所需的各种数据和代码，但其模式与加密/解密存根不同。虽然通过延迟修补执行可以缓解该问题，但若能完全阻止Arxan代码运行将会更加理想。
 
-### Deobfuscation
-While `dearxan` already helps reverse engineering by getting rid of all anti-debug features and encrypted regions, it does nothing to address the instruction and control flow obfuscation performed by Arxan. They make following the disassembly very annoying and make decompilers perform very poorly, requiring extensive manual patches to get an acceptable output. 
+### 反混淆处理
+尽管`dearxan`已通过消除所有反调试功能和加密区域为逆向工程提供了帮助，但它并未解决Arxan实施的指令和控制流混淆问题。这些混淆技术使得反汇编跟踪变得异常困难，并导致反编译器性能急剧下降，需要大量手动修补才能获得可接受的输出。
 
-I've already began working on a proof-of-concept deobfuscator. The strategy is optimization-based deobfuscation, where optimizations such as constant folding, copy propagation and dead code elimination are applied to the program with the goal of simplifying obfuscated blocks. While general approaches use powerful lifters like [Remill](https://github.com/lifting-bits/remill) along with LLVM and work great on academic examples and small binaries like malware, applying them to a 100MB game executable would be quite a challenge. As such I've opted to use a minimal [SSA](https://en.wikipedia.org/wiki/Static_single-assignment_form "Static Single-Assignment") IR specifically designed for Arxan obfuscation. There are still a few hurdles to overcome, but I will make another post on this approach if it turns out to be successful.
+我已开始开发概念验证反混淆器。其策略基于优化驱动去混淆——通过应用常量折叠、复制传播和死代码消除等优化技术来简化混淆代码块。虽然通用方案通常采用[Remill](https://github.com/lifting-bits/remill)等强大提升器结合LLVM，在学术样例和恶意软件等小型二进制文件上表现优异，但将其应用于100MB的游戏可执行文件将面临巨大挑战。因此我选择使用专为Arxan混淆设计的最小化静态单赋值（[SSA](https://en.wikipedia.org/wiki/Static_single-assignment_form "Static Single-Assignment")）中间表示（IR）。虽然仍有部分技术障碍需要克服，若该方法取得成功，我将另文详述。
 
-## Credits
-Many thanks to [Yui](https://github.com/LukeYui) for giving me the motivation to work on this and for some initial research that helped me get started, as well as [Dasaav](https://github.com/Dasaav-dsv) for the help with reversing how Arxan stores encrypted code blocks and data.
+## 致谢
+特别感谢[Yui](https://github.com/LukeYui)激励我开展此项研究并提供帮助我入门的初期调研，同时感谢[Dasaav](https://github.com/Dasaav-dsv)在逆向分析Arxan加密代码块和数据存储机制方面提供的协助。
 
 *[DSR]: Dark Souls Remastered
 *[DS2]: Dark Souls II: Scholar of The First Sin
