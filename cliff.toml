@@ -115,6 +115,7 @@ require_conventional = false
 # Split commits on newlines, treating each line as an individual commit.
 split_commits = false
 commit_preprocessors = [
+  { pattern = "feat\\(docs\\)", replace = "docs\\(feature\\)" },
   { pattern = 'feat: ootb ux improvements', replace = "feat: improvements to out of the box UX\n\nAdds start menu entries and a 'mods' folder for each profile where mods can be placed for an out-of-the box launch experience." },
   { pattern = '[\s]*\(#[0-9]+\)', replace = "" },
   { pattern = "^Fix ", replace = "fix: " },
