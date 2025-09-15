@@ -126,7 +126,7 @@ plugins:
           - optimize
   - meta
   - search
-  
+  - autorefs
   - meta-descriptions
   - git-committers:
       repository: garyttierney/me3
@@ -239,6 +239,7 @@ markdown_extensions:
   - def_list
   - footnotes
   - md_in_html
+  - attr_list
   - toc:
       toc_depth: "1-3"
       permalink: true
