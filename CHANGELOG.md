@@ -4,11 +4,19 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
-## me3 - [v0.8.0](https://github.com/garyttierney/me3/releases/v0.8.0) - 2025-09-05
+## me3 - [v0.9.0](https://github.com/garyttierney/me3/releases/v0.9.0) - 2025-09-15
 
 ### 🚀 Features
 
 - [1f2f438](https://github.com/garyttierney/me3/commit/1f2f438f2cdd368ea6273b9aae1fc4ca47d05b3c)  *(cli)* Make `--auto-detect` optional when launching a profile in [#454](https://github.com/garyttierney/me3/pull/454)
+
+
+
+- [8dca989](https://github.com/garyttierney/me3/commit/8dca98979767c6387e75e8ca777a93199faccf0a)  *(docs)* Collapsible code blocks
+
+
+
+- [dd9271f](https://github.com/garyttierney/me3/commit/dd9271f4619038e4b1089aac6e16d96f30e2d3f8)  *(docs)* Support mermaid diagrams
 
 
 
@@ -33,6 +41,14 @@ All notable changes to this project will be documented in this file.
 
 
 ### 🐛 Bug Fixes
+
+- [5b216e7](https://github.com/garyttierney/me3/commit/5b216e75b7b41a78b00fb71dc2403a1c16684011)  *(docs)* Work around blog plugin incompatibility with mkdocs-static-18n
+
+
+
+- [004f1e2](https://github.com/garyttierney/me3/commit/004f1e2371cbfd16805f5641fa255fc3c59cb674)  *(host)* Missing music and dialogue audio in Dark Souls 3 in [#516](https://github.com/garyttierney/me3/pull/516)
+
+
 
 - [94b375f](https://github.com/garyttierney/me3/commit/94b375f012bc92104a688c3b7f4be22286f95bd6)  *(host)* Add missing ANSI filesystem functions in [#400](https://github.com/garyttierney/me3/pull/400)
 
@@ -71,6 +87,10 @@ All notable changes to this project will be documented in this file.
   > allow other external tools like MangoHud and gamemode to run.
 
   > Fixes #456
+
+- [26dde17](https://github.com/garyttierney/me3/commit/26dde172b39f2410dfdc14d61ea7571856013d28) Load natives with initializers in a new thread in [#501](https://github.com/garyttierney/me3/pull/501)
+
+
 
 - [0812fd4](https://github.com/garyttierney/me3/commit/0812fd4937a33acbad714a66b4c8c700f5f8279d) Consistent native and package load order in [#484](https://github.com/garyttierney/me3/pull/484)
 
@@ -181,6 +201,14 @@ All notable changes to this project will be documented in this file.
   > Edited CLI help for typos, errors, length, language. There is now
   > extended `--help` vs short `-h` for some options. Option descriptions
   > wrap nicely based on terminal width.
+
+
+- [5bc716a](https://github.com/garyttierney/me3/commit/5bc716acf11aa75e54e1a6b11f920c32484e8116)  *(zh)* Update for 0.8.0 in [#508](https://github.com/garyttierney/me3/pull/508)
+
+
+
+- [28b0a73](https://github.com/garyttierney/me3/commit/28b0a7350ec3e5253901ffb02b97198bdd2f67b2) Write Arxan reverse engineering blog post in [#483](https://github.com/garyttierney/me3/pull/483)
+
 
 
 - [4dbcb4a](https://github.com/garyttierney/me3/commit/4dbcb4ad21ae1957465fd1d0e43a26c531065239) Add DS3 to supported games in [#497](https://github.com/garyttierney/me3/pull/497)
@@ -2526,7 +2554,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
-[0.8.0]: https://github.com/garyttierney/me3/compare/v0.7.0..v0.8.0
+[0.9.0]: https://github.com/garyttierney/me3/compare/v0.7.0..v0.9.0
 [0.7.0]: https://github.com/garyttierney/me3/compare/v0.6.1..v0.7.0
 [0.6.1]: https://github.com/garyttierney/me3/compare/v0.6.0..v0.6.1
 [0.6.0]: https://github.com/garyttierney/me3/compare/v0.5.0..v0.6.0
