@@ -194,6 +194,9 @@ Section "Main Application" SEC01
     WriteRegStr HKCU "Software\${PRODUCT}" "Install_Dir" $INSTDIR
     nsExec::Exec '"$INSTDIR\bin\me3.exe" add-to-path'
 
+    CreateDirectory "$LOCALAPPDATA\garyttierney\me3\config\profiles\darksouls3-mods"
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g ds3 --package darksouls3-mods darksouls3-default'
+
     CreateDirectory "$LOCALAPPDATA\garyttierney\me3\config\profiles\eldenring-mods"
     nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g er --package eldenring-mods eldenring-default'
 
@@ -201,6 +204,10 @@ Section "Main Application" SEC01
     nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr --package nightreign-mods nightreign-default'
 
     CreateDirectory "$SMPROGRAMS\me3"
+    CreateShortCut "$SMPROGRAMS\me3\DARK SOULS III (me3).lnk" "$INSTDIR\bin\me3.exe" \
+      "launch -p darksouls3-default" "$INSTDIR\assets\me3.ico" "" "" \
+      "" "Launch DARK SOULS III with the darksouls3-default mod profile"
+
     CreateShortCut "$SMPROGRAMS\me3\ELDEN RING (me3).lnk" "$INSTDIR\bin\me3.exe" \
       "launch -p eldenring-default" "$INSTDIR\assets\me3.ico" "" "" \
       "" "Launch ELDEN RING with the eldenring-default mod profile"
@@ -240,6 +247,7 @@ Section "Uninstall"
     Delete "$INSTDIR\CHANGELOG.md"
     Delete "$INSTDIR\README.txt"
     Delete "$INSTDIR\assets\me3.ico"
+    Delete "$SMPROGRAMS\me3\DARK SOULS III (me3).lnk"
     Delete "$SMPROGRAMS\me3\ELDEN RING (me3).lnk"
     Delete "$SMPROGRAMS\me3\NIGHTREIGN (me3).lnk"
     Delete "$SMPROGRAMS\me3\Documentation.URL"
