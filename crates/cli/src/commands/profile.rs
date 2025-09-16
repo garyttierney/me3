@@ -8,7 +8,7 @@ use me3_mod_protocol::{
     package::{Package, WithPackageSource},
     ModProfile, Supports,
 };
-use tracing::{error, warn};
+use tracing::error;
 
 use crate::{config::Config, db::DbContext, output::OutputBuilder, Game};
 
@@ -23,17 +23,13 @@ pub enum ProfileCommands {
     List,
 
     /// Show information on a profile.
-    #[clap(name = "show")]
-    Show {
-        /// Name of the profile.
-        name: String,
-    },
+    Show(#[clap(flatten)] ProfileNameArgs),
 }
 
 #[derive(Args, Debug)]
 pub struct ProfileCreateArgs {
-    /// Name of the profile.
-    name: String,
+    #[clap(flatten)]
+    name: ProfileNameArgs,
 
     /// Game to associate with this profile for one-click launches.
     #[clap(
@@ -59,10 +55,6 @@ pub struct ProfileCreateArgs {
 
     #[clap(flatten)]
     options: ProfileOptions,
-
-    /// Treat NAME as a file path, instead of creating the profile in the profile dir.
-    #[clap(short, long, action = ArgAction::SetTrue)]
-    file: bool,
 
     /// Overwrite the profile if it already exists.
     #[clap(long, action = ArgAction::SetTrue)]
@@ -101,7 +93,27 @@ impl ProfileOptions {
     }
 }
 
-#[tracing::instrument(skip_all)]
+#[derive(Args, Debug)]
+pub struct ProfileNameArgs {
+    /// Name of the profile or its path (use with --file).
+    name: String,
+
+    /// Optional flag to treat the input as a filename instead of a profile name.
+    #[clap(short, long, action = ArgAction::SetTrue)]
+    file: bool,
+}
+
+impl ProfileNameArgs {
+    fn into_profile_path(self, config: &Config) -> color_eyre::Result<PathBuf> {
+        if self.file {
+            Ok(PathBuf::from(self.name))
+        } else {
+            config.resolve_profile(&self.name)
+        }
+    }
+}
+
+#[tracing::instrument(err, skip_all)]
 pub fn list(db: DbContext) -> color_eyre::Result<()> {
     for profile_entry in db.profiles.list() {
         let profile_name = profile_entry
@@ -115,13 +127,9 @@ pub fn list(db: DbContext) -> color_eyre::Result<()> {
     Ok(())
 }
 
-#[tracing::instrument(skip(config))]
+#[tracing::instrument(err, skip_all)]
 pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()> {
-    let profile_path = if args.file {
-        PathBuf::from(args.name)
-    } else {
-        config.resolve_profile(&args.name)?
-    };
+    let profile_path = args.name.into_profile_path(&config)?;
 
     if std::fs::exists(&profile_path).is_ok_and(|exists| exists) && !args.overwrite {
         error!("profile already exists, use --overwrite to ignore this error");
@@ -164,12 +172,22 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
     Ok(())
 }
 
-pub fn show(db: DbContext, name: String) -> color_eyre::Result<()> {
-    let profile = db.profiles.load(name)?;
+#[tracing::instrument(err, skip_all)]
+pub fn show(db: DbContext, config: Config, name: ProfileNameArgs) -> color_eyre::Result<()> {
+    let profile_path = name.into_profile_path(&config)?;
+
+    let profile = db.profiles.load(profile_path)?;
     let mut output = OutputBuilder::new("Mod Profile");
 
     output.property("Name", profile.name());
-    output.property("Path", profile.base_dir().to_string_lossy());
+
+    output.property(
+        "Path",
+        match profile.base_dir() {
+            Some(dir) => dir.to_string_lossy(),
+            None => std::borrow::Cow::Borrowed("-"),
+        },
+    );
 
     output.section("Supports", |builder| {
         if let Some(game) = profile.supported_game() {

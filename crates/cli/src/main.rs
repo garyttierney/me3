@@ -139,7 +139,7 @@ fn main() {
         Commands::Launch(args) => commands::launch::launch(db, config, args),
         Commands::Profile(ProfileCommands::Create(args)) => commands::profile::create(config, args),
         Commands::Profile(ProfileCommands::List) => commands::profile::list(db),
-        Commands::Profile(ProfileCommands::Show { name }) => commands::profile::show(db, name),
+        Commands::Profile(ProfileCommands::Show(name)) => commands::profile::show(db, config, name),
         #[cfg(target_os = "windows")]
         Commands::AddToPath => commands::windows::add_to_path(),
         #[cfg(target_os = "windows")]
