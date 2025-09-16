@@ -18,11 +18,10 @@ pub enum ProfileCommands {
     List,
 
     /// Show information on a profile.
-    #[clap(name = "show")]
-    Show {
-        /// Name of the profile.
-        name: String,
-    },
+    Show(ProfileNameArgs),
+
+    /// Upgrade a profile to the latest profile version.
+    Upgrade(ProfileNameArgs),
 }
 
 #[derive(Args, Debug)]
