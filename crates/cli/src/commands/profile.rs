@@ -146,17 +146,7 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
 
     let packages = profile.packages_mut();
     for pkg in args.packages {
-        let full_path = if pkg.is_absolute() || std::fs::exists(&pkg)? {
-            pkg
-        } else {
-            profile_dir.join(pkg)
-        };
-
-        if !std::fs::exists(&full_path)? {
-            std::fs::create_dir_all(&full_path)?;
-        }
-
-        packages.push(Package::new(full_path));
+        packages.push(Package::new(pkg));
     }
 
     let natives = profile.natives_mut();
