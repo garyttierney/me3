@@ -1,6 +1,10 @@
-use std::{fs::DirEntry, path::Path};
+use std::{
+    ffi::OsStr,
+    fs::DirEntry,
+    path::{Path, PathBuf},
+};
 
-use color_eyre::eyre::{Context as _, OptionExt as _};
+use color_eyre::eyre::Context;
 use me3_mod_protocol::{
     dependency::sort_dependencies,
     native::Native,
@@ -26,7 +30,7 @@ impl ProfileDb {
 
 pub struct Profile {
     name: String,
-    base_dir: Box<Path>,
+    path: PathBuf,
     profile: ModProfile,
 }
 
@@ -35,7 +39,7 @@ impl Profile {
     pub fn transient() -> Self {
         Self {
             name: "transient-profile".to_string(),
-            base_dir: Box::from(Path::new(".")),
+            path: Default::default(),
             profile: Default::default(),
         }
     }
@@ -46,19 +50,17 @@ impl Profile {
     }
 
     /// Get the directory containing this profile file.
-    pub fn base_dir(&self) -> &Path {
-        &self.base_dir
+    pub fn base_dir(&self) -> Option<&Path> {
+        self.path.parent()
     }
 
     /// Get the single game this profile supports, or None if it supports multiple games/omits
     /// support metadata.
     pub fn supported_game(&self) -> Option<Game> {
         let supports = self.profile.supports();
-
-        if supports.len() == 1 {
-            Some(supports[0].game)
-        } else {
-            None
+        match &supports[..] {
+            [one_game] => Some(one_game.game),
+            _ => None,
         }
     }
 
@@ -111,8 +113,10 @@ impl Profile {
         let mut packages = self.profile.packages();
         let mut natives = self.profile.natives();
 
-        canonicalize(&self.base_dir, &mut packages);
-        canonicalize(&self.base_dir, &mut natives);
+        let base_dir = self.base_dir().unwrap_or(Path::new("."));
+
+        canonicalize(base_dir, &mut packages);
+        canonicalize(base_dir, &mut natives);
 
         let ordered_natives = sort_dependencies(natives)?;
         let ordered_packages = sort_dependencies(packages)?;
@@ -134,7 +138,7 @@ pub enum ProfileDbError {
 }
 
 impl ProfileDb {
-    pub fn load(&self, path: impl AsRef<Path>) -> color_eyre::Result<Profile> {
+    pub fn load<P: AsRef<Path>>(&self, path: P) -> color_eyre::Result<Profile> {
         let path = path.as_ref();
         let is_file_ref = path.is_absolute() && path.exists();
         let canonical_path = is_file_ref
@@ -144,9 +148,19 @@ impl ProfileDb {
                     .iter()
                     .filter_map(|dir| {
                         let mut candidate = dir.join(path);
-                        let _ = candidate.set_extension("me3");
+                        let extension = candidate.extension();
 
-                        candidate.exists().then_some(candidate.into_boxed_path())
+                        if extension.is_none()
+                            || (extension != Some(OsStr::new(".me3")) && !candidate.is_file())
+                        {
+                            candidate.as_mut_os_string().push(".me3");
+
+                            if !candidate.exists() {
+                                return None;
+                            }
+                        }
+
+                        Some(candidate.into_boxed_path())
                     })
                     .next_back()
             })
@@ -160,20 +174,17 @@ impl ProfileDb {
             })
             .wrap_err("failed while normalizing")?;
 
-        let parent = normalized_path
-            .parent()?
-            .map(|base| base.as_path())
-            .ok_or_eyre("parent folder of mod profile is inaccessible")?;
-
-        let profile = ModProfile::from_file(&canonical_path)?;
         let name = canonical_path
             .file_stem()
-            .expect("BUG: profile path must have a filename")
-            .to_string_lossy();
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+
+        let profile = ModProfile::from_file(&canonical_path)?;
 
         Ok(Profile {
-            name: name.to_string(),
-            base_dir: Box::from(parent),
+            name,
+            path: normalized_path.into_path_buf(),
             profile,
         })
     }
@@ -234,7 +245,7 @@ mod test {
         let profile = db.load(temp_file.path())?;
 
         assert_eq!("my-profile", profile.name());
-        assert_eq!(temp_file.parent().unwrap(), profile.base_dir());
+        assert_eq!(temp_file.parent(), profile.base_dir());
 
         Ok(())
     }
