@@ -24,7 +24,7 @@ me3-mod-protocol.workspace = true
 tracing.workspace = true
 
 [dependencies.windows]
-version = "0.61"
+version = "0.62"
 features = [
     "Win32_Media",
     "Win32_System_Memory",

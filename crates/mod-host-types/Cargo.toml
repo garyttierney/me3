@@ -18,7 +18,7 @@ regex.workspace = true
 thiserror.workspace = true
 
 [dependencies.windows]
-version = "0.61"
+version = "0.62"
 features = [
     "Win32_System_Memory",
 ]

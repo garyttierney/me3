@@ -69,13 +69,13 @@ strum = "0.27"
 strum_macros = "0.27"
 tempfile = "3"
 thiserror = "2"
-toml = { version = "0.9.5", features = ["preserve_order"] }
+toml = { version = "0.9.6", features = ["preserve_order"] }
 tracing = { version = "0.1", features = ["release_max_level_info"] }
 tracing-appender = "0.2"
 tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", default-features = false }
 ureq = "3"
-windows = "0.61"
+windows = "0.62"
 
 [profile.dev.package."*"]
 opt-level = 3
