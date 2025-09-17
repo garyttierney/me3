@@ -12,6 +12,8 @@ V2(
                     optional: false,
                 },
                 initializer: None,
+                load_before: [],
+                load_after: [],
             },
             Native {
                 inner: ModFile {
@@ -21,6 +23,8 @@ V2(
                     optional: false,
                 },
                 initializer: None,
+                load_before: [],
+                load_after: [],
             },
             Native {
                 inner: ModFile {
@@ -30,17 +34,21 @@ V2(
                     optional: true,
                 },
                 initializer: None,
+                load_before: [],
+                load_after: [],
             },
         ],
         packages: [
-            Package(
-                ModFile {
+            Package {
+                inner: ModFile {
                     name: "my_mod",
                     path: "./my-mod",
                     enabled: true,
                     optional: false,
                 },
-            ),
+                load_before: [],
+                load_after: [],
+            },
         ],
         profiles: [
             ModFile {

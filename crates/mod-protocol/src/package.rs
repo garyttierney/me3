@@ -5,18 +5,46 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::mod_file::{AsModFile, ModFile};
+use crate::{
+    dependency::{Dependency, Dependent},
+    mod_file::{AsModFile, ModFile},
+};
 
 /// A package is a source for files that override files within the existing games DVDBND archives.
 /// It points to a local path containing assets matching the hierarchy they would be served under in
 /// the DVDBND.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct Package(pub(crate) ModFile);
+pub struct Package {
+    #[serde(flatten)]
+    pub(crate) inner: ModFile,
+
+    #[serde(default)]
+    pub(crate) load_before: Vec<Dependent<String>>,
+
+    #[serde(default)]
+    pub(crate) load_after: Vec<Dependent<String>>,
+}
 
 impl Package {
     #[inline]
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
         ModFile::new(path).into()
+    }
+}
+
+impl Dependency for Package {
+    type UniqueId = String;
+
+    fn id(&self) -> Self::UniqueId {
+        self.name.clone()
+    }
+
+    fn loads_after(&self) -> &[crate::dependency::Dependent<Self::UniqueId>] {
+        &self.load_after
+    }
+
+    fn loads_before(&self) -> &[crate::dependency::Dependent<Self::UniqueId>] {
+        &self.load_before
     }
 }
 
@@ -32,33 +60,37 @@ impl Deref for Package {
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.inner
     }
 }
 
 impl DerefMut for Package {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        &mut self.inner
     }
 }
 
 impl AsModFile for Package {
     #[inline]
     fn as_mod_file(&self) -> &ModFile {
-        &self.0
+        &self.inner
     }
 
     #[inline]
     fn as_mod_file_mut(&mut self) -> &mut ModFile {
-        &mut self.0
+        &mut self.inner
     }
 }
 
 impl From<ModFile> for Package {
     #[inline]
     fn from(item: ModFile) -> Self {
-        Self(item)
+        Self {
+            inner: item,
+            load_before: vec![],
+            load_after: vec![],
+        }
     }
 }
 

@@ -145,7 +145,7 @@
           "type": "object",
           "properties": {
             "path": {
-              "$ref": "#/$defs/ModFile"
+              "$ref": "#/$defs/ModFileV1"
             },
             "optional": {
               "type": "boolean",
@@ -158,14 +158,16 @@
             "load_before": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/DependentV1"
-              }
+                "$ref": "#/$defs/Dependent"
+              },
+              "default": []
             },
             "load_after": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/DependentV1"
-              }
+                "$ref": "#/$defs/Dependent"
+              },
+              "default": []
             },
             "initializer": {
               "anyOf": [
@@ -188,10 +190,10 @@
             "path"
           ]
         },
-        "ModFile": {
+        "ModFileV1": {
           "type": "string"
         },
-        "DependentV1": {
+        "Dependent": {
           "type": "object",
           "properties": {
             "id": {
@@ -258,19 +260,21 @@
               "default": true
             },
             "path": {
-              "$ref": "#/$defs/ModFile"
+              "$ref": "#/$defs/ModFileV1"
             },
             "load_after": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/DependentV1"
-              }
+                "$ref": "#/$defs/Dependent"
+              },
+              "default": []
             },
             "load_before": {
               "type": "array",
               "items": {
-                "$ref": "#/$defs/DependentV1"
-              }
+                "$ref": "#/$defs/Dependent"
+              },
+              "default": []
             }
           },
           "required": [
@@ -395,33 +399,50 @@
               "type": "string"
             },
             {
-              "type": "object",
-              "properties": {
-                "path": {
-                  "type": "string"
-                },
-                "enabled": {
-                  "type": "boolean"
-                },
-                "optional": {
-                  "type": "boolean"
-                },
-                "initializer": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/$defs/NativeInitializerCondition"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ],
-                  "default": null
-                }
-              },
-              "required": [
-                "path"
-              ]
+              "$ref": "#/$defs/FullProfileDependency"
             }
+          ]
+        },
+        "FullProfileDependency": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "optional": {
+              "type": "boolean"
+            },
+            "initializer": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/NativeInitializerCondition"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "load_before": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Dependent"
+              },
+              "default": []
+            },
+            "load_after": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Dependent"
+              },
+              "default": []
+            }
+          },
+          "required": [
+            "path"
           ]
         },
         "NativeInitializerCondition": {
@@ -458,6 +479,21 @@
           },
           "required": [
             "ms"
+          ]
+        },
+        "Dependent": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "optional": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "optional"
           ]
         }
       }

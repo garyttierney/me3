@@ -242,13 +242,8 @@ pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Result<Vec<T>, Depende
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use super::{sort_dependencies, Dependent};
-    use crate::{
-        dependency::Dependency as _,
-        package::{ModFile, Package},
-    };
+    use crate::{dependency::Dependency as _, mod_file::ModFile, package::Package};
 
     fn mock_package(
         id: &str,
@@ -256,9 +251,10 @@ mod tests {
         load_before: Vec<Dependent<String>>,
     ) -> Package {
         Package {
-            id: Some(id.to_owned()),
-            enabled: true,
-            path: ModFile(PathBuf::from(id)),
+            inner: ModFile {
+                name: id.to_owned(),
+                ..ModFile::new("pkg")
+            },
             load_after,
             load_before,
         }

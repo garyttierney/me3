@@ -4,6 +4,7 @@ use schemars::{schema_for, JsonSchema};
 use serde::Deserialize;
 
 use crate::{
+    dependency::Dependent,
     mod_file::ModFile,
     native::{Native, NativeInitializerCondition, NativeInitializerDelay},
     package::Package,
@@ -93,9 +94,9 @@ struct NativeV1 {
     #[serde(default = "on")]
     enabled: bool,
     #[serde(default)]
-    load_before: Vec<DependentV1>,
+    load_before: Vec<Dependent<String>>,
     #[serde(default)]
-    load_after: Vec<DependentV1>,
+    load_after: Vec<Dependent<String>>,
     initializer: Option<NativeInitializerConditionV1>,
     finalizer: Option<String>,
 }
@@ -109,20 +110,13 @@ pub struct PackageV1 {
     #[serde(alias = "source")]
     path: ModFileV1,
     #[serde(default)]
-    load_after: Vec<DependentV1>,
+    load_after: Vec<Dependent<String>>,
     #[serde(default)]
-    load_before: Vec<DependentV1>,
+    load_before: Vec<Dependent<String>>,
 }
 
 #[derive(Deserialize, JsonSchema)]
 struct ModFileV1(PathBuf);
-
-#[allow(dead_code)]
-#[derive(Deserialize, JsonSchema)]
-struct DependentV1 {
-    id: String,
-    optional: bool,
-}
 
 impl From<ModProfileV1Layout> for ModProfileV1 {
     fn from(layout: ModProfileV1Layout) -> Self {
@@ -139,27 +133,29 @@ impl From<ModProfileV1Layout> for ModProfileV1 {
 
 impl From<NativeV1> for Native {
     fn from(value: NativeV1) -> Self {
+        let item = ModFile {
+            enabled: value.enabled,
+            optional: value.optional,
+            ..value.path.0.into()
+        };
+
+        let initializer = match value.initializer {
+            Some(NativeInitializerConditionV1::Delay { ms }) => Some(NativeInitializerCondition {
+                delay: Some(NativeInitializerDelay { ms }),
+                function: None,
+            }),
+            Some(NativeInitializerConditionV1::Function(name)) => {
+                Some(NativeInitializerCondition {
+                    delay: None,
+                    function: Some(name),
+                })
+            }
+            None => None,
+        };
+
         Self {
-            inner: ModFile {
-                enabled: value.enabled,
-                optional: value.optional,
-                ..value.path.0.into()
-            },
-            initializer: match value.initializer {
-                Some(NativeInitializerConditionV1::Delay { ms }) => {
-                    Some(NativeInitializerCondition {
-                        delay: Some(NativeInitializerDelay { ms }),
-                        function: None,
-                    })
-                }
-                Some(NativeInitializerConditionV1::Function(name)) => {
-                    Some(NativeInitializerCondition {
-                        delay: None,
-                        function: Some(name),
-                    })
-                }
-                None => None,
-            },
+            initializer,
+            ..item.into()
         }
     }
 }
@@ -175,7 +171,7 @@ impl From<PackageV1> for Package {
             item.name = id;
         }
 
-        Self(item)
+        item.into()
     }
 }
 

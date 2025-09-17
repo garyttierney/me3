@@ -3,14 +3,16 @@ V1(
         supports: [],
         natives: [],
         packages: [
-            Package(
-                ModFile {
+            Package {
+                inner: ModFile {
                     name: "test-pkg",
                     path: ".",
                     enabled: true,
                     optional: false,
                 },
-            ),
+                load_before: [],
+                load_after: [],
+            },
         ],
         savefile: None,
         start_online: None,

@@ -6,7 +6,10 @@ use std::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::mod_file::{AsModFile, ModFile};
+use crate::{
+    dependency::{Dependency, Dependent},
+    mod_file::{AsModFile, ModFile},
+};
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct NativeInitializerDelay {
@@ -26,8 +29,13 @@ pub struct Native {
     #[serde(flatten)]
     pub(crate) inner: ModFile,
 
-    /// An optional symbol to be called after this native successfully loads.
     pub initializer: Option<NativeInitializerCondition>,
+
+    #[serde(default)]
+    pub(crate) load_before: Vec<Dependent<String>>,
+
+    #[serde(default)]
+    pub(crate) load_after: Vec<Dependent<String>>,
 }
 
 impl Native {
@@ -39,6 +47,25 @@ impl Native {
     #[inline]
     pub fn is_default(&self) -> bool {
         self.inner.is_default() && self.initializer.is_none()
+    }
+}
+
+impl Dependency for Native {
+    type UniqueId = String;
+
+    fn id(&self) -> Self::UniqueId {
+        self.path
+            .file_name()
+            .map(|f| f.to_string_lossy().to_ascii_lowercase())
+            .expect("native had no file name")
+    }
+
+    fn loads_after(&self) -> &[Dependent<Self::UniqueId>] {
+        &self.load_after
+    }
+
+    fn loads_before(&self) -> &[Dependent<Self::UniqueId>] {
+        &self.load_before
     }
 }
 
@@ -83,6 +110,8 @@ impl From<ModFile> for Native {
         Self {
             inner: item,
             initializer: None,
+            load_before: vec![],
+            load_after: vec![],
         }
     }
 }

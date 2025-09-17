@@ -4,6 +4,7 @@ use std::{
     fmt::Debug,
     marker::Tuple,
     panic::{self, AssertUnwindSafe},
+    ptr,
     sync::{Arc, Mutex, OnceLock},
     time::Duration,
 };
@@ -18,12 +19,16 @@ use me3_mod_protocol::{
     profile::ModProfile,
     Game,
 };
+use pelite::pe::Pe;
+use regex::bytes::Regex;
 use retour::Function;
 use tracing::{error, info, instrument, Span};
+use windows::core::w;
 
 use self::hook::HookInstaller;
 use crate::{
     detour::UntypedDetour,
+    executable::Executable,
     native::{ModEngineConnectorShim, ModEngineInitializer},
 };
 

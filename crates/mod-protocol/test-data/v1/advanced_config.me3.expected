@@ -9,16 +9,18 @@ V1(
         natives: [
             Native {
                 inner: ModFile {
-                    name: "my_native-ac5db8a5",
+                    name: "my_native_ac5db8a5",
                     path: "my_native.dll",
                     enabled: true,
                     optional: true,
                 },
                 initializer: None,
+                load_before: [],
+                load_after: [],
             },
             Native {
                 inner: ModFile {
-                    name: "my_other_native-eae16c4a",
+                    name: "my_other_native_eae16c4a",
                     path: "./nr-mods/my_other_native.dll",
                     enabled: true,
                     optional: false,
@@ -31,41 +33,51 @@ V1(
                         ),
                     },
                 ),
+                load_before: [],
+                load_after: [],
             },
         ],
         packages: [
-            Package(
-                ModFile {
+            Package {
+                inner: ModFile {
                     name: "my-mod",
                     path: "./mod",
                     enabled: true,
                     optional: false,
                 },
-            ),
-            Package(
-                ModFile {
-                    name: "unnamed-mod-f0cb703b",
+                load_before: [],
+                load_after: [],
+            },
+            Package {
+                inner: ModFile {
+                    name: "unnamed-mod_f0cb703b",
                     path: "./unnamed-mod",
                     enabled: true,
                     optional: false,
                 },
-            ),
-            Package(
-                ModFile {
+                load_before: [],
+                load_after: [],
+            },
+            Package {
+                inner: ModFile {
                     name: "my-other-mod",
                     path: "./nr-mods/mod",
                     enabled: true,
                     optional: false,
                 },
-            ),
-            Package(
-                ModFile {
+                load_before: [],
+                load_after: [],
+            },
+            Package {
+                inner: ModFile {
                     name: "my-disabled-mod",
                     path: "./unused-mod",
                     enabled: false,
                     optional: false,
                 },
-            ),
+                load_before: [],
+                load_after: [],
+            },
         ],
         savefile: None,
         start_online: Some(

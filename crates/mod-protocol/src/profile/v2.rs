@@ -1,10 +1,11 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use indexmap::IndexMap;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    dependency::Dependent,
     mod_file::ModFile,
     native::{Native, NativeInitializerCondition},
     package::Package,
@@ -38,12 +39,8 @@ pub struct ModProfileV2 {
 
 impl ModProfileV2 {
     pub(super) fn push_dependency(&mut self, (name, dependency): (String, ProfileDependency)) {
-        let file_path = match &dependency {
-            ProfileDependency::Simple(path) => path,
-            ProfileDependency::Full { path, .. } => path,
-        };
-
-        let file_name = file_path
+        let file_name = dependency
+            .path()
             .file_name()
             .unwrap_or_default()
             .to_string_lossy()
@@ -90,62 +87,40 @@ struct ProfileGame {
 #[serde(untagged)]
 pub enum ProfileDependency {
     Simple(PathBuf),
-    Full {
-        path: PathBuf,
+    Full(FullProfileDependency),
+}
 
-        #[serde(
-            default = "ProfileDependency::enabled_default",
-            skip_serializing_if = "ProfileDependency::enabled_is_default"
-        )]
-        enabled: bool,
+#[derive(Clone, Deserialize, Serialize, JsonSchema)]
+pub struct FullProfileDependency {
+    path: PathBuf,
 
-        #[serde(
-            default = "ProfileDependency::optional_default",
-            skip_serializing_if = "ProfileDependency::optional_is_default"
-        )]
-        optional: bool,
+    #[serde(
+        default = "ProfileDependency::enabled_default",
+        skip_serializing_if = "ProfileDependency::enabled_is_default"
+    )]
+    enabled: bool,
 
-        #[serde(default)]
-        initializer: Option<NativeInitializerCondition>,
-    },
+    #[serde(
+        default = "ProfileDependency::optional_default",
+        skip_serializing_if = "ProfileDependency::optional_is_default"
+    )]
+    optional: bool,
+
+    #[serde(default)]
+    initializer: Option<NativeInitializerCondition>,
+
+    #[serde(default)]
+    load_before: Vec<Dependent<String>>,
+
+    #[serde(default)]
+    load_after: Vec<Dependent<String>>,
 }
 
 impl ProfileDependency {
-    fn into_parts(self) -> (PathBuf, bool, bool, Option<NativeInitializerCondition>) {
+    pub fn path(&self) -> &Path {
         match self {
-            Self::Simple(path) => (
-                path,
-                Self::enabled_default(),
-                Self::optional_default(),
-                None,
-            ),
-            Self::Full {
-                path,
-                enabled,
-                optional,
-                initializer,
-            } => (path, enabled, optional, initializer),
-        }
-    }
-
-    fn from_parts(
-        path: PathBuf,
-        enabled: bool,
-        optional: bool,
-        initializer: Option<NativeInitializerCondition>,
-    ) -> Self {
-        if enabled == Self::enabled_default()
-            && optional == Self::optional_default()
-            && initializer.is_none()
-        {
-            Self::Simple(path)
-        } else {
-            Self::Full {
-                path,
-                enabled,
-                optional,
-                initializer,
-            }
+            Self::Simple(path) => path,
+            Self::Full(full) => &full.path,
         }
     }
 
@@ -163,6 +138,37 @@ impl ProfileDependency {
 
     fn optional_is_default(optional: &bool) -> bool {
         *optional == Self::optional_default()
+    }
+}
+
+impl From<ProfileDependency> for FullProfileDependency {
+    fn from(value: ProfileDependency) -> Self {
+        match value {
+            ProfileDependency::Simple(path) => Self {
+                path,
+                enabled: ProfileDependency::enabled_default(),
+                optional: ProfileDependency::optional_default(),
+                initializer: None,
+                load_before: vec![],
+                load_after: vec![],
+            },
+            ProfileDependency::Full(full) => full,
+        }
+    }
+}
+
+impl From<FullProfileDependency> for ProfileDependency {
+    fn from(value: FullProfileDependency) -> Self {
+        if value.enabled == Self::enabled_default()
+            && value.optional == Self::optional_default()
+            && value.initializer.is_none()
+            && value.load_before.is_empty()
+            && value.load_after.is_empty()
+        {
+            Self::Simple(value.path)
+        } else {
+            Self::Full(value)
+        }
     }
 }
 
@@ -206,7 +212,15 @@ impl From<ModProfileV2> for ModProfileV2Layout {
 
 impl From<(String, ProfileDependency)> for Native {
     fn from((name, dependency): (String, ProfileDependency)) -> Self {
-        let (path, enabled, optional, initializer) = dependency.into_parts();
+        let FullProfileDependency {
+            path,
+            enabled,
+            optional,
+            initializer,
+            load_before,
+            load_after,
+        } = dependency.into();
+
         Self {
             inner: ModFile {
                 name,
@@ -214,6 +228,8 @@ impl From<(String, ProfileDependency)> for Native {
                 enabled,
                 optional,
             },
+            load_before,
+            load_after,
             initializer,
         }
     }
@@ -223,31 +239,69 @@ impl From<Native> for (String, ProfileDependency) {
     fn from(native: Native) -> Self {
         (
             native.inner.name,
-            ProfileDependency::from_parts(
-                native.inner.path,
-                native.inner.enabled,
-                native.inner.optional,
-                native.initializer,
-            ),
+            FullProfileDependency {
+                path: native.inner.path,
+                enabled: native.inner.enabled,
+                optional: native.inner.optional,
+                initializer: native.initializer,
+                load_before: native.load_before,
+                load_after: native.load_after,
+            }
+            .into(),
         )
     }
 }
 
 impl From<(String, ProfileDependency)> for Package {
-    fn from(dependency: (String, ProfileDependency)) -> Self {
-        ModFile::from(dependency).into()
+    fn from((name, dependency): (String, ProfileDependency)) -> Self {
+        let FullProfileDependency {
+            path,
+            enabled,
+            optional,
+            load_before,
+            load_after,
+            ..
+        } = dependency.into();
+
+        Self {
+            inner: ModFile {
+                name,
+                path,
+                enabled,
+                optional,
+            },
+            load_before,
+            load_after,
+        }
     }
 }
 
 impl From<Package> for (String, ProfileDependency) {
     fn from(package: Package) -> Self {
-        package.0.into()
+        (
+            package.inner.name,
+            FullProfileDependency {
+                path: package.inner.path,
+                enabled: package.inner.enabled,
+                optional: package.inner.optional,
+                initializer: None,
+                load_before: package.load_before,
+                load_after: package.load_after,
+            }
+            .into(),
+        )
     }
 }
 
 impl From<(String, ProfileDependency)> for ModFile {
     fn from((name, dependency): (String, ProfileDependency)) -> Self {
-        let (path, enabled, optional, _) = dependency.into_parts();
+        let FullProfileDependency {
+            path,
+            enabled,
+            optional,
+            ..
+        } = dependency.into();
+
         Self {
             name,
             path,
@@ -261,7 +315,15 @@ impl From<ModFile> for (String, ProfileDependency) {
     fn from(item: ModFile) -> Self {
         (
             item.name,
-            ProfileDependency::from_parts(item.path, item.enabled, item.optional, None),
+            FullProfileDependency {
+                path: item.path,
+                enabled: item.enabled,
+                optional: item.optional,
+                initializer: None,
+                load_before: vec![],
+                load_after: vec![],
+            }
+            .into(),
         )
     }
 }
