@@ -52,7 +52,7 @@ struct ModProfileV2Layout {
     #[serde(default)]
     game: GamePropertiesV2,
 
-    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     mods: IndexMap<String, ModEntryV2Layout>,
 }
 
