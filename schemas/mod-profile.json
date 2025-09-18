@@ -304,9 +304,6 @@
           }
         }
       },
-      "required": [
-        "mods"
-      ],
       "$defs": {
         "GamePropertiesV2": {
           "type": "object",
