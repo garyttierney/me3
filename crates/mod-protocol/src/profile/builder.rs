@@ -4,9 +4,8 @@ use std::{
 };
 
 use crate::{
-    mod_file::ModFile,
     profile::{
-        v2::{ModProfileV2, ProfileDependency},
+        v2::{ModEntryV2, ModProfileV2},
         ModProfile,
     },
     Game,
@@ -15,7 +14,7 @@ use crate::{
 #[derive(Default)]
 pub struct ModProfileBuilder {
     supports: Option<Game>,
-    dependencies: Vec<(String, ProfileDependency)>,
+    mods: Vec<ModEntryV2>,
     savefile: Option<String>,
     start_online: Option<bool>,
     disable_arxan: Option<bool>,
@@ -29,7 +28,7 @@ impl ModProfileBuilder {
     pub fn build(&mut self) -> ModProfile {
         let Self {
             supports,
-            dependencies,
+            mods,
             savefile,
             start_online,
             disable_arxan,
@@ -43,8 +42,8 @@ impl ModProfileBuilder {
             ..Default::default()
         };
 
-        for uses in dependencies {
-            profile.push_dependency(uses);
+        for mod_entry in mods {
+            profile.push_mod_entry(mod_entry);
         }
 
         ModProfile::V2(profile)
@@ -66,17 +65,16 @@ impl ModProfileBuilder {
     where
         I: IntoIterator<Item = PathBuf>,
     {
-        self.dependencies
-            .extend(iter.into_iter().map(|i| ModFile::from(i).into()));
+        self.mods.extend(iter.into_iter().map(Into::into));
         self
     }
 
     #[inline]
-    pub fn with_dependencies<I>(&mut self, iter: I) -> &mut Self
+    pub fn with_mods<I>(&mut self, iter: I) -> &mut Self
     where
-        I: IntoIterator<Item: Into<(String, ProfileDependency)>>,
+        I: IntoIterator<Item: Into<ModEntryV2>>,
     {
-        self.dependencies.extend(iter.into_iter().map(Into::into));
+        self.mods.extend(iter.into_iter().map(Into::into));
         self
     }
 

@@ -12,16 +12,24 @@ pub trait AsModFile {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ModFile {
-    /// Name associated with this item.
+    /// Name associated with this file.
     pub name: String,
 
-    /// A path to the source of this item.
+    /// A path to the source of this file.
     pub path: PathBuf,
 
-    /// Does this item participate in dependency resolution?
+    /// Does this file participate in dependency resolution?
+    #[serde(
+        default = "ModFile::enabled_default",
+        skip_serializing_if = "ModFile::enabled_is_default"
+    )]
     pub enabled: bool,
 
-    /// Should failing to find this item result in a hard error?
+    /// Should failing to find this file result in a hard error?
+    #[serde(
+        default = "ModFile::optional_default",
+        skip_serializing_if = "ModFile::optional_is_default"
+    )]
     pub optional: bool,
 }
 
@@ -47,6 +55,26 @@ impl ModFile {
             self.path = base.as_ref().join(&self.path);
         }
     }
+
+    #[inline]
+    pub(crate) fn enabled_default() -> bool {
+        true
+    }
+
+    #[inline]
+    pub(crate) fn enabled_is_default(enabled: &bool) -> bool {
+        *enabled == Self::enabled_default()
+    }
+
+    #[inline]
+    pub(crate) fn optional_default() -> bool {
+        false
+    }
+
+    #[inline]
+    pub(crate) fn optional_is_default(optional: &bool) -> bool {
+        *optional == Self::optional_default()
+    }
 }
 
 impl Default for ModFile {
@@ -55,8 +83,8 @@ impl Default for ModFile {
         Self {
             name: Default::default(),
             path: Default::default(),
-            enabled: true,
-            optional: false,
+            enabled: Self::enabled_default(),
+            optional: Self::optional_default(),
         }
     }
 }

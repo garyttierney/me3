@@ -6,7 +6,7 @@ savefile = "TEST.sl2"
 disable_arxan = false
 start_online = true
 
-[dependencies]
+[mods]
 test_dll.path = 'test.dll'
 other_dll = { path = './other_mods/mod.dll', optional = true }
 big_overhaul.path = './other_mods/overhaul.me3'

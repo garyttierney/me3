@@ -289,7 +289,7 @@
       "type": "object",
       "properties": {
         "game": {
-          "$ref": "#/$defs/ProfileGame",
+          "$ref": "#/$defs/GamePropertiesV2",
           "default": {
             "launch": null,
             "savefile": null,
@@ -297,18 +297,18 @@
             "disable_arxan": null
           }
         },
-        "dependencies": {
+        "mods": {
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/$defs/ProfileDependency"
+            "$ref": "#/$defs/ModEntryV2Layout"
           }
         }
       },
       "required": [
-        "dependencies"
+        "mods"
       ],
       "$defs": {
-        "ProfileGame": {
+        "GamePropertiesV2": {
           "type": "object",
           "properties": {
             "launch": {
@@ -319,29 +319,25 @@
                 {
                   "type": "null"
                 }
-              ],
-              "default": null
+              ]
             },
             "savefile": {
               "type": [
                 "string",
                 "null"
-              ],
-              "default": null
+              ]
             },
             "start_online": {
               "type": [
                 "boolean",
                 "null"
-              ],
-              "default": null
+              ]
             },
             "disable_arxan": {
               "type": [
                 "boolean",
                 "null"
-              ],
-              "default": null
+              ]
             }
           }
         },
@@ -393,56 +389,105 @@
             }
           ]
         },
-        "ProfileDependency": {
+        "ModEntryV2Layout": {
           "anyOf": [
             {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "optional": {
+                  "type": "boolean"
+                },
+                "initializer": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/NativeInitializerCondition"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "load_before": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Dependent"
+                  }
+                },
+                "load_after": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Dependent"
+                  }
+                },
+                "kind": {
+                  "type": "string",
+                  "const": "native"
+                }
+              },
+              "required": [
+                "kind",
+                "path"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "optional": {
+                  "type": "boolean"
+                },
+                "load_before": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Dependent"
+                  }
+                },
+                "load_after": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Dependent"
+                  }
+                },
+                "kind": {
+                  "type": "string",
+                  "const": "package"
+                }
+              },
+              "required": [
+                "kind",
+                "path"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "profile"
+                }
+              },
+              "$ref": "#/$defs/ModFileV2",
+              "required": [
+                "kind"
+              ]
+            },
+            {
               "type": "string"
             },
             {
-              "$ref": "#/$defs/FullProfileDependency"
+              "$ref": "#/$defs/UntaggedModEntryV2"
             }
-          ]
-        },
-        "FullProfileDependency": {
-          "type": "object",
-          "properties": {
-            "path": {
-              "type": "string"
-            },
-            "enabled": {
-              "type": "boolean"
-            },
-            "optional": {
-              "type": "boolean"
-            },
-            "initializer": {
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/NativeInitializerCondition"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null
-            },
-            "load_before": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/Dependent"
-              },
-              "default": []
-            },
-            "load_after": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/Dependent"
-              },
-              "default": []
-            }
-          },
-          "required": [
-            "path"
           ]
         },
         "NativeInitializerCondition": {
@@ -494,6 +539,62 @@
           "required": [
             "id",
             "optional"
+          ]
+        },
+        "ModFileV2": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "optional": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "path"
+          ]
+        },
+        "UntaggedModEntryV2": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "optional": {
+              "type": "boolean"
+            },
+            "initializer": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/NativeInitializerCondition"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "load_before": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Dependent"
+              }
+            },
+            "load_after": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Dependent"
+              }
+            }
+          },
+          "required": [
+            "path"
           ]
         }
       }

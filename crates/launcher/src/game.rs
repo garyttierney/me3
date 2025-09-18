@@ -170,12 +170,8 @@ unsafe fn deserialize_result_payload(
     result_payload: *mut u8,
 ) -> LauncherResult<Result<Attachment, AttachError>> {
     let payload_len = unsafe {
-        ProcessMemorySlice::from_raw_parts(
-            result_payload,
-            mem::size_of::<usize>(),
-            process,
-        )
-        .read_struct::<usize>(0)?
+        ProcessMemorySlice::from_raw_parts(result_payload, mem::size_of::<usize>(), process)
+            .read_struct::<usize>(0)?
     };
 
     let mut bytes = Vec::new();

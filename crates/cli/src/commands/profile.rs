@@ -263,9 +263,9 @@ pub fn upgrade(db: DbContext, config: Config, args: ProfileNameArgs) -> color_ey
 
     ModProfileBuilder::new()
         .with_supported_game(profile.supported_game())
-        .with_dependencies(profile.natives())
-        .with_dependencies(profile.packages())
-        .with_dependencies(profile.profiles())
+        .with_mods(profile.natives())
+        .with_mods(profile.packages())
+        .with_mods(profile.profiles())
         .with_savefile(profile.savefile())
         .start_online(profile.options().start_online)
         .disable_arxan(profile.options().disable_arxan)

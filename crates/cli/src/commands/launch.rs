@@ -156,7 +156,8 @@ pub struct LaunchArgs {
         )]
     uses: Vec<PathBuf>,
 
-    /// (DEPRECATED, use "-u") /// Path to package directory (asset override mod) [repeatable option]
+    /// (DEPRECATED, use "-u") /// Path to package directory (asset override mod) [repeatable
+    /// option]
     #[deprecated]
     #[clap(
             long("package"),

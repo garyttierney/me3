@@ -95,9 +95,9 @@ impl ModProfile {
         let profile = ModProfileBuilder::new()
             .with_supported_game(game.cloned())
             .with_savefile(self.savefile())
-            .with_dependencies(self.natives().into_iter().chain(other.natives()))
-            .with_dependencies(self.packages().into_iter().chain(other.packages()))
-            .with_dependencies(self.profiles().into_iter().chain(other.profiles()))
+            .with_mods(self.natives().into_iter().chain(other.natives()))
+            .with_mods(self.packages().into_iter().chain(other.packages()))
+            .with_mods(self.profiles().into_iter().chain(other.profiles()))
             .start_online(either(other.start_online(), self.start_online()))
             .disable_arxan(either(other.disable_arxan(), self.disable_arxan()))
             .build();
