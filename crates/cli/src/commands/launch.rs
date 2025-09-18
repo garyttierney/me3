@@ -37,7 +37,7 @@ use crate::{
 
 fn remap_slr_path(path: impl AsRef<Path>) -> PathBuf {
     // <https://gitlab.steamos.cloud/steamrt/steam-runtime-tools/-/blob/4d85075e6240c839a3464fd97f22aa2253a9cea1/docs/shared-paths.md#never-shared>
-    const NON_SHARED_PATHS: [&'static str; 4] = ["/usr", "/etc", "/bin", "/lib"];
+    const NON_SHARED_PATHS: [&str; 4] = ["/usr", "/etc", "/bin", "/lib"];
 
     let path = path.as_ref();
 
@@ -236,8 +236,7 @@ impl Launcher for CompatToolLauncher {
             .library_paths()?
             .into_iter()
             .map(|path| path.join(format!("steamapps/compatdata/{}", self.app_id)))
-            .filter(|path| path.exists())
-            .next()
+            .find(|path| path.exists())
             .unwrap_or_else(|| {
                 self.library
                     .path()

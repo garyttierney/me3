@@ -191,8 +191,8 @@ impl Profile {
             let mut natives = ordered.profile.inner.natives();
             let mut packages = ordered.profile.inner.packages();
 
-            canonicalize(&base_dir, &mut natives);
-            canonicalize(&base_dir, &mut packages);
+            canonicalize(base_dir, &mut natives);
+            canonicalize(base_dir, &mut packages);
 
             ordered_natives.extend(sort_dependencies(natives)?);
             ordered_packages.extend(sort_dependencies(packages)?);
@@ -290,6 +290,7 @@ impl ProfileDb {
 }
 
 #[derive(Clone, Debug, Hash)]
+#[allow(clippy::derived_hash_with_manual_eq)]
 struct ProfilePath(Arc<Path>);
 
 impl AsRef<Path> for ProfilePath {

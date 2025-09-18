@@ -105,7 +105,7 @@ impl VfsOverrideMapping {
             let root_key =
                 VfsKey::for_disk_path(package_path).map_err(VfsOverrideMappingError::ReadDir)?;
 
-            let scanned_directories = map_packages_inner(package_path, &root_key, &package_source);
+            let scanned_directories = map_packages_inner(package_path, &root_key, package_source);
             self.map.reserve(scanned_directories.len());
 
             for result in scanned_directories {
