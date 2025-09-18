@@ -4,8 +4,10 @@
 #![feature(unboxed_closures)]
 
 use std::{
+    alloc::{handle_alloc_error, GlobalAlloc, Layout, System},
     fs::OpenOptions,
     io::stdout,
+    ptr, slice,
     sync::{Arc, OnceLock},
 };
 
@@ -40,19 +42,6 @@ mod native;
 mod savefile;
 mod skip_logos;
 
-static INSTANCE: OnceLock<usize> = OnceLock::new();
-static mut TELEMETRY_INSTANCE: OnceLock<me3_telemetry::Telemetry> = OnceLock::new();
-
-dll_syringe::payload_procedure! {
-    fn me_attach(request: AttachRequest) -> AttachResult {
-        if request.config.suspend {
-            debugger::suspend_for_debugger();
-        }
-
-        on_attach(request)
-    }
-}
-
 #[cfg(coverage)]
 #[unsafe(no_mangle)]
 #[allow(non_upper_case_globals)]
@@ -64,7 +53,61 @@ unsafe extern "C" {
     fn __llvm_profile_initialize_file();
 }
 
+static INSTANCE: OnceLock<usize> = OnceLock::new();
+static mut TELEMETRY_INSTANCE: OnceLock<me3_telemetry::Telemetry> = OnceLock::new();
+
+#[unsafe(no_mangle)]
+extern "C" fn me_attach(attach_payload: *mut u8, attach_payload_len: usize) -> *mut u8 {
+    let result = me_attach_inner(attach_payload, attach_payload_len);
+    serialize_result_payload(result)
+}
+
+fn me_attach_inner(attach_payload: *mut u8, attach_payload_len: usize) -> AttachResult {
+    let request = unsafe { deserialize_attach_payload(attach_payload, attach_payload_len)? };
+    on_attach(request)
+}
+
+unsafe fn deserialize_attach_payload(
+    attach_payload: *mut u8,
+    attach_payload_len: usize,
+) -> Result<AttachRequest, eyre::Error> {
+    let bytes = unsafe { slice::from_raw_parts(attach_payload, attach_payload_len) };
+    Ok(serde_json::from_slice(bytes)?)
+}
+
+fn serialize_result_payload(result: AttachResult) -> *mut u8 {
+    let string = match serde_json::to_string(&result) {
+        Ok(string) => string,
+        Err(e) => format!("\"{e}\""),
+    };
+
+    unsafe {
+        let (layout, string_offset) = Layout::new::<usize>()
+            .extend(Layout::from_size_align_unchecked(string.len(), 1))
+            .unwrap();
+
+        let length_prefixed_payload = System.alloc(layout);
+        if length_prefixed_payload.is_null() {
+            handle_alloc_error(layout);
+        }
+
+        ptr::write(length_prefixed_payload as *mut usize, string.len());
+
+        ptr::copy(
+            string.as_ptr(),
+            length_prefixed_payload.add(string_offset),
+            string.len(),
+        );
+
+        length_prefixed_payload
+    }
+}
+
 fn on_attach(request: AttachRequest) -> AttachResult {
+    if request.config.suspend {
+        debugger::suspend_for_debugger();
+    }
+
     let _ = unsafe { SetConsoleOutputCP(CP_UTF8) };
     me3_telemetry::install_error_handler();
 
@@ -113,7 +156,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         let mut override_mapping = VfsOverrideMapping::new()?;
 
-        override_mapping.scan_directories(attach_config.packages.iter())?;
+        override_mapping.map_packages(attach_config.packages.iter())?;
         savefile::attach_override(&attach_config, &mut override_mapping)?;
 
         let override_mapping = Arc::new(override_mapping);
@@ -155,18 +198,8 @@ fn deferred_attach(
         override_mapping.clone(),
     )?;
 
-    let first_delayed_offset = attach_config
-        .natives
-        .iter()
-        .enumerate()
-        .filter_map(|(idx, native)| native.initializer.is_some().then_some(idx))
-        .next()
-        .unwrap_or(attach_config.natives.len());
-
-    let (immediate, delayed) = attach_config.natives.split_at(first_delayed_offset);
-
-    for native in immediate {
-        if let Err(e) = ModHost::get_attached().load_native(&native.path, &native.initializer) {
+    for native in &attach_config.natives {
+        if let Err(e) = ModHost::get_attached().load_native(native) {
             warn!(
                 error = &*e,
                 path = %native.path.display(),
@@ -174,27 +207,10 @@ fn deferred_attach(
             );
 
             if !native.optional {
-                return Err(e.into());
+                return Err(e);
             }
         }
     }
-
-    let delayed = delayed.to_vec();
-    std::thread::spawn(move || {
-        for native in delayed {
-            if let Err(e) = ModHost::get_attached().load_native(&native.path, &native.initializer) {
-                warn!(
-                    error = &*e,
-                    path = %native.path.display(),
-                    "failed to load native mod",
-                );
-
-                if !native.optional {
-                    panic!("{:#?}", e);
-                }
-            }
-        }
-    });
 
     asset_hooks::attach_override(
         attach_config,

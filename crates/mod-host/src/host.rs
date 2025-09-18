@@ -3,29 +3,33 @@ use std::{
     ffi::CString,
     fmt::Debug,
     marker::Tuple,
-    panic,
-    path::Path,
+    panic::{self, AssertUnwindSafe},
     ptr,
     sync::{Arc, Mutex, OnceLock},
     time::Duration,
 };
 
 use closure_ffi::traits::FnPtr;
+use eyre::eyre;
 use libloading::{Library, Symbol};
 use me3_binary_analysis::pe;
 use me3_launcher_attach_protocol::AttachConfig;
-use me3_mod_protocol::{native::NativeInitializerCondition, Game, ModProfile};
+use me3_mod_protocol::{
+    native::{Native, NativeInitializerCondition},
+    profile::ModProfile,
+    Game,
+};
 use pelite::pe::Pe;
 use regex::bytes::Regex;
 use retour::Function;
-use tracing::{error, info, warn, Span};
+use tracing::{error, info, instrument, Span};
 use windows::core::w;
 
 use self::hook::HookInstaller;
 use crate::{
     detour::UntypedDetour,
     executable::Executable,
-    native::{ModEngineConnectorShim, ModEngineExtension, ModEngineInitializer},
+    native::{ModEngineConnectorShim, ModEngineInitializer},
 };
 
 mod append;
@@ -58,53 +62,92 @@ impl ModHost {
         Self::default()
     }
 
-    pub fn load_native(
-        &self,
-        path: &Path,
-        condition: &Option<NativeInitializerCondition>,
-    ) -> eyre::Result<()> {
-        let result = panic::catch_unwind(|| {
-            let module = unsafe { libloading::Library::new(path)? };
+    #[instrument(skip_all)]
+    pub fn load_native(&self, native: &Native) -> eyre::Result<()> {
+        let load_native = {
+            let span = AssertUnwindSafe(Span::current());
+            let native = native.clone();
 
-            match &condition {
-                Some(NativeInitializerCondition::Delay { ms }) => {
-                    std::thread::sleep(Duration::from_millis(*ms as u64))
-                }
-                Some(NativeInitializerCondition::Function(symbol)) => unsafe {
+            move || unsafe {
+                let _span_guard = span.enter();
+                let module = libloading::Library::new(&native.path)?;
+
+                if let Some(NativeInitializerCondition {
+                    function: Some(symbol),
+                    ..
+                }) = &native.initializer
+                {
                     let sym_name = CString::new(symbol.as_bytes())?;
+
                     let initializer: Symbol<unsafe extern "C" fn() -> bool> =
                         module.get(sym_name.as_bytes_with_nul())?;
 
-                    if initializer() {
-                        info!(?path, symbol, "native initialized successfully");
-                    } else {
-                        error!(?path, symbol, "native failed to initialize");
+                    if !initializer() {
+                        return Err(eyre!("native failed to initialize"));
                     }
-                },
-                None => {
-                    let me2_initializer: Option<Symbol<ModEngineInitializer>> =
-                        unsafe { module.get(b"modengine_ext_init\0").ok() };
+                }
 
-                    let mut extension_ptr: *mut ModEngineExtension = std::ptr::null_mut();
-                    if let Some(initializer) = me2_initializer {
-                        unsafe { initializer(&ModEngineConnectorShim, &mut extension_ptr) };
+                info!("native" = native.name, "loaded native");
 
-                        info!(?path, "loaded native with me2 compatibility shim");
+                eyre::Ok(module)
+            }
+        };
+
+        let result = panic::catch_unwind(move || {
+            if let Some(NativeInitializerCondition {
+                delay: Some(delay), ..
+            }) = &native.initializer
+            {
+                let name = native.name.clone();
+                let delay = delay.clone();
+
+                std::thread::spawn(move || {
+                    std::thread::sleep(Duration::from_millis(delay.ms as u64));
+
+                    match load_native() {
+                        Ok(module) => ModHost::get_attached()
+                            .native_modules
+                            .lock()
+                            .unwrap()
+                            .push(module),
+                        Err(e) => {
+                            error!(
+                                "error" = &*e,
+                                "native" = name,
+                                "an error occurred while loading native"
+                            )
+                        }
                     }
+                });
+
+                return eyre::Ok(());
+            }
+
+            let module = load_native()?;
+
+            if native.initializer.is_none() {
+                let me2_initializer =
+                    unsafe { module.get::<ModEngineInitializer>(b"modengine_ext_init\0") };
+
+                if let Ok(initializer) = me2_initializer {
+                    unsafe { initializer(&ModEngineConnectorShim, &mut std::ptr::null_mut()) };
                 }
             }
 
-            Ok(module)
+            self.native_modules.lock().unwrap().push(module);
+
+            eyre::Ok(())
         });
 
         match result {
-            Err(exception) => {
-                warn!("an error occurred while loading {path:?}, it may not work as expected");
-                Ok(())
+            Ok(result) => result,
+            Err(payload) => {
+                let payload = payload
+                    .downcast::<&'static str>()
+                    .map_or("unable to retrieve panic payload", |b| *b);
+
+                Err(eyre!(payload))
             }
-            Ok(result) => result.map(|module| {
-                self.native_modules.lock().unwrap().push(module);
-            }),
         }
     }
 

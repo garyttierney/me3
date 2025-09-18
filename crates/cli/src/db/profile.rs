@@ -1,17 +1,22 @@
 use std::{
     ffi::OsStr,
+    fmt,
     fs::DirEntry,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use color_eyre::eyre::Context;
 use me3_mod_protocol::{
-    dependency::sort_dependencies,
+    dependency::{sort_dependencies, Dependency, Dependent},
+    mod_file::{AsModFile, ModFile},
     native::Native,
-    package::{Package, WithPackageSource},
-    Game, ModProfile,
+    package::Package,
+    profile::{ModProfile, ProfileMergeError},
+    Game,
 };
 use normpath::PathExt;
+use serde::{Deserialize, Serialize};
 use tracing::warn;
 
 use crate::commands::profile::ProfileOptions;
@@ -28,10 +33,11 @@ impl ProfileDb {
     }
 }
 
+#[derive(Debug)]
 pub struct Profile {
     name: String,
     path: PathBuf,
-    profile: ModProfile,
+    inner: ModProfile,
 }
 
 impl Profile {
@@ -40,7 +46,7 @@ impl Profile {
         Self {
             name: "transient-profile".to_string(),
             path: Default::default(),
-            profile: Default::default(),
+            inner: Default::default(),
         }
     }
 
@@ -54,74 +60,151 @@ impl Profile {
         self.path.parent()
     }
 
+    /// Returns the path to the profile file.
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
     /// Get the single game this profile supports, or None if it supports multiple games/omits
     /// support metadata.
     pub fn supported_game(&self) -> Option<Game> {
-        let supports = self.profile.supports();
-        match &supports[..] {
-            [one_game] => Some(one_game.game),
-            _ => None,
-        }
+        self.inner.game()
     }
 
-    /// Get an unordered list of natives to be loaded by this profile.
-    ///
-    /// See [compile] to produce an ordered list.
+    /// Returns a list of natives to be loaded by this profile.
     pub fn natives(&self) -> impl Iterator<Item = Native> {
-        self.profile.natives().into_iter()
+        self.inner.natives().into_iter()
     }
 
-    /// Get an unordered list of packages loaded by this profile.
-    ///
-    /// See [compile] to produce an ordered list.
+    /// Returns a list of packages loaded by this profile.
     pub fn packages(&self) -> impl Iterator<Item = Package> {
-        self.profile.packages().into_iter()
+        self.inner.packages().into_iter()
+    }
+
+    /// Returns a list of profiles loaded by this profile.
+    pub fn profiles(&self) -> impl Iterator<Item = ModFile> {
+        self.inner.profiles().into_iter()
     }
 
     /// Get the savefile name that may be overridden by this profile.
     pub fn savefile(&self) -> Option<String> {
-        self.profile.savefile()
+        self.inner.savefile()
     }
 
     /// Returns misc. options set by this profile.
     pub fn options(&self) -> ProfileOptions {
         ProfileOptions {
-            start_online: self.profile.start_online(),
-            disable_arxan: self.profile.disable_arxan(),
+            start_online: self.inner.start_online(),
+            disable_arxan: self.inner.disable_arxan(),
         }
     }
 
-    /// Compile this profile into a load order of native DLLs and packages to be loaded.
-    pub fn compile(&self) -> color_eyre::Result<(Vec<Native>, Vec<Package>)> {
-        fn exists<S: WithPackageSource>(p: &S) -> bool {
-            match p.source().try_exists() {
-                Ok(true) => true,
+    /// Attempt to apply the properties of another profile on top of this profile.
+    ///
+    /// Returns a profile that is a combination of both.
+    pub fn try_merge<P: AsRef<ModProfile>>(&self, other: &P) -> Result<Self, ProfileMergeError> {
+        Ok(Self {
+            name: self.name.clone(),
+            path: self.path.clone(),
+            inner: self.inner.try_merge(other.as_ref())?,
+        })
+    }
+
+    /// Compile this profile into a load order of native DLLs, packages and files to be loaded.
+    pub fn compile(self, db: &ProfileDb) -> color_eyre::Result<(Vec<Native>, Vec<Package>)> {
+        fn canonicalize<S: AsModFile>(base_dir: &Path, sources: &mut Vec<S>) {
+            sources
+                .iter_mut()
+                .for_each(|i| i.as_mod_file_mut().make_absolute(base_dir));
+
+            sources.retain(|s| match s.as_mod_file().as_ref().try_exists() {
+                Ok(true) => s.as_mod_file().enabled,
                 _ => {
-                    warn!(path = %p.source().display(), "specified path does not exist or is inaccessible");
+                    warn!(
+                        "path" = ?s.as_mod_file().as_ref(),
+                        "specified path does not exist or is inaccessible"
+                    );
                     false
                 }
+            });
+        }
+
+        let root = ProfileDependency::from_profile(self, None);
+
+        let base_dir = root.profile.base_dir().unwrap_or(Path::new("."));
+
+        let mut children = root.profile.inner.profiles();
+        canonicalize(base_dir, &mut children);
+
+        let mut remaining = children
+            .into_iter()
+            .rev()
+            .map(|p| {
+                (
+                    ProfilePath::from(&*p.path),
+                    Dependent {
+                        id: root.path.clone(),
+                        optional: p.optional,
+                    },
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let mut profiles = vec![root];
+
+        while let Some((next, after)) = remaining.pop() {
+            if let Some(index) = profiles.iter().position(|p| p.path == next) {
+                let mut profile = profiles.remove(index);
+                profile.load_after = Some(after);
+                profiles.push(profile);
+            } else {
+                let profile = db.load(next.as_ref())?;
+                let profile = ProfileDependency::from_profile(profile, Some(after));
+
+                let base_dir = profile.profile.base_dir().unwrap_or(Path::new("."));
+
+                let mut children = profile.profile.inner.profiles();
+                canonicalize(base_dir, &mut children);
+
+                for next in children.into_iter().rev() {
+                    remaining.push((
+                        ProfilePath::from(&*next.path),
+                        Dependent {
+                            id: profile.path.clone(),
+                            optional: next.optional,
+                        },
+                    ));
+                }
+
+                profiles.push(profile);
             }
         }
 
-        fn canonicalize<S: WithPackageSource>(base_dir: &Path, sources: &mut Vec<S>) {
-            sources
-                .iter_mut()
-                .for_each(|pkg| pkg.source_mut().make_absolute(base_dir));
-            sources.retain(exists);
+        let ordered_profiles = sort_dependencies(profiles)?;
+
+        let mut ordered_natives = vec![];
+        let mut ordered_packages = vec![];
+
+        for ordered in ordered_profiles {
+            let base_dir = ordered.profile.base_dir().unwrap_or(Path::new("."));
+
+            let mut natives = ordered.profile.inner.natives();
+            let mut packages = ordered.profile.inner.packages();
+
+            canonicalize(base_dir, &mut natives);
+            canonicalize(base_dir, &mut packages);
+
+            ordered_natives.extend(sort_dependencies(natives)?);
+            ordered_packages.extend(sort_dependencies(packages)?);
         }
 
-        let mut packages = self.profile.packages();
-        let mut natives = self.profile.natives();
-
-        let base_dir = self.base_dir().unwrap_or(Path::new("."));
-
-        canonicalize(base_dir, &mut packages);
-        canonicalize(base_dir, &mut natives);
-
-        let ordered_natives = sort_dependencies(natives)?;
-        let ordered_packages = sort_dependencies(packages)?;
-
         Ok((ordered_natives, ordered_packages))
+    }
+}
+
+impl AsRef<ModProfile> for Profile {
+    fn as_ref(&self) -> &ModProfile {
+        &self.inner
     }
 }
 
@@ -185,7 +268,7 @@ impl ProfileDb {
         Ok(Profile {
             name,
             path: normalized_path.into_path_buf(),
-            profile,
+            inner: profile,
         })
     }
 
@@ -203,6 +286,87 @@ impl ProfileDb {
                     .is_some_and(|ext| ext == "me3")
                     .then(|| entry.path().into_boxed_path())
             })
+    }
+}
+
+#[derive(Clone, Debug, Hash)]
+#[allow(clippy::derived_hash_with_manual_eq)]
+struct ProfilePath(Arc<Path>);
+
+impl AsRef<Path> for ProfilePath {
+    fn as_ref(&self) -> &Path {
+        &self.0
+    }
+}
+
+impl From<&Path> for ProfilePath {
+    fn from(path: &Path) -> Self {
+        Self(Arc::from(path))
+    }
+}
+
+impl PartialEq for ProfilePath {
+    fn eq(&self, other: &Self) -> bool {
+        same_file::is_same_file(&self.0, &other.0).unwrap()
+    }
+}
+
+impl Eq for ProfilePath {}
+
+impl fmt::Display for ProfilePath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.display().fmt(f)
+    }
+}
+
+impl Serialize for ProfilePath {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.as_ref().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ProfilePath {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        PathBuf::deserialize(deserializer).map(|p| p.as_path().into())
+    }
+}
+
+#[derive(Debug)]
+struct ProfileDependency {
+    profile: Profile,
+    path: ProfilePath,
+    load_after: Option<Dependent<ProfilePath>>,
+}
+
+impl ProfileDependency {
+    fn from_profile(profile: Profile, load_after: Option<Dependent<ProfilePath>>) -> Self {
+        Self {
+            path: profile.path.as_path().into(),
+            profile,
+            load_after,
+        }
+    }
+}
+
+impl Dependency for ProfileDependency {
+    type UniqueId = ProfilePath;
+
+    fn id(&self) -> Self::UniqueId {
+        self.path.clone()
+    }
+
+    fn load_before(&self) -> &[Dependent<Self::UniqueId>] {
+        &[]
+    }
+
+    fn load_after(&self) -> &[Dependent<Self::UniqueId>] {
+        self.load_after.as_slice()
     }
 }
 

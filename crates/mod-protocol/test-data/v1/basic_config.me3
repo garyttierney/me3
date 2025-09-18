@@ -2,7 +2,7 @@ profileVersion = "v1"
 
 [[packages]]
 id = "my-mod"
-source = "mod/"
+source = "./mod"
 
 [[natives]]
 path = "my_native.dll"

@@ -1,0 +1,12 @@
+profileVersion = "v2"
+
+[game]
+launch = "eldenring"
+savefile = "ERMOD.sl2"
+disable_arxan = true
+start_online = false
+
+[mods]
+my_mod.path = './my-mod'
+my_dll.path = './my-mod/my_dll.dll'
+my_profile.path = 'my_profile.me3'

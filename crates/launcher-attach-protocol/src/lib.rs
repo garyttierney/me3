@@ -6,7 +6,7 @@ use std::{
 
 use bincode::{error::DecodeError, Decode, Encode};
 use me3_mod_protocol::{native::Native, package::Package, Game};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AttachRequest {
@@ -15,6 +15,9 @@ pub struct AttachRequest {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AttachConfig {
+    /// Name of the profile that produced this config.
+    pub profile_name: String,
+
     /// The attached to game.
     pub game: Game,
 
@@ -53,8 +56,6 @@ pub struct AttachConfig {
 pub struct Attachment;
 
 pub type AttachResult = Result<Attachment, AttachError>;
-
-pub type AttachFunction = fn(AttachRequest) -> AttachResult;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AttachError(pub String);

@@ -1,4 +1,4 @@
-use me3_mod_protocol::ModProfile;
+use me3_mod_protocol::profile::ModProfile;
 use schemars::schema_for;
 
 pub fn main() {

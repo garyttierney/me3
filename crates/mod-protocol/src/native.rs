@@ -1,76 +1,52 @@
-use std::path::PathBuf;
+use std::{
+    ops::{Deref, DerefMut},
+    path::{Path, PathBuf},
+};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     dependency::{Dependency, Dependent},
-    package::{ModFile, WithPackageSource},
+    mod_file::{AsModFile, ModFile},
 };
 
-fn off() -> bool {
-    false
-}
-
-fn on() -> bool {
-    true
+#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+pub struct NativeInitializerDelay {
+    pub ms: usize,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-pub enum NativeInitializerCondition {
-    #[serde(rename = "delay")]
-    Delay { ms: usize },
-    #[serde(rename = "function")]
-    Function(String),
+pub struct NativeInitializerCondition {
+    #[serde(default)]
+    pub delay: Option<NativeInitializerDelay>,
+    #[serde(default)]
+    pub function: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Native {
-    /// Path to the DLL. Can be relative to the mod profile.
-    pub path: ModFile,
+    #[serde(flatten)]
+    pub(crate) inner: ModFile,
 
-    /// If this native fails to load and this value is false, treat it as a critical error.
-    #[serde(default = "off")]
-    pub optional: bool,
-
-    /// Should this native be loaded?
-    #[serde(default = "on")]
-    pub enabled: bool,
-
-    #[serde(default)]
-    load_before: Vec<Dependent<String>>,
-
-    #[serde(default)]
-    load_after: Vec<Dependent<String>>,
-
-    /// An optional symbol to be called after this native successfully loads.
     pub initializer: Option<NativeInitializerCondition>,
 
-    /// An optional symbol to be called when this native successfully is queued for unload.
-    pub finalizer: Option<String>,
+    #[serde(default)]
+    pub(crate) load_before: Vec<Dependent<String>>,
+
+    #[serde(default)]
+    pub(crate) load_after: Vec<Dependent<String>>,
 }
 
 impl Native {
-    pub fn new<P: Into<PathBuf>>(path: P) -> Self {
-        Self {
-            path: ModFile(path.into()),
-            optional: false,
-            enabled: true,
-            load_after: vec![],
-            load_before: vec![],
-            initializer: None,
-            finalizer: None,
-        }
-    }
-}
-
-impl WithPackageSource for Native {
-    fn source(&self) -> &crate::package::ModFile {
-        &self.path
+    #[inline]
+    pub fn new<P: AsRef<Path>>(path: P) -> Self {
+        ModFile::new(path).into()
     }
 
-    fn source_mut(&mut self) -> &mut crate::package::ModFile {
-        &mut self.path
+    #[inline]
+    pub fn is_default(&self) -> bool {
+        self.inner.is_default() && self.initializer.is_none()
     }
 }
 
@@ -79,17 +55,70 @@ impl Dependency for Native {
 
     fn id(&self) -> Self::UniqueId {
         self.path
-            .0
             .file_name()
-            .map(|f| f.to_string_lossy().to_string())
+            .map(|f| f.to_string_lossy().to_ascii_lowercase())
             .expect("native had no file name")
     }
 
-    fn loads_after(&self) -> &[Dependent<Self::UniqueId>] {
-        &self.load_after
+    fn load_before(&self) -> &[Dependent<Self::UniqueId>] {
+        &self.load_before
     }
 
-    fn loads_before(&self) -> &[Dependent<Self::UniqueId>] {
-        &self.load_before
+    fn load_after(&self) -> &[Dependent<Self::UniqueId>] {
+        &self.load_after
+    }
+}
+
+impl AsRef<Path> for Native {
+    #[inline]
+    fn as_ref(&self) -> &Path {
+        self.as_mod_file().as_ref()
+    }
+}
+
+impl Deref for Native {
+    type Target = ModFile;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl DerefMut for Native {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
+impl AsModFile for Native {
+    #[inline]
+    fn as_mod_file(&self) -> &ModFile {
+        &self.inner
+    }
+
+    #[inline]
+    fn as_mod_file_mut(&mut self) -> &mut ModFile {
+        &mut self.inner
+    }
+}
+
+impl From<ModFile> for Native {
+    #[inline]
+    fn from(item: ModFile) -> Self {
+        Self {
+            inner: item,
+            initializer: None,
+            load_before: vec![],
+            load_after: vec![],
+        }
+    }
+}
+
+impl From<PathBuf> for Native {
+    #[inline]
+    fn from(path: PathBuf) -> Self {
+        ModFile::from(path).into()
     }
 }

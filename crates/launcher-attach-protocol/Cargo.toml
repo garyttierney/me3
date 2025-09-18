@@ -17,7 +17,6 @@ eyre = { workspace = true, default-features = false, features = [
 ] }
 me3-mod-protocol.workspace = true
 serde.workspace = true
-serde_derive.workspace = true
 
 [lints]
 workspace = true

@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf, StripPrefixError},
 };
 
-use me3_mod_protocol::package::{AssetOverrideSource, Package};
+use me3_mod_protocol::package::Package;
 use normpath::PathExt;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use smallvec::{smallvec_inline, SmallVec};
@@ -30,6 +30,7 @@ pub struct VfsOverride {
     display: Box<str>,
     path_c_str: Box<Path>,
     wide_c_str: Box<[u16]>,
+    source: Option<&'static str>,
 }
 
 #[derive(Debug, Error)]
@@ -57,14 +58,15 @@ impl VfsOverrideMapping {
         })
     }
 
-    /// Scans a set of directories, mapping discovered assets into itself.
-    pub fn scan_directories<I>(&mut self, sources: I) -> Result<(), VfsOverrideMappingError>
+    /// Sequentially scans a set of packages, mapping discovered assets into itself.
+    pub fn map_packages<'a, I>(&mut self, packages: I) -> Result<(), VfsOverrideMappingError>
     where
-        I: Iterator<Item: AssetOverrideSource>,
+        I: Iterator<Item = &'a Package>,
     {
-        fn scan_directories_inner(
+        fn map_packages_inner(
             base_dir: &Path,
             root_key: &VfsKey,
+            source: &'static str,
         ) -> SmallVec<[Result<(VfsKey, VfsOverride), io::Error>; 1]> {
             let entries = match read_dir(base_dir) {
                 Ok(entries) => entries,
@@ -76,13 +78,17 @@ impl VfsOverrideMapping {
                 .par_bridge()
                 .flat_map_iter(|dir_entry| match dir_entry.file_type() {
                     Ok(file_type) if file_type.is_dir() || file_type.is_symlink_dir() => {
-                        scan_directories_inner(&dir_entry.path(), root_key)
+                        map_packages_inner(&dir_entry.path(), root_key, source)
                     }
                     Ok(_) => {
                         let path = dir_entry.path();
 
-                        let result = VfsKey::for_asset_path(&path, root_key)
-                            .map(|vfs_key| (vfs_key, VfsOverride::new(&path)));
+                        let result = VfsKey::for_asset_path(&path, root_key).map(|vfs_key| {
+                            (
+                                vfs_key,
+                                VfsOverride::new_with_package_source(&path, Some(source)),
+                            )
+                        });
 
                         smallvec_inline![result]
                     }
@@ -93,12 +99,13 @@ impl VfsOverrideMapping {
             SmallVec::from_vec(result)
         }
 
-        for source in sources {
-            let source_path = source.asset_path();
+        for package in packages {
+            let package_source = package.name.clone().leak() as &'static str;
+            let package_path = package.path.as_path();
             let root_key =
-                VfsKey::for_disk_path(source_path).map_err(VfsOverrideMappingError::ReadDir)?;
+                VfsKey::for_disk_path(package_path).map_err(VfsOverrideMappingError::ReadDir)?;
 
-            let scanned_directories = scan_directories_inner(source_path, &root_key);
+            let scanned_directories = map_packages_inner(package_path, &root_key, package_source);
             self.map.reserve(scanned_directories.len());
 
             for result in scanned_directories {
@@ -110,12 +117,11 @@ impl VfsOverrideMapping {
         Ok(())
     }
 
-    pub fn scan_directory<P: AsRef<Path>>(
+    pub fn map_package_sources(
         &mut self,
-        path: P,
+        package: &Package,
     ) -> Result<(), VfsOverrideMappingError> {
-        let package = Package::new(path.as_ref().to_owned());
-        self.scan_directories(iter::once(&package))
+        self.map_packages(iter::once(package))
     }
 
     pub fn add_savefile_override<P, F>(&mut self, savefile_dir: P, f: F) -> Result<(), io::Error>
@@ -150,6 +156,10 @@ impl VfsOverrideMapping {
 
 impl VfsOverride {
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
+        Self::new_with_package_source(path, None)
+    }
+
+    pub fn new_with_package_source<P: AsRef<Path>>(path: P, source: Option<&'static str>) -> Self {
         let display = path.as_ref().display().to_string().into_boxed_str();
 
         let (wide_c_str, path_c_str) = {
@@ -166,7 +176,12 @@ impl VfsOverride {
             display,
             path_c_str,
             wide_c_str,
+            source,
         }
+    }
+
+    pub fn source(&self) -> Option<&str> {
+        self.source
     }
 
     pub fn as_str_lossy(&self) -> &str {
@@ -302,6 +317,8 @@ impl Borrow<Path> for VfsKey {
 mod test {
     use std::path::Path;
 
+    use me3_mod_protocol::package::Package;
+
     use super::{VfsKey, VfsOverrideMapping};
 
     #[test]
@@ -349,7 +366,9 @@ mod test {
         let mut asset_mapping = VfsOverrideMapping::new().unwrap();
 
         let test_mod_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data/test-mod");
-        asset_mapping.scan_directory(test_mod_dir).unwrap();
+        asset_mapping
+            .map_package_sources(&Package::new(test_mod_dir))
+            .unwrap();
 
         assert!(
             asset_mapping
