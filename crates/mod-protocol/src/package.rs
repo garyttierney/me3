@@ -39,12 +39,12 @@ impl Dependency for Package {
         self.name.clone()
     }
 
-    fn loads_after(&self) -> &[crate::dependency::Dependent<Self::UniqueId>] {
-        &self.load_after
+    fn load_before(&self) -> &[crate::dependency::Dependent<Self::UniqueId>] {
+        &self.load_before
     }
 
-    fn loads_before(&self) -> &[crate::dependency::Dependent<Self::UniqueId>] {
-        &self.load_before
+    fn load_after(&self) -> &[crate::dependency::Dependent<Self::UniqueId>] {
+        &self.load_after
     }
 }
 

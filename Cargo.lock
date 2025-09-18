@@ -1634,6 +1634,7 @@ dependencies = [
  "normpath",
  "open",
  "pretty_assertions",
+ "same-file",
  "semver",
  "serde",
  "serde_json",

@@ -60,12 +60,12 @@ impl Dependency for Native {
             .expect("native had no file name")
     }
 
-    fn loads_after(&self) -> &[Dependent<Self::UniqueId>] {
-        &self.load_after
+    fn load_before(&self) -> &[Dependent<Self::UniqueId>] {
+        &self.load_before
     }
 
-    fn loads_before(&self) -> &[Dependent<Self::UniqueId>] {
-        &self.load_before
+    fn load_after(&self) -> &[Dependent<Self::UniqueId>] {
+        &self.load_after
     }
 }
 

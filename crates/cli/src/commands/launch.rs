@@ -267,7 +267,6 @@ impl Launcher for CompatToolLauncher {
 
 struct LaunchContext {
     game: Game,
-    profile: Profile,
     game_options: GameOptions,
     profile_options: ProfileOptions,
     attach_config: AttachConfig,
@@ -343,16 +342,16 @@ impl LaunchArgs {
         info!(?game, ?game_options, ?profile_options, "resolved game");
 
         let attach_config = self.generate_attach_config(
+            db,
             game,
             &game_options,
-            &profile,
+            profile,
             &profile_options,
             config.cache_dir(),
         )?;
 
         Ok(LaunchContext {
             game,
-            profile,
             game_options,
             profile_options,
             attach_config,
@@ -361,13 +360,14 @@ impl LaunchArgs {
 
     fn generate_attach_config(
         &self,
+        db: &DbContext,
         game: Game,
         opts: &GameOptions,
-        profile: &Profile,
+        profile: Profile,
         profile_options: &ProfileOptions,
         cache_path: Option<Box<Path>>,
     ) -> color_eyre::Result<AttachConfig> {
-        let (natives, packages) = profile.compile()?;
+        let profile_name = profile.name().to_owned();
 
         let savefile = profile.savefile();
         if let Some(savefile) = &savefile {
@@ -386,7 +386,10 @@ impl LaunchArgs {
             }
         }
 
+        let (natives, packages) = profile.compile(&db.profiles)?;
+
         Ok(AttachConfig {
+            profile_name,
             game: game.into(),
             natives,
             packages,
@@ -406,7 +409,6 @@ impl LaunchArgs {
 pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
     let LaunchContext {
         game,
-        profile,
         game_options,
         profile_options: _profile_options,
         attach_config,
@@ -477,7 +479,7 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
 
     let monitor_log_file = NamedTempFile::with_suffix(".log")?;
 
-    let log_file_path = db.logs.create_log_file(profile.name())?;
+    let log_file_path = db.logs.create_log_file(&attach_config.profile_name)?;
     // Ensure log file exists so `normalize()` succeeds on Unix
     let log_file = File::create(&log_file_path)?;
     drop(log_file);

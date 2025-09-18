@@ -12,8 +12,8 @@ impl<T: Eq + PartialEq + Hash + Clone + for<'de> Deserialize<'de> + Serialize> D
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Dependent<T: DependencyId> {
-    id: T,
-    optional: bool,
+    pub id: T,
+    pub optional: bool,
 }
 
 impl<T: DependencyId> Dependent<T> {
@@ -39,23 +39,23 @@ pub trait Dependency {
     fn id(&self) -> Self::UniqueId;
 
     fn dependencies(&self) -> impl Iterator<Item = DependencyLink<Self::UniqueId>> {
-        self.loads_after()
+        self.load_after()
             .iter()
             .map(|dep| DependencyLink {
                 optional: dep.optional,
                 order: DependencyOrder::After,
                 id: dep.id(),
             })
-            .chain(self.loads_before().iter().map(|dep| DependencyLink {
+            .chain(self.load_before().iter().map(|dep| DependencyLink {
                 optional: dep.optional,
                 order: DependencyOrder::Before,
                 id: dep.id(),
             }))
     }
 
-    fn loads_after(&self) -> &[Dependent<Self::UniqueId>];
+    fn load_before(&self) -> &[Dependent<Self::UniqueId>];
 
-    fn loads_before(&self) -> &[Dependent<Self::UniqueId>];
+    fn load_after(&self) -> &[Dependent<Self::UniqueId>];
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -176,7 +176,9 @@ impl<T> Ord for DependencyRun<T> {
     }
 }
 
-pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Result<Vec<T>, DependencyError<T>> {
+pub fn sort_dependencies<T: Dependency, I: IntoIterator<Item = T>>(
+    items: I,
+) -> Result<Vec<T>, DependencyError<T>> {
     let mut sorter = IndexMap::<T::UniqueId, DependencyNode<T::UniqueId>>::new();
     let mut all = items
         .into_iter()
@@ -210,7 +212,7 @@ pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Result<Vec<T>, Depende
     while let Some((key, has_succ)) = sorter.pop_dependency() {
         let (item, index) = all.shift_remove(&key).expect("item already removed?");
 
-        if max_index.is_none() && item.loads_after().is_empty() && item.loads_before().is_empty() {
+        if max_index.is_none() && item.load_after().is_empty() && item.load_before().is_empty() {
             max_index = Some(index);
         }
 

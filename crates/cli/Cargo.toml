@@ -32,6 +32,7 @@ me3-mod-protocol.workspace = true
 me3-telemetry.workspace = true
 normpath.workspace = true
 open = { version = "5" }
+same-file = "1.0.6"
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 steamlocate.workspace = true

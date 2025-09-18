@@ -15,6 +15,9 @@ pub struct AttachRequest {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AttachConfig {
+    /// Name of the profile that produced this config.
+    pub profile_name: String,
+
     /// The attached to game.
     pub game: Game,
 
