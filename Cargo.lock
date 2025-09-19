@@ -684,9 +684,9 @@ dependencies = [
 
 [[package]]
 name = "dearxan"
-version = "0.4.1"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b6c1be15f40b589fefc8253551f0a2e690752860a6a631317509f0e84e8ff1b"
+checksum = "c6572d6f65f5e2046aab0a622fdb39c708cb76c2b7b477358382ae207a57bf6d"
 dependencies = [
  "atomic-wait",
  "bitfield-struct",
