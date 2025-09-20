@@ -5,26 +5,20 @@ use std::{
     marker::Tuple,
     panic,
     path::Path,
-    ptr,
     sync::{Arc, Mutex, OnceLock},
     time::Duration,
 };
 
 use closure_ffi::traits::FnPtr;
 use libloading::{Library, Symbol};
-use me3_binary_analysis::pe;
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{native::NativeInitializerCondition, Game, ModProfile};
-use pelite::pe::Pe;
-use regex::bytes::Regex;
 use retour::Function;
 use tracing::{error, info, warn, Span};
-use windows::core::w;
 
 use self::hook::HookInstaller;
 use crate::{
     detour::UntypedDetour,
-    executable::Executable,
     native::{ModEngineConnectorShim, ModEngineExtension, ModEngineInitializer},
 };
 
@@ -132,7 +126,7 @@ impl ModHost {
     }
 }
 
-pub fn dearxan(attach_config: &AttachConfig, executable: Executable) {
+pub fn dearxan(attach_config: &AttachConfig) {
     if !attach_config.disable_arxan && attach_config.game != Game::DarkSouls3 {
         return;
     }
@@ -143,48 +137,11 @@ pub fn dearxan(attach_config: &AttachConfig, executable: Executable) {
         "will attempt to disable Arxan code protection",
     );
 
-    let game = attach_config.game;
     let span = Span::current();
     unsafe {
         dearxan::disabler::neuter_arxan(move |result| {
             let _span_guard = span.enter();
             info!(?result, "dearxan::disabler::neuter_arxan finished");
-
-            // Temporary patch for a data encryption method not handled by dearxan.
-            // FIXME: remove when dearxan (currently 0.4.1) is updated.
-            if game == Game::DarkSouls3 {
-                let Ok(text_section) = pe::section(executable, ".text") else {
-                    return;
-                };
-
-                let Ok(text) = executable.get_section_bytes(text_section) else {
-                    return;
-                };
-
-                let re = Regex::new(
-                    r"(?s-u)\x41\xb8\x1f\x00\x00\x00\x48\x8d\x15(.{4})[\x48|\x49]\x8b[\xc8-\xcf]\xe8.{4}",
-                )
-                .unwrap();
-
-                let Some((_, [disp32 @ &[b0, b1, b2, b3]])) =
-                    re.captures(text).map(|c| c.extract())
-                else {
-                    return;
-                };
-
-                let data_ptr = disp32
-                    .as_ptr_range()
-                    .end
-                    .byte_offset(i32::from_le_bytes([b0, b1, b2, b3]) as _);
-
-                ptr::copy_nonoverlapping(
-                    w!("FDPrVuT4fAFvdHJYAgyMzRF4EcBAnKg").as_ptr(),
-                    data_ptr as *mut u16,
-                    32,
-                );
-
-                info!("applied dearxan patch for Dark Souls 3");
-            }
         });
     }
 }
