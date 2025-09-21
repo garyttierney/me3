@@ -74,8 +74,10 @@ dist-windows: $(windows_binaries) $(DESTDIR)/CHANGELOG.pdf
 	install -Dm 0755 -t "$(DESTDIR)/dist-windows" \
 		distribution/windows/launch-eldenring-mods.bat \
 		distribution/windows/launch-nightreign-mods.bat \
+		distribution/windows/launch-sekiro-mods.bat \
 		distribution/cross-platform/eldenring-default.me3 \
 		distribution/cross-platform/nightreign-default.me3 \
+		distribution/cross-platform/sekiro-default.me3 \
 		$(DESTDIR)/CHANGELOG.pdf \
 		$(license_files)
 
@@ -87,8 +89,10 @@ dist-linux: $(windows_binaries) $(DESTDIR)/me3 $(DESTDIR)/CHANGELOG.pdf
 		distribution/linux/install-user.sh \
 		distribution/linux/launch-eldenring-mods.sh \
 		distribution/linux/launch-nightreign-mods.sh \
+		distribution/linux/launch-sekiro-mods.sh \
 		distribution/cross-platform/eldenring-default.me3 \
 		distribution/cross-platform/nightreign-default.me3 \
+		distribution/cross-platform/sekiro-default.me3 \
 		$(DESTDIR)/CHANGELOG.pdf \
 		$(license_files)
 
