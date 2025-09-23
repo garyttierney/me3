@@ -155,6 +155,8 @@ impl From<NativeV1> for Native {
 
         Self {
             initializer,
+            load_before: value.load_before,
+            load_after: value.load_after,
             ..item.into()
         }
     }
@@ -171,7 +173,11 @@ impl From<PackageV1> for Package {
             item.name = id;
         }
 
-        item.into()
+        Self {
+            load_before: value.load_before,
+            load_after: value.load_after,
+            ..item.into()
+        }
     }
 }
 
