@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    ops::BitXor,
+    path::{Path, PathBuf},
+};
 
 use indexmap::IndexMap;
 use schemars::{schema_for, JsonSchema};
@@ -26,7 +29,7 @@ pub struct ModProfileV2 {
     pub packages: Vec<Package>,
 
     /// Other profiles listed as dependencies by this profile.
-    pub profiles: Vec<ModFile>,
+    pub profiles: Vec<Profile>,
 
     /// Name of an alternative savefile to use (in the default savefile directory).
     pub savefile: Option<String>,
@@ -145,6 +148,18 @@ struct UntaggedModEntryV2 {
 impl ModEntryV2 {
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
         path.as_ref().to_owned().into()
+    }
+}
+
+impl ModEntryV2Layout {
+    fn path(&self) -> &Path {
+        match self {
+            Self::Native { inner, .. } => &inner.path,
+            Self::Package { inner, .. } => &inner.path,
+            Self::Profile(inner) => &inner.path,
+            Self::Simple(path) => &path,
+            Self::Untagged(untagged) => &untagged.inner.path,
+        }
     }
 }
 
@@ -521,26 +536,41 @@ impl From<ModProfileV2> for ModProfileV2Layout {
     fn from(profile: ModProfileV2) -> Self {
         let mut mods = IndexMap::new();
 
-        mods.extend(
-            profile
-                .natives
-                .into_iter()
-                .map(|native| ModEntryV2::from(native).into()),
-        );
+        fn push_unique_mods<
+            I: IntoIterator<Item: Into<ModEntryV2>, IntoIter: ExactSizeIterator>,
+        >(
+            mods: &mut IndexMap<String, ModEntryV2Layout>,
+            i: I,
+        ) {
+            let iter = i.into_iter();
+            mods.reserve_exact(iter.len());
 
-        mods.extend(
-            profile
-                .packages
-                .into_iter()
-                .map(|package| ModEntryV2::from(package).into()),
-        );
+            let fnv_offset_base = 0x811c9dc5;
+            let fnv1_a = |base: u32, bytes: &[u8]| {
+                bytes.iter().fold(base, |hash, byte| {
+                    hash.bitxor(*byte as u32).wrapping_mul(0x01000193)
+                })
+            };
 
-        mods.extend(
-            profile
-                .profiles
-                .into_iter()
-                .map(|profile| ModEntryV2::from(profile).into()),
-        );
+            for (i, (mut name, mod_entry)) in iter
+                .map(|e| <(String, ModEntryV2Layout)>::from(e.into()))
+                .enumerate()
+            {
+                while mods.get(&name).is_some() {
+                    let seeded_hash = fnv1_a(fnv_offset_base, &i.to_ne_bytes());
+                    let path_bytes = mod_entry.path().as_os_str().as_encoded_bytes();
+
+                    name.push('_');
+                    name.push_str(&fnv1_a(seeded_hash, path_bytes).to_string());
+                }
+
+                mods.insert(name, mod_entry);
+            }
+        }
+
+        push_unique_mods(&mut mods, profile.natives);
+        push_unique_mods(&mut mods, profile.packages);
+        push_unique_mods(&mut mods, profile.profiles);
 
         Self {
             game: GamePropertiesV2 {

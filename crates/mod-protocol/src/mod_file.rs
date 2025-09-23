@@ -1,7 +1,4 @@
-use std::{
-    ops::BitXor,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -99,21 +96,12 @@ impl AsRef<Path> for ModFile {
 impl From<PathBuf> for ModFile {
     #[inline]
     fn from(path: PathBuf) -> Self {
-        let fnv1_a = |b: &[u8]| {
-            b.iter().fold(0x811c9dc5u32, |hash, byte| {
-                hash.bitxor(*byte as u32).wrapping_mul(0x01000193)
-            })
-        };
-
         Self {
-            name: format!(
-                "{}_{:x}",
-                path.file_stem()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_lowercase(),
-                fnv1_a(path.as_os_str().as_encoded_bytes())
-            ),
+            name: path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_lowercase(),
             path,
             ..Default::default()
         }
