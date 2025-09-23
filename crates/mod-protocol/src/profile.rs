@@ -24,6 +24,8 @@ pub mod builder;
 mod v1;
 mod v2;
 
+pub type Profile = ModFile;
+
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(tag = "profileVersion")]
 pub enum ModProfile {

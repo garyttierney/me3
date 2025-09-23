@@ -21,17 +21,21 @@ use clap::{
 use color_eyre::eyre::{eyre, Context, OptionExt};
 use me3_env::{CommandExt, LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::AttachConfig;
-use me3_mod_protocol::profile::builder::ModProfileBuilder;
+use me3_mod_protocol::{
+    native::Native,
+    package::Package,
+    profile::{builder::ModProfileBuilder, Profile},
+};
 use normpath::PathExt;
 use serde::{Deserialize, Serialize};
 use steamlocate::{CompatTool, Library, SteamDir};
 use tempfile::NamedTempFile;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 use crate::{
     commands::{launch::proton::CompatTools, profile::ProfileOptions},
     config::Config,
-    db::{profile::Profile, DbContext},
+    db::{profile::Profile as DbProfile, DbContext},
     Game,
 };
 
@@ -130,35 +134,35 @@ pub struct LaunchArgs {
     profile_options: ProfileOptions,
 
     /// Enable diagnostics for this launch.
-    #[clap(short('d'), long("diagnostics"), action = ArgAction::SetTrue)]
+    #[clap(short, long, action = ArgAction::SetTrue)]
     diagnostics: bool,
 
     /// Suspend the game until a debugger is attached.
-    #[clap(long("suspend"), action = ArgAction::SetTrue)]
+    #[clap(action = ArgAction::SetTrue)]
     suspend: bool,
 
-    /// Name of a profile in the me3 profile dir, or path to a ModProfile (TOML or JSON).
+    /// Name of a profile in the me3 profile dir, or path to a ModProfile (TOML or JSON)
+    /// [repeatable option]
     #[arg(
-            short('p'),
+            short,
             long("profile"),
+            action = clap::ArgAction::Append,
             help_heading = "Mod configuration",
             value_hint = clap::ValueHint::FilePath,
         )]
-    profile: Option<String>,
+    profiles: Vec<String>,
 
     /// Path to a native DLL, package, file or a profile to use [repeatable option]
     #[clap(
-            short('u'),
-            long("use"),
+            short,
+            long("mod"),
             action = clap::ArgAction::Append,
             help_heading = "Mod configuration",
             value_hint = clap::ValueHint::AnyPath,
         )]
-    uses: Vec<PathBuf>,
+    mods: Vec<PathBuf>,
 
-    /// (DEPRECATED, use "-u") /// Path to package directory (asset override mod) [repeatable
-    /// option]
-    #[deprecated]
+    /// Path to package directory (asset override mod) [repeatable option]
     #[clap(
             long("package"),
             action = clap::ArgAction::Append,
@@ -167,10 +171,9 @@ pub struct LaunchArgs {
         )]
     packages: Vec<PathBuf>,
 
-    /// (DEPRECATED, use "-u") Path to DLL file (native DLL mod) [repeatable option]
-    #[deprecated]
+    /// Path to DLL file (native DLL mod) [repeatable option]
     #[clap(
-            short('n'),
+            short,
             long("native"),
             action = clap::ArgAction::Append,
             help_heading = "Mod configuration",
@@ -179,7 +182,7 @@ pub struct LaunchArgs {
     natives: Vec<PathBuf>,
 
     /// Name of an alternative savefile to use (in the default savefile directory).
-    #[clap(long("savefile"), help_heading = "Mod configuration")]
+    #[clap(help_heading = "Mod configuration")]
     savefile: Option<String>,
 }
 
@@ -277,21 +280,11 @@ impl LaunchArgs {
         db: &DbContext,
         config: &Config,
     ) -> color_eyre::Result<LaunchContext> {
-        let profile = if let Some(profile_name) = &self.profile {
+        let profile = if let Some(profile_name) = self.profiles.first() {
             db.profiles.load(profile_name)?
         } else {
-            Profile::transient()
+            DbProfile::transient()
         };
-
-        #[allow(deprecated)]
-        if !self.natives.is_empty() {
-            warn!("option \"--native\" is deprecated, use \"--use\" instead!");
-        }
-
-        #[allow(deprecated)]
-        if !self.packages.is_empty() {
-            warn!("option \"--package\" is deprecated, use \"--use\" instead!");
-        }
 
         let game_from_args = self
             .target_selector
@@ -299,18 +292,26 @@ impl LaunchArgs {
             .and_then(|s| s.game.or_else(|| s.steam_id.and_then(Game::from_app_id)))
             .map(Into::into);
 
-        #[allow(deprecated)]
-        let uses_args = self.uses.iter().chain(&self.natives).chain(&self.packages);
-
-        for path in uses_args.clone() {
+        for path in self.mods.iter().chain(&self.natives).chain(&self.packages) {
             if !path.exists() {
                 return Err(eyre!("{path:?} does not exist"));
             }
         }
 
+        let other_profiles = self
+            .profiles
+            .get(1..)
+            .into_iter()
+            .flatten()
+            .map(|profile| config.resolve_profile(profile))
+            .collect::<Result<Vec<_>, _>>()?;
+
         let profile_from_args = ModProfileBuilder::new()
             .with_supported_game(game_from_args)
-            .with_paths(uses_args.cloned())
+            .with_mods(self.natives.iter().map(Native::new))
+            .with_mods(self.packages.iter().map(Package::new))
+            .with_mods(other_profiles.iter().map(Profile::new))
+            .with_paths(self.mods.iter().cloned())
             .with_savefile(self.savefile.clone())
             .start_online(self.profile_options.start_online)
             .disable_arxan(self.profile_options.disable_arxan)
@@ -362,7 +363,7 @@ impl LaunchArgs {
         db: &DbContext,
         game: Game,
         opts: &GameOptions,
-        profile: Profile,
+        profile: DbProfile,
         profile_options: &ProfileOptions,
         cache_path: Option<Box<Path>>,
     ) -> color_eyre::Result<AttachConfig> {

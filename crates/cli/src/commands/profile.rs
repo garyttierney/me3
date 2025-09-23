@@ -2,8 +2,12 @@ use std::{fs, path::PathBuf};
 
 use clap::{ArgAction, Args, Subcommand};
 use color_eyre::eyre::{eyre, OptionExt};
-use me3_mod_protocol::profile::{builder::ModProfileBuilder, ModProfile};
-use tracing::{error, info, warn};
+use me3_mod_protocol::{
+    native::Native,
+    package::Package,
+    profile::{builder::ModProfileBuilder, ModProfile, Profile},
+};
+use tracing::{error, info};
 
 use crate::{config::Config, db::DbContext, output::OutputBuilder, Game};
 
@@ -31,7 +35,7 @@ pub struct ProfileCreateArgs {
 
     /// Game to associate with this profile for one-click launches.
     #[clap(
-        short('g'),
+        short,
         long,
         hide_possible_values = false,
         help_heading = "Game selection"
@@ -40,18 +44,33 @@ pub struct ProfileCreateArgs {
     game: Option<Game>,
 
     /// Path to a native DLL, package, file or profile [repeatable option]
-    #[clap(short('u'), long("use"))]
-    uses: Vec<PathBuf>,
+    #[clap(
+            short,
+            long("mod"),
+            action = clap::ArgAction::Append,
+        )]
+    mods: Vec<PathBuf>,
 
-    /// (DEPRECATED, use "-u") Path to package directory (asset override mod) [repeatable option]
-    #[deprecated]
-    #[clap(long("native"))]
+    /// Path to package directory (asset override mod) [repeatable option]
+    #[clap(
+            long("native"),
+            action = clap::ArgAction::Append,
+        )]
     natives: Vec<PathBuf>,
 
-    /// (DEPRECATED, use "-u") Path to DLL file (native DLL mod) [repeatable option]
-    #[deprecated]
-    #[clap(long("package"))]
+    /// Path to DLL file (native DLL mod) [repeatable option]
+    #[clap(
+        long("package"),
+        action = clap::ArgAction::Append,
+    )]
     packages: Vec<PathBuf>,
+
+    /// Path to me3 profile [repeatable option]
+    #[clap(
+        long("profile"),
+        action = clap::ArgAction::Append,
+    )]
+    profiles: Vec<String>,
 
     /// Name of an alternative savefile to use (in the default savefile directory).
     #[clap(long("savefile"))]
@@ -145,22 +164,21 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         .ok_or_eyre("profile parent path was removed")?;
     fs::create_dir_all(profile_dir)?;
 
-    #[allow(deprecated)]
-    if !args.natives.is_empty() {
-        warn!("option \"--native\" is deprecated, use \"--use\" instead!");
-    }
-
-    #[allow(deprecated)]
-    if !args.packages.is_empty() {
-        warn!("option \"--package\" is deprecated, use \"--use\" instead!");
-    }
+    let profiles = args
+        .profiles
+        .get(1..)
+        .into_iter()
+        .flatten()
+        .map(|profile| config.resolve_profile(profile))
+        .collect::<Result<Vec<_>, _>>()?;
 
     #[allow(deprecated)]
     ModProfileBuilder::new()
         .with_supported_game(args.game.map(Into::into))
-        .with_paths(args.uses)
-        .with_paths(args.natives)
-        .with_paths(args.packages)
+        .with_mods(args.natives.iter().map(Native::new))
+        .with_mods(args.packages.iter().map(Package::new))
+        .with_mods(profiles.iter().map(Profile::new))
+        .with_paths(args.mods)
         .with_savefile(args.savefile)
         .start_online(args.options.start_online)
         .disable_arxan(args.options.disable_arxan)

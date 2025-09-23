@@ -9,6 +9,7 @@ use crate::{
     mod_file::ModFile,
     native::{Native, NativeInitializerCondition},
     package::Package,
+    profile::Profile,
     Game,
 };
 
@@ -68,7 +69,7 @@ struct GamePropertiesV2 {
 pub enum ModEntryV2 {
     Native(Native),
     Package(Package),
-    Profile(ModFile),
+    Profile(Profile),
 }
 
 #[derive(Clone, Deserialize, Serialize, JsonSchema)]
@@ -194,7 +195,7 @@ impl From<(String, ModEntryV2Layout)> for ModEntryV2 {
                 path,
                 enabled,
                 optional,
-            }) => Self::Profile(ModFile {
+            }) => Self::Profile(Profile {
                 name,
                 path,
                 enabled,
@@ -416,8 +417,8 @@ impl From<Package> for ModEntryV2 {
     }
 }
 
-impl From<ModFile> for ModEntryV2 {
-    fn from(profile: ModFile) -> Self {
+impl From<Profile> for ModEntryV2 {
+    fn from(profile: Profile) -> Self {
         Self::Profile(profile)
     }
 }
