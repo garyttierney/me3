@@ -545,10 +545,12 @@ impl From<ModProfileV2> for ModProfileV2Layout {
             let iter = i.into_iter();
             mods.reserve_exact(iter.len());
 
-            let fnv_offset_base = 0x811c9dc5;
+            const FNV_BASE: u32 = 0x811c9dc5;
+            const FNV_PRIME: u32 = 0x01000193;
+
             let fnv1_a = |base: u32, bytes: &[u8]| {
                 bytes.iter().fold(base, |hash, byte| {
-                    hash.bitxor(*byte as u32).wrapping_mul(0x01000193)
+                    hash.bitxor(*byte as u32).wrapping_mul(FNV_PRIME)
                 })
             };
 
@@ -556,12 +558,18 @@ impl From<ModProfileV2> for ModProfileV2Layout {
                 .map(|e| <(String, ModEntryV2Layout)>::from(e.into()))
                 .enumerate()
             {
-                while mods.get(&name).is_some() {
-                    let seeded_hash = fnv1_a(fnv_offset_base, &i.to_ne_bytes());
-                    let path_bytes = mod_entry.path().as_os_str().as_encoded_bytes();
+                let mut hash = None;
 
-                    name.push('_');
-                    name.push_str(&fnv1_a(seeded_hash, path_bytes).to_string());
+                while mods.get(&name).is_some() {
+                    let seeded_hash = hash.get_or_insert_with(|| {
+                        name.push('_');
+                        fnv1_a(FNV_BASE, &i.to_ne_bytes())
+                    });
+
+                    let path_bytes = mod_entry.path().as_os_str().as_encoded_bytes();
+                    *seeded_hash = fnv1_a(*seeded_hash, path_bytes);
+
+                    name.push_str(&seeded_hash.to_string());
                 }
 
                 mods.insert(name, mod_entry);
