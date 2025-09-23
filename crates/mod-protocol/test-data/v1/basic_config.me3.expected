@@ -4,7 +4,7 @@ V1(
         natives: [
             Native {
                 inner: ModFile {
-                    name: "my_native_ac5db8a5",
+                    name: "my_native",
                     path: "my_native.dll",
                     enabled: true,
                     optional: true,

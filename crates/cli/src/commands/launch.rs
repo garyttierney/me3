@@ -138,7 +138,7 @@ pub struct LaunchArgs {
     diagnostics: bool,
 
     /// Suspend the game until a debugger is attached.
-    #[clap(action = ArgAction::SetTrue)]
+    #[clap(long, action = ArgAction::SetTrue)]
     suspend: bool,
 
     /// Name of a profile in the me3 profile dir, or path to a ModProfile (TOML or JSON)

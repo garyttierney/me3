@@ -157,7 +157,7 @@ impl ModEntryV2Layout {
             Self::Native { inner, .. } => &inner.path,
             Self::Package { inner, .. } => &inner.path,
             Self::Profile(inner) => &inner.path,
-            Self::Simple(path) => &path,
+            Self::Simple(path) => path,
             Self::Untagged(untagged) => &untagged.inner.path,
         }
     }
