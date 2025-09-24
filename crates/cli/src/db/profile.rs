@@ -118,8 +118,11 @@ impl Profile {
         canonicalize(base_dir, &mut packages);
         canonicalize(base_dir, &mut natives);
 
-        let ordered_natives = sort_dependencies(natives)?;
-        let ordered_packages = sort_dependencies(packages)?;
+        let mut ordered_natives = sort_dependencies(natives)?;
+        let mut ordered_packages = sort_dependencies(packages)?;
+
+        ordered_natives.retain(|native| native.enabled);
+        ordered_packages.retain(|package| package.enabled);
 
         Ok((ordered_natives, ordered_packages))
     }
