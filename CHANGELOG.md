@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
+## me3 - [v0.9.0](https://github.com/garyttierney/me3/releases/v0.9.0) - 2025-09-24
+
+### 🚀 Features
+
+- [1bce9d5](https://github.com/garyttierney/me3/commit/1bce9d55b404ddd0f0a6c9bc3aa4972a5b936c10)  *(cli)* Add support for SEKIRO mod profile and related scripts in [#533](https://github.com/garyttierney/me3/pull/533)
+
+
+
+### 🐛 Bug Fixes
+
+- [b5a6e51](https://github.com/garyttierney/me3/commit/b5a6e514a525c4ea0114e45a9ffac18d0ffc5405)  *(cli)* Uniformly handle profile names and file paths in [#524](https://github.com/garyttierney/me3/pull/524)
+
+
+
+- [3c20cb0](https://github.com/garyttierney/me3/commit/3c20cb0787e2ef4d6af6a354f5efc8ef37a6d5a7)  *(cli)* Correctly handle profile names with extra dot separators
+
+
+
+- [2154320](https://github.com/garyttierney/me3/commit/215432030d1b929c0317e81b54a096463f6d790d)  *(cli)* Create package directories inside the installer
+
+
+
+- [d2ac2e8](https://github.com/garyttierney/me3/commit/d2ac2e839feccdcbfc709892071023e8142ad8fc) Don't load mods which are not enabled in [#541](https://github.com/garyttierney/me3/pull/541)
+
+
 ## me3 - [v0.8.1](https://github.com/garyttierney/me3/releases/v0.8.1) - 2025-09-15
 
 ### 🚀 Features
@@ -2554,6 +2579,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
+[0.9.0]: https://github.com/garyttierney/me3/compare/v0.8.1..v0.9.0
 [0.8.1]: https://github.com/garyttierney/me3/compare/v0.7.0..v0.8.1
 [0.7.0]: https://github.com/garyttierney/me3/compare/v0.6.1..v0.7.0
 [0.6.1]: https://github.com/garyttierney/me3/compare/v0.6.0..v0.6.1
