@@ -173,7 +173,7 @@ fn hook_device_manager(
 
             let mapped_override = mapping.vfs_override(OsString::from_wide(&expanded))?;
 
-            info!("override" = %mapped_override);
+            info!("override" = %path, "source" = mapped_override.source());
 
             let mut path = path.clone();
 
@@ -513,7 +513,10 @@ fn try_hook_wwise(
             let path_string = unsafe { path.to_string().unwrap() };
 
             if let Some(mapped_override) = wwise::find_override(&mapping, &path_string) {
-                info!("override" = %mapped_override);
+                info!(
+                    "override" = path_string,
+                    "source" = mapped_override.source()
+                );
 
                 // Force lookup to wwise's ordinary read (from disk) mode instead of the EBL read.
                 unsafe {

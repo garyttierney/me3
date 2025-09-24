@@ -18,10 +18,14 @@ use clap::{
     builder::{BoolValueParser, MapValueParser, TypedValueParser},
     ArgAction, Args,
 };
-use color_eyre::eyre::{eyre, OptionExt};
+use color_eyre::eyre::{eyre, Context, OptionExt};
 use me3_env::{CommandExt, LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::AttachConfig;
-use me3_mod_protocol::{native::Native, package::Package};
+use me3_mod_protocol::{
+    native::Native,
+    package::Package,
+    profile::{builder::ModProfileBuilder, Profile},
+};
 use normpath::PathExt;
 use serde::{Deserialize, Serialize};
 use steamlocate::{CompatTool, Library, SteamDir};
@@ -31,13 +35,13 @@ use tracing::{error, info};
 use crate::{
     commands::{launch::proton::CompatTools, profile::ProfileOptions},
     config::Config,
-    db::{profile::Profile, DbContext},
+    db::{profile::Profile as DbProfile, DbContext},
     Game,
 };
 
 fn remap_slr_path(path: impl AsRef<Path>) -> PathBuf {
     // <https://gitlab.steamos.cloud/steamrt/steam-runtime-tools/-/blob/4d85075e6240c839a3464fd97f22aa2253a9cea1/docs/shared-paths.md#never-shared>
-    const NON_SHARED_PATHS: [&'static str; 4] = ["/usr", "/etc", "/bin", "/lib"];
+    const NON_SHARED_PATHS: [&str; 4] = ["/usr", "/etc", "/bin", "/lib"];
 
     let path = path.as_ref();
 
@@ -130,24 +134,36 @@ pub struct LaunchArgs {
     profile_options: ProfileOptions,
 
     /// Enable diagnostics for this launch.
-    #[clap(short('d'), long("diagnostics"), action = ArgAction::SetTrue)]
+    #[clap(short, long, action = ArgAction::SetTrue)]
     diagnostics: bool,
 
     /// Suspend the game until a debugger is attached.
-    #[clap(long("suspend"), action = ArgAction::SetTrue)]
+    #[clap(long, action = ArgAction::SetTrue)]
     suspend: bool,
 
-    /// Name of a profile in the me3 profile dir, or path to a ModProfile (TOML or JSON).
+    /// Name of a profile in the me3 profile dir, or path to a ModProfile (TOML or JSON)
+    /// [repeatable option]
     #[arg(
-            short('p'),
+            short,
             long("profile"),
+            action = clap::ArgAction::Append,
             help_heading = "Mod configuration",
             value_hint = clap::ValueHint::FilePath,
         )]
-    profile: Option<String>,
+    profiles: Vec<String>,
+
+    /// Path to a native DLL, package, file or a profile to use [repeatable option]
+    #[clap(
+            short,
+            long("mod"),
+            action = clap::ArgAction::Append,
+            help_heading = "Mod configuration",
+            value_hint = clap::ValueHint::AnyPath,
+        )]
+    mods: Vec<PathBuf>,
 
     /// Path to package directory (asset override mod) [repeatable option]
-    #[arg(
+    #[clap(
             long("package"),
             action = clap::ArgAction::Append,
             help_heading = "Mod configuration",
@@ -156,8 +172,8 @@ pub struct LaunchArgs {
     packages: Vec<PathBuf>,
 
     /// Path to DLL file (native DLL mod) [repeatable option]
-    #[arg(
-            short('n'),
+    #[clap(
+            short,
             long("native"),
             action = clap::ArgAction::Append,
             help_heading = "Mod configuration",
@@ -166,7 +182,7 @@ pub struct LaunchArgs {
     natives: Vec<PathBuf>,
 
     /// Name of an alternative savefile to use (in the default savefile directory).
-    #[arg(long("savefile"), help_heading = "Mod configuration")]
+    #[clap(long, help_heading = "Mod configuration")]
     savefile: Option<String>,
 }
 
@@ -223,8 +239,7 @@ impl Launcher for CompatToolLauncher {
             .library_paths()?
             .into_iter()
             .map(|path| path.join(format!("steamapps/compatdata/{}", self.app_id)))
-            .filter(|path| path.exists())
-            .next()
+            .find(|path| path.exists())
             .unwrap_or_else(|| {
                 self.library
                     .path()
@@ -254,7 +269,6 @@ impl Launcher for CompatToolLauncher {
 
 struct LaunchContext {
     game: Game,
-    profile: Profile,
     game_options: GameOptions,
     profile_options: ProfileOptions,
     attach_config: AttachConfig,
@@ -266,29 +280,54 @@ impl LaunchArgs {
         db: &DbContext,
         config: &Config,
     ) -> color_eyre::Result<LaunchContext> {
-        let profile = if let Some(profile_name) = &self.profile {
+        let profile = if let Some(profile_name) = self.profiles.first() {
             db.profiles.load(profile_name)?
         } else {
-            Profile::transient()
+            DbProfile::transient()
         };
 
-        let target_selector = self.target_selector.as_ref().unwrap_or(&Selector {
-            auto_detect: true,
-            game: None,
-            steam_id: None,
-        });
+        let game_from_args = self
+            .target_selector
+            .as_ref()
+            .and_then(|s| s.game.or_else(|| s.steam_id.and_then(Game::from_app_id)))
+            .map(Into::into);
 
-        let game = if target_selector.auto_detect {
-            profile
-                .supported_game()
-                .map(crate::Game)
-                .ok_or_eyre("unable to determine which game to launch")
-        } else {
-            target_selector
-                .game
-                .or_else(|| target_selector.steam_id.and_then(Game::from_app_id))
-                .ok_or_eyre("unable to determine game from name or app ID")
-        }?;
+        for path in self.mods.iter().chain(&self.natives).chain(&self.packages) {
+            if !path.exists() {
+                return Err(eyre!("{path:?} does not exist"));
+            }
+        }
+
+        let other_profiles = self
+            .profiles
+            .get(1..)
+            .into_iter()
+            .flatten()
+            .map(|profile| config.resolve_profile(profile))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let profile_from_args = ModProfileBuilder::new()
+            .with_supported_game(game_from_args)
+            .with_mods(self.natives.iter().map(Native::new))
+            .with_mods(self.packages.iter().map(Package::new))
+            .with_mods(other_profiles.iter().map(Profile::new))
+            .with_paths(self.mods.iter().cloned())
+            .with_savefile(self.savefile.clone())
+            .start_online(self.profile_options.start_online)
+            .disable_arxan(self.profile_options.disable_arxan)
+            .build();
+
+        let profile = profile.try_merge(&profile_from_args).wrap_err_with(|| {
+            eyre!(
+                "game ({game_from_args:?}) is not supported by profile ({:?})",
+                profile.supported_game()
+            )
+        })?;
+
+        let game = profile
+            .supported_game()
+            .map(Game)
+            .ok_or_eyre("unable to determine which game to launch")?;
 
         let game_options = config
             .options
@@ -303,16 +342,16 @@ impl LaunchArgs {
         info!(?game, ?game_options, ?profile_options, "resolved game");
 
         let attach_config = self.generate_attach_config(
+            db,
             game,
             &game_options,
-            &profile,
+            profile,
             &profile_options,
             config.cache_dir(),
         )?;
 
         Ok(LaunchContext {
             game,
-            profile,
             game_options,
             profile_options,
             attach_config,
@@ -321,39 +360,16 @@ impl LaunchArgs {
 
     fn generate_attach_config(
         &self,
+        db: &DbContext,
         game: Game,
         opts: &GameOptions,
-        profile: &Profile,
+        profile: DbProfile,
         profile_options: &ProfileOptions,
         cache_path: Option<Box<Path>>,
     ) -> color_eyre::Result<AttachConfig> {
-        for path in self.natives.iter().chain(&self.packages) {
-            if !path.exists() {
-                return Err(eyre!("{path:?} does not exist"));
-            }
-        }
+        let profile_name = profile.name().to_owned();
 
-        let mut packages = self
-            .packages
-            .iter()
-            .filter_map(|path| path.normalize().ok())
-            .map(|normalized| Package::new(normalized.into_path_buf()))
-            .collect::<Vec<_>>();
-
-        let mut natives = self
-            .natives
-            .iter()
-            .filter_map(|path| path.normalize().ok())
-            .map(|normalized| Native::new(normalized.into_path_buf()))
-            .collect::<Vec<_>>();
-
-        let (ordered_natives, ordered_packages) = profile.compile()?;
-
-        packages.extend(ordered_packages);
-        natives.extend(ordered_natives);
-
-        let savefile = self.savefile.clone().or_else(|| profile.savefile());
-
+        let savefile = profile.savefile();
         if let Some(savefile) = &savefile {
             // https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions
             let is_windows_path_reserved_char = |c: char| {
@@ -370,10 +386,13 @@ impl LaunchArgs {
             }
         }
 
+        let (natives, packages) = profile.compile(&db.profiles)?;
+
         Ok(AttachConfig {
+            profile_name,
             game: game.into(),
-            packages,
             natives,
+            packages,
             savefile,
             cache_path: cache_path.map(|path| path.into_path_buf()),
             suspend: self.suspend,
@@ -390,7 +409,6 @@ impl LaunchArgs {
 pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
     let LaunchContext {
         game,
-        profile,
         game_options,
         profile_options: _profile_options,
         attach_config,
@@ -456,12 +474,12 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     std::fs::create_dir_all(&attach_config_dir)?;
     let attach_config_file = NamedTempFile::new_in(&attach_config_dir)?;
 
-    std::fs::write(&attach_config_file, toml::to_string_pretty(&attach_config)?)?;
+    std::fs::write(&attach_config_file, toml::to_string(&attach_config)?)?;
     info!(?attach_config_file, ?attach_config, "wrote attach config");
 
     let monitor_log_file = NamedTempFile::with_suffix(".log")?;
 
-    let log_file_path = db.logs.create_log_file(profile.name())?;
+    let log_file_path = db.logs.create_log_file(&attach_config.profile_name)?;
     // Ensure log file exists so `normalize()` succeeds on Unix
     let log_file = File::create(&log_file_path)?;
     drop(log_file);

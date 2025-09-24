@@ -1,151 +1,19 @@
-use std::{fs::File, io::Read, path::Path};
-
-use native::Native;
-use package::Package;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
 pub mod dependency;
 pub mod game;
+pub mod mod_file;
 pub mod native;
 pub mod package;
+pub mod profile;
 
 pub use game::Game;
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
-#[serde(tag = "profileVersion")]
-pub enum ModProfile {
-    #[serde(rename = "v1")]
-    V1(ModProfileV1),
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-pub struct Supports {
-    #[serde(rename = "game")]
-    pub game: Game,
-
-    #[serde(rename = "since")]
-    pub since_version: Option<String>,
-}
-
-impl Default for ModProfile {
-    fn default() -> Self {
-        ModProfile::V1(ModProfileV1::default())
-    }
-}
-
-impl ModProfile {
-    pub fn from_file(path: &Path) -> Result<Self, std::io::Error> {
-        let mut file = File::open(path)?;
-
-        match path.extension().and_then(|path| path.to_str()) {
-            Some("toml") | Some("me3") | None => {
-                let mut file_contents = String::new();
-                let _ = file.read_to_string(&mut file_contents)?;
-
-                toml::from_str(file_contents.as_str()).map_err(std::io::Error::other)
-            }
-            Some("json") => serde_json::from_reader(file).map_err(std::io::Error::other),
-            Some(format) => Err(std::io::Error::other(format!("{format} is unsupported"))),
-        }
-    }
-
-    pub fn natives_mut(&mut self) -> &mut Vec<Native> {
-        match self {
-            ModProfile::V1(v1) => &mut v1.natives,
-        }
-    }
-
-    pub fn packages_mut(&mut self) -> &mut Vec<Package> {
-        match self {
-            ModProfile::V1(v1) => &mut v1.packages,
-        }
-    }
-
-    pub fn supports_mut(&mut self) -> &mut Vec<Supports> {
-        match self {
-            ModProfile::V1(v1) => &mut v1.supports,
-        }
-    }
-
-    pub fn start_online_mut(&mut self) -> &mut Option<bool> {
-        match self {
-            ModProfile::V1(v1) => &mut v1.start_online,
-        }
-    }
-
-    pub fn supports(&self) -> Vec<Supports> {
-        match self {
-            ModProfile::V1(v1) => v1.supports.to_vec(),
-        }
-    }
-
-    pub fn natives(&self) -> Vec<Native> {
-        match self {
-            ModProfile::V1(v1) => v1.natives.to_vec(),
-        }
-    }
-
-    pub fn packages(&self) -> Vec<Package> {
-        match self {
-            ModProfile::V1(v1) => v1.packages.to_vec(),
-        }
-    }
-
-    pub fn savefile(&self) -> Option<String> {
-        match self {
-            ModProfile::V1(v1) => v1.savefile.clone(),
-        }
-    }
-
-    pub fn start_online(&self) -> Option<bool> {
-        match self {
-            ModProfile::V1(v1) => v1.start_online,
-        }
-    }
-
-    pub fn disable_arxan(&self) -> Option<bool> {
-        match self {
-            ModProfile::V1(v1) => v1.disable_arxan,
-        }
-    }
-}
-
-#[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
-pub struct ModProfileV1 {
-    /// The games that this profile supports.
-    #[serde(default)]
-    supports: Vec<Supports>,
-
-    /// Native modules (DLLs) that will be loaded.
-    #[serde(default)]
-    #[serde(alias = "native")]
-    natives: Vec<Native>,
-
-    /// A collection of packages containing assets that should be considered for loading
-    /// before the DVDBND.
-    #[serde(default)]
-    #[serde(alias = "package")]
-    packages: Vec<Package>,
-
-    /// Name of an alternative savefile to use (in the default savefile directory).
-    #[serde(default)]
-    savefile: Option<String>,
-
-    /// Starts the game with multiplayer server connectivity enabled.
-    #[serde(default)]
-    start_online: Option<bool>,
-
-    /// Try to neutralize Arxan GuardIT code protection to improve mod stability.
-    #[serde(default)]
-    disable_arxan: Option<bool>,
-}
-
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use expect_test::expect_file;
 
-    use super::*;
+    use crate::profile::ModProfile;
 
     fn check(test_case_name: &str) {
         let test_data_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data");
@@ -159,17 +27,49 @@ mod tests {
     }
 
     #[test]
-    fn basic_config_toml() {
-        check("basic_config.me3.toml");
+    fn v1_basic_config() {
+        check("v1/basic_config.me3");
     }
 
     #[test]
-    fn plural_packages_name() {
-        check("plural_packages.me3");
+    fn v1_advanced_config() {
+        check("v1/advanced_config.me3");
     }
 
     #[test]
-    fn singular_packages_name() {
-        check("singular_package.me3");
+    fn v1_plural_packages_name() {
+        check("v1/plural_packages.me3");
+    }
+
+    #[test]
+    fn v1_singular_packages_name() {
+        check("v1/singular_package.me3");
+    }
+
+    #[test]
+    fn v2_basic_config() {
+        check("v2/basic_config.me3");
+    }
+
+    #[test]
+    fn v2_advanced_config() {
+        check("v2/advanced_config.me3");
+    }
+
+    #[test]
+    fn v2_merge_configs() {
+        let test_data_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data/v2");
+
+        let profile_a =
+            ModProfile::from_file(test_data_dir.join("merge_config_a.me3")).expect("parse failure");
+        let profile_b =
+            ModProfile::from_file(test_data_dir.join("merge_config_b.me3")).expect("parse failure");
+
+        let merged_profile = profile_a
+            .try_merge(&profile_b)
+            .expect("failed to merge profiles");
+        let expected_profile = expect_file![test_data_dir.join("merge_config.me3.expected")];
+
+        expected_profile.assert_debug_eq(&merged_profile);
     }
 }

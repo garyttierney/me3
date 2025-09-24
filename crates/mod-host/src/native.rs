@@ -1,7 +1,7 @@
 use std::ffi::c_char;
 
 pub type ModEngineInitializer =
-    unsafe extern "C" fn(&ModEngineConnectorShim, &mut *mut ModEngineExtension) -> bool;
+    unsafe extern "C" fn(*const ModEngineConnectorShim, *mut *mut ModEngineExtension) -> bool;
 
 pub struct ModEngineConnectorShim;
 

@@ -85,6 +85,8 @@ fn get_override<'a>(mapping: &'a VfsOverrideMapping, input: &str) -> Option<&'a 
 mod test {
     use std::path::Path;
 
+    use me3_mod_protocol::package::Package;
+
     use crate::{mapping::VfsOverrideMapping, wwise::find_override};
 
     #[test]
@@ -92,7 +94,9 @@ mod test {
         let mut asset_mapping = VfsOverrideMapping::new().unwrap();
 
         let test_mod_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("test-data/test-mod");
-        asset_mapping.scan_directory(test_mod_dir).unwrap();
+        asset_mapping
+            .map_package_sources(&Package::new(test_mod_dir))
+            .unwrap();
 
         assert!(
             find_override(&asset_mapping, "sd:/init.bnk").is_some(),

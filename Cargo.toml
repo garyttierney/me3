@@ -38,7 +38,11 @@ crash-context = "0.6"
 crash-handler = "0.6"
 ctrlc = "3"
 directories = "6"
-dll-syringe = { version = "0.16", default-features = false, features = ["syringe", "rpc"] }
+dll-syringe = { version = "0.16", default-features = false, features = [
+  "syringe",
+  "rpc-raw",
+  "process-memory",
+] }
 expect-test = "1"
 eyre = { version = "0.6", default-features = false }
 from-singleton = { version = "2", features = ["regex-unicode"] }
@@ -61,9 +65,8 @@ regex = "1"
 rdvec = "0.2.1"
 schemars = "1.0"
 sentry = { version = "0.40", default-features = false }
-serde = "1"
-serde_derive = "1"
-serde_json = "1"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = { version = "1.0.143", features = ["preserve_order"] }
 steamlocate = "2"
 strum = "0.27"
 strum_macros = "0.27"

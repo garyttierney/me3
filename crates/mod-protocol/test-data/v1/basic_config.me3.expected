@@ -1,0 +1,33 @@
+V1(
+    ModProfileV1 {
+        supports: [],
+        natives: [
+            Native {
+                inner: ModFile {
+                    name: "my_native",
+                    path: "my_native.dll",
+                    enabled: true,
+                    optional: true,
+                },
+                initializer: None,
+                load_before: [],
+                load_after: [],
+            },
+        ],
+        packages: [
+            Package {
+                inner: ModFile {
+                    name: "my-mod",
+                    path: "./mod",
+                    enabled: true,
+                    optional: false,
+                },
+                load_before: [],
+                load_after: [],
+            },
+        ],
+        savefile: None,
+        start_online: None,
+        disable_arxan: None,
+    },
+)

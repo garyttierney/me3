@@ -1,0 +1,6 @@
+profileVersion = "v2"
+
+[mods]
+my_mod.path = './my-mod'
+my_dll.path = './my-mod/my_dll.dll'
+my_profile.path = 'my_profile.me3'

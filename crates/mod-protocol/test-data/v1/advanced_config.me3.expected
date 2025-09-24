@@ -1,0 +1,100 @@
+V1(
+    ModProfileV1 {
+        supports: [
+            Supports {
+                game: Nightreign,
+                since_version: None,
+            },
+        ],
+        natives: [
+            Native {
+                inner: ModFile {
+                    name: "my_native",
+                    path: "my_native.dll",
+                    enabled: true,
+                    optional: true,
+                },
+                initializer: None,
+                load_before: [],
+                load_after: [],
+            },
+            Native {
+                inner: ModFile {
+                    name: "my_other_native",
+                    path: "./nr-mods/my_other_native.dll",
+                    enabled: true,
+                    optional: false,
+                },
+                initializer: Some(
+                    NativeInitializerCondition {
+                        delay: None,
+                        function: Some(
+                            "init_my_dll",
+                        ),
+                    },
+                ),
+                load_before: [],
+                load_after: [],
+            },
+        ],
+        packages: [
+            Package {
+                inner: ModFile {
+                    name: "my-mod",
+                    path: "./mod",
+                    enabled: true,
+                    optional: false,
+                },
+                load_before: [],
+                load_after: [],
+            },
+            Package {
+                inner: ModFile {
+                    name: "unnamed-mod",
+                    path: "./unnamed-mod",
+                    enabled: true,
+                    optional: false,
+                },
+                load_before: [],
+                load_after: [
+                    Dependent {
+                        id: "my-mod",
+                        optional: false,
+                    },
+                ],
+            },
+            Package {
+                inner: ModFile {
+                    name: "my-other-mod",
+                    path: "./nr-mods/mod",
+                    enabled: true,
+                    optional: false,
+                },
+                load_before: [
+                    Dependent {
+                        id: "my-mod",
+                        optional: true,
+                    },
+                ],
+                load_after: [],
+            },
+            Package {
+                inner: ModFile {
+                    name: "my-disabled-mod",
+                    path: "./unused-mod",
+                    enabled: false,
+                    optional: false,
+                },
+                load_before: [],
+                load_after: [],
+            },
+        ],
+        savefile: None,
+        start_online: Some(
+            true,
+        ),
+        disable_arxan: Some(
+            false,
+        ),
+    },
+)

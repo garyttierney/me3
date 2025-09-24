@@ -1,0 +1,92 @@
+V2(
+    ModProfileV2 {
+        supports: Some(
+            Nightreign,
+        ),
+        natives: [
+            Native {
+                inner: ModFile {
+                    name: "my_dll",
+                    path: "./my-mod/my_dll.dll",
+                    enabled: true,
+                    optional: false,
+                },
+                initializer: Some(
+                    NativeInitializerCondition {
+                        delay: Some(
+                            NativeInitializerDelay {
+                                ms: 3000,
+                            },
+                        ),
+                        function: None,
+                    },
+                ),
+                load_before: [],
+                load_after: [],
+            },
+            Native {
+                inner: ModFile {
+                    name: "my_other_dll",
+                    path: "other_dll.dll",
+                    enabled: true,
+                    optional: false,
+                },
+                initializer: Some(
+                    NativeInitializerCondition {
+                        delay: None,
+                        function: Some(
+                            "init_my_dll",
+                        ),
+                    },
+                ),
+                load_before: [],
+                load_after: [],
+            },
+        ],
+        packages: [
+            Package {
+                inner: ModFile {
+                    name: "my_mod",
+                    path: "./my-mod",
+                    enabled: true,
+                    optional: false,
+                },
+                load_before: [],
+                load_after: [],
+            },
+            Package {
+                inner: ModFile {
+                    name: "my_other_mod",
+                    path: "./my-other-mod",
+                    enabled: true,
+                    optional: false,
+                },
+                load_before: [],
+                load_after: [],
+            },
+        ],
+        profiles: [
+            ModFile {
+                name: "hks_debug",
+                path: "./hks_debug.me3",
+                enabled: true,
+                optional: true,
+            },
+            ModFile {
+                name: "my_profile",
+                path: "my_profile.me3",
+                enabled: true,
+                optional: false,
+            },
+        ],
+        savefile: Some(
+            "NRMOD.sl2",
+        ),
+        start_online: Some(
+            true,
+        ),
+        disable_arxan: Some(
+            true,
+        ),
+    },
+)
