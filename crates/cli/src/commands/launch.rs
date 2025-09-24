@@ -182,7 +182,7 @@ pub struct LaunchArgs {
     natives: Vec<PathBuf>,
 
     /// Name of an alternative savefile to use (in the default savefile directory).
-    #[clap(help_heading = "Mod configuration")]
+    #[clap(long, help_heading = "Mod configuration")]
     savefile: Option<String>,
 }
 
