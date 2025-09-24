@@ -112,7 +112,34 @@ where
     )
     .unwrap();
 
-    let (_, [call_disp32]) = mount_re.captures(text)?.extract();
+    // Not nearly as reliable (matches an entire function as-is), but works on all current game
+    // builds.
+    let alt_mount_re = || {
+        // Matches:
+        // push   rbx
+        // sub    rsp,0x30
+        // mov    rax,QWORD PTR [rsp+0x70]
+        // mov    r10,r9
+        // mov    r9,QWORD PTR [rsp+0x60]
+        // mov    r11,r8
+        // mov    QWORD PTR [rsp+0x28],rax
+        // mov    rcx,rdx
+        // mov    rax,QWORD PTR [rsp+0x68]
+        // mov    r8,r10
+        // mov    rdx,r11
+        // mov    QWORD PTR [rsp+0x20],rax
+        // call   MountEbl
+        // add    rsp,0x30
+        // pop    rbx
+        // ret
+        let alt_mount_re = Regex::new(
+            r"(?s-u)\x53\x48\x83\xec\x30\x48\x8b\x44\x24\x70\x4d\x8b\xd1\x4c\x8b\x4c\x24\x60\x4d\x8b\xd8\x48\x89\x44\x24\x28\x48\x8b\xca\x48\x8b\x44\x24\x68\x4d\x8b\xc2\x49\x8b\xd3\x48\x89\x44\x24\x20\xe8(.{4})\x48\x83\xc4\x30\x5b\xc3"
+        ).unwrap();
+
+        alt_mount_re.captures(text)
+    };
+
+    let (_, [call_disp32]) = mount_re.captures(text).or_else(alt_mount_re)?.extract();
 
     let call_bytes = <[u8; 4]>::try_from(call_disp32).unwrap();
 
