@@ -203,6 +203,9 @@ Section "Main Application" SEC01
     CreateDirectory "$LOCALAPPDATA\garyttierney\me3\config\profiles\nightreign-mods"
     nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g nr --package nightreign-mods nightreign-default'
 
+    CreateDirectory "$LOCALAPPDATA\garyttierney\me3\config\profiles\sekiro-mods"
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" profile create -g sekiro --package sekiro-mods sekiro-default'
+
     CreateDirectory "$SMPROGRAMS\me3"
     CreateShortCut "$SMPROGRAMS\me3\DARK SOULS III (me3).lnk" "$INSTDIR\bin\me3.exe" \
       "launch -p darksouls3-default" "$INSTDIR\assets\me3.ico" "" "" \
@@ -215,6 +218,10 @@ Section "Main Application" SEC01
     CreateShortCut "$SMPROGRAMS\me3\NIGHTREIGN (me3).lnk" "$INSTDIR\bin\me3.exe" \
       "launch -p nightreign-default" "$INSTDIR\assets\me3.ico" "" "" \
       "" "Launch NIGHTREIGN with the nightreign-default mod profile"
+
+    CreateShortCut "$SMPROGRAMS\me3\SEKIRO (me3).lnk" "$INSTDIR\bin\me3.exe" \
+      "launch -p sekiro-default" "$INSTDIR\assets\me3.ico" "" "" \
+      "" "Launch SEKIRO with the sekiro-default mod profile"
 
     !insertmacro CreateInternetShortcutWithIcon "$SMPROGRAMS\me3\Documentation.URL" "https://me3.readthedocs.io" "$INSTDIR\assets\me3.ico"
 
@@ -250,6 +257,7 @@ Section "Uninstall"
     Delete "$SMPROGRAMS\me3\DARK SOULS III (me3).lnk"
     Delete "$SMPROGRAMS\me3\ELDEN RING (me3).lnk"
     Delete "$SMPROGRAMS\me3\NIGHTREIGN (me3).lnk"
+    Delete "$SMPROGRAMS\me3\SEKIRO (me3).lnk"
     Delete "$SMPROGRAMS\me3\Documentation.URL"
 
     RMDir "$SMPROGRAMS\me3"

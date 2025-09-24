@@ -19,4 +19,5 @@ if [ ! -d "${confdir}/me3/profiles" ]; then
     install -Dpm 0644 -t "${confdir}/me3/profiles" ./*.me3
     mkdir "${confdir}/me3/profiles/eldenring-mods"
     mkdir "${confdir}/me3/profiles/nightreign-mods"
+    mkdir "${confdir}/me3/profiles/sekiro-mods"
 fi

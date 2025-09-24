@@ -1,0 +1,8 @@
+profileVersion = "v1"
+
+[[supports]]
+game = "sekiro"
+
+[[package]]
+id = "default-mods"
+path = "sekiro-mods"
