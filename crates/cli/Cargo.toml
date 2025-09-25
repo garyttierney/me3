@@ -45,7 +45,7 @@ tracing.workspace = true
 windows = { workspace = true, features = ["Win32_System_Console"] }
 winreg = "0.55.0"
 ureq.workspace = true
-semver = "1.0.26"
+semver = "1.0.27"
 
 [build-dependencies]
 winresource = "0.1"
