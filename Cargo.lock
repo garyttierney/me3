@@ -1747,6 +1747,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "me3-mod-host-api"
+version = "0.9.0"
+dependencies = [
+ "me3-launcher-attach-protocol",
+ "serde_json",
+]
+
+[[package]]
 name = "me3-mod-host-assets"
 version = "0.10.1"
 dependencies = [
