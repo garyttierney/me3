@@ -45,7 +45,7 @@ fn remap_slr_path(path: impl AsRef<Path>) -> PathBuf {
         .iter()
         .any(|prefix| path.starts_with(prefix))
     {
-        Path::new("/run/host").join(path)
+        Path::new("/run/host").join(path.strip_prefix("/").unwrap())
     } else {
         path.to_path_buf()
     }
