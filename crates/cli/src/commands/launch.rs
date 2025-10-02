@@ -490,6 +490,8 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
         .env("SteamOverlayGameId", app_id.to_string());
 
     info!(?injector_command, "running injector command");
+    // Set terminal window title. See console_codes(4)
+    println!("\x1B]0;me3 - {}\x07", profile.name());
 
     let running = Arc::new(AtomicBool::new(true));
     let mut launcher_proc = injector_command.spawn()?;
