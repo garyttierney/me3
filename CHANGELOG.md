@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
+## me3 - [v0.9.1](https://github.com/garyttierney/me3/releases/v0.9.1) - 2025-10-02
+
+### 🐛 Bug Fixes
+
+- [103199a](https://github.com/garyttierney/me3/commit/103199ac986363aa7dc464a515afe186a06aae5d)  *(linux)* Fix path remapping for SLR in [#552](https://github.com/garyttierney/me3/pull/552)
+
+
+  > Closes #416
+  > 
+  > Tested with no me3 config in any of the searched paths, and with win
+  > bins installed to:
+  > 
+  > ```
+  > /usr/lib64/me3/x86_64-windows/me3_mod_host.dll
+  > /usr/lib64/me3/x86_64-windows/me3-launcher.exe
+  > ```
+  > Before:```console
+  > $ /usr/bin/me3 launch -g er # fails to launch
+  > ... ME3_LAUNCHER_HOST_DLL="\"/usr/lib64/me3/x86_64-windows/me3_mod_host.dll\""
+  > ... proton" "waitforexitandrun" "/usr/lib64/me3/x86_64-windows/me3-launcher.exe"
+  > ```
+  > After:```console
+  > $ cargo run --release --target x86_64-unknown-linux-gnu --bin me3 launch -g er # ok
+  > ... ME3_LAUNCHER_HOST_DLL="\"/run/host/usr/lib64/me3/x86_64-windows/me3_mod_host.dll\""
+  > ... proton" "waitforexitandrun" "/run/host/usr/lib64/me3/x86_64-windows/me3-launcher.exe"
+  > ```
 ## me3 - [v0.9.0](https://github.com/garyttierney/me3/releases/v0.9.0) - 2025-09-24
 
 ### 🚀 Features
@@ -2579,6 +2605,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
+[0.9.1]: https://github.com/garyttierney/me3/compare/v0.9.0..v0.9.1
 [0.9.0]: https://github.com/garyttierney/me3/compare/v0.8.1..v0.9.0
 [0.8.1]: https://github.com/garyttierney/me3/compare/v0.7.0..v0.8.1
 [0.7.0]: https://github.com/garyttierney/me3/compare/v0.6.1..v0.7.0
