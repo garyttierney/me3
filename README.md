@@ -23,7 +23,7 @@
     </strong>
   </p>
 
-[![Discord](https://img.shields.io/discord/1379238773916831845?label=Discord)](https://discord.gg/BbXKeXgP)
+[![Discord](https://img.shields.io/discord/1379238773916831845?label=Discord)][discord-invite]
 [![Discussions][discussions-shield]][discussions-url]
 [![MIT + Apache-2.0 License][license-shield]][license-url]
 ![GitHub Downloads (all assets, all releases)][downloads-badge]
@@ -155,7 +155,7 @@ Project Link: [https://github.com/garyttierney/me3](https://github.com/garyttier
 
 Discussions Board: [https://github.com/garyttierney/me3/discussions](https://github.com/garyttierney/me3/discussions)
 
-Discord: https://discord.gg/BbXKeXgP
+[Discord][discord-invite]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -189,6 +189,7 @@ We are grateful for the generous support of our sponsors.
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
+[discord-invite]: https://discord.gg/3TcDtfShXd
 [rustup-installer]: https://static.rust-lang.org/dist/rust-1.87.0-x86_64-pc-windows-msvc.msi
 [buildtools-installer]: https://aka.ms/vs/17/release/vs_BuildTools.exe
 [discussions-shield]: https://img.shields.io/github/discussions/garyttierney/me3
