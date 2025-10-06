@@ -23,6 +23,7 @@
     </strong>
   </p>
 
+[![Discord](https://img.shields.io/discord/1379238773916831845?label=Discord)](https://discord.gg/BbXKeXgP)
 [![Discussions][discussions-shield]][discussions-url]
 [![MIT + Apache-2.0 License][license-shield]][license-url]
 ![GitHub Downloads (all assets, all releases)][downloads-badge]
@@ -153,6 +154,8 @@ The me3 logo is not available under any license - all rights are reserved.
 Project Link: [https://github.com/garyttierney/me3](https://github.com/garyttierney/me3)
 
 Discussions Board: [https://github.com/garyttierney/me3/discussions](https://github.com/garyttierney/me3/discussions)
+
+Discord: https://discord.gg/BbXKeXgP
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
