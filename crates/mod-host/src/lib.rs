@@ -69,6 +69,12 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     me3_telemetry::install_error_handler();
 
     let attach_config = Arc::new(request.config);
+    let attach_config_json = serde_json::to_string(&*attach_config)?;
+
+    // SAFETY: only called on Windows
+    unsafe {
+        std::env::set_var("ME3_ATTACH_CONFIG", attach_config_json);
+    }
 
     let telemetry_vars: TelemetryVars = me3_env::deserialize_from_env()?;
     let telemetry_log_file = OpenOptions::new()

@@ -13,7 +13,7 @@ pub struct AttachRequest {
     pub config: AttachConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct AttachConfig {
     /// The attached to game.
     pub game: Game,
