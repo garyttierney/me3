@@ -41,6 +41,10 @@ pub struct Options {
     #[clap(long, help_heading = "Configuration", value_hint = clap::ValueHint::DirPath)]
     pub(crate) windows_binaries_dir: Option<Box<Path>>,
 
+    /// Path to a directory used to store me3 log files.
+    #[clap(long, help_heading = "Configuration", value_hint = clap::ValueHint::DirPath)]
+    pub(crate) log_dir: Option<Box<Path>>,
+
     #[clap(skip)]
     #[serde(default)]
     pub(crate) game: BTreeMap<Game, GameOptions>,
@@ -53,7 +57,10 @@ pub struct Config {
 
 impl Config {
     pub fn log_dir(&self) -> Option<Box<Path>> {
-        self.known_dirs.data_dir().join("logs")
+        self.options
+            .log_dir
+            .clone()
+            .or_else(|| self.known_dirs.data_dir().join("logs"))
     }
 
     pub fn cache_dir(&self) -> Option<Box<Path>> {
