@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf};
+use std::{collections::HashSet, fs, path::PathBuf};
 
 use clap::{ArgAction, Args, Subcommand};
 use color_eyre::eyre::{eyre, OptionExt};
@@ -59,6 +59,14 @@ pub struct ProfileCreateArgs {
     /// Overwrite the profile if it already exists.
     #[clap(long, action = ArgAction::SetTrue)]
     overwrite: bool,
+
+    /// Scan a directory of mods to populate packages and natives automatically.
+    #[clap(long("from-mods-dir"), short('d'), value_hint = clap::ValueHint::DirPath)]
+    from_mods_dir: Option<PathBuf>,
+
+    /// Optional positional path to scan (same as --from-mods-dir PATH)
+    #[clap(value_hint = clap::ValueHint::DirPath)]
+    mods_dir: Option<PathBuf>,
 }
 
 #[derive(Args, Clone, Debug, Default, PartialEq)]
@@ -152,14 +160,37 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         });
     }
 
-    let packages = profile.packages_mut();
+    // Accumulate additions, then apply to avoid overlapping mutable borrows
+    let mut add_packages: Vec<Package> = Vec::new();
+    let mut add_natives: Vec<Native> = Vec::new();
+
+    // Add from explicit args first
     for pkg in args.packages {
-        packages.push(Package::new(pkg));
+        add_packages.push(Package::new(pkg));
+    }
+    for dll in args.natives {
+        add_natives.push(Native::new(dll));
     }
 
-    let natives = profile.natives_mut();
-    for pkg in args.natives {
-        natives.push(Native::new(pkg));
+    // Optionally scan a mods directory
+    let scan_dir = args.from_mods_dir.or(args.mods_dir).or_else(|| {
+        // Default to current directory if accessible
+        std::env::current_dir().ok()
+    });
+
+    if let Some(dir) = scan_dir {
+        let (scanned_packages, scanned_natives) = scan_mods_dir(&dir)?;
+        add_packages.extend(scanned_packages);
+        add_natives.extend(scanned_natives);
+    }
+
+    {
+        let packages = profile.packages_mut();
+        packages.extend(add_packages);
+    }
+    {
+        let natives = profile.natives_mut();
+        natives.extend(add_natives);
     }
 
     let start_online = profile.start_online_mut();
@@ -167,9 +198,64 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
 
     let contents = toml::to_string_pretty(&profile)?;
 
-    std::fs::write(profile_path, contents)?;
+    std::fs::write(&profile_path, contents)?;
+
+    // Simple output
+    println!("Created profile: {}", profile_path.display());
 
     Ok(())
+}
+
+fn scan_mods_dir(dir: &PathBuf) -> color_eyre::Result<(Vec<Package>, Vec<Native>)> {
+    let mut packages = Vec::new();
+    let mut natives = Vec::new();
+
+    if !dir.exists() {
+        return Err(eyre!("mods directory does not exist: {}", dir.display()));
+    }
+
+    // First pass: collect natives and their stems
+    let mut native_stems: HashSet<String> = HashSet::new();
+    for entry in std::fs::read_dir(dir)? {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        let path = entry.path();
+        if path.is_file()
+            && path
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("dll"))
+        {
+            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                native_stems.insert(stem.to_ascii_lowercase());
+            }
+            natives.push(Native::new(path));
+        }
+    }
+
+    // Second pass: collect packages, skipping dirs that match native stems
+    for entry in std::fs::read_dir(dir)? {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        let path = entry.path();
+        if path.is_dir() {
+            let dir_name = path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_ascii_lowercase());
+            let skip = dir_name
+                .as_ref()
+                .is_some_and(|name| native_stems.contains(name));
+            if !skip {
+                packages.push(Package::new(path));
+            }
+        }
+    }
+
+    Ok((packages, natives))
 }
 
 #[tracing::instrument(err, skip_all)]
