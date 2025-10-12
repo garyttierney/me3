@@ -115,7 +115,6 @@ impl ModProfile {
 pub struct ModProfileV1 {
     /// The games that this profile supports.
     #[serde(default)]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
     supports: Vec<Supports>,
 
     /// Native modules (DLLs) that will be loaded.

@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use clap::{ArgAction, Args, Subcommand};
 use color_eyre::eyre::{eyre, OptionExt};
@@ -196,7 +196,19 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
     let start_online = profile.start_online_mut();
     *start_online = args.options.start_online;
 
-    let contents = toml::to_string_pretty(&profile)?;
+    // Serialize to TOML, then remove empty `supports = []` if present to avoid clutter
+    let mut contents = toml::to_string_pretty(&profile)?;
+    if contents.contains("supports = []") {
+        contents = contents
+            .lines()
+            .filter(|line| !line.trim_start().starts_with("supports = []"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        // Ensure trailing newline for POSIX friendliness
+        if !contents.ends_with('\n') {
+            contents.push('\n');
+        }
+    }
 
     std::fs::write(&profile_path, contents)?;
 
@@ -207,53 +219,103 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
 }
 
 fn scan_mods_dir(dir: &PathBuf) -> color_eyre::Result<(Vec<Package>, Vec<Native>)> {
-    let mut packages = Vec::new();
-    let mut natives = Vec::new();
+    use std::path::Path;
 
     if !dir.exists() {
         return Err(eyre!("mods directory does not exist: {}", dir.display()));
     }
 
-    // First pass: collect natives and their stems
-    let mut native_stems: HashSet<String> = HashSet::new();
+    // Full list of known FromSoftware mod content directories
+    const KNOWN_DIR_MARKERS: &[&str] = &[
+        "_backup", "_unknown", "action", "asset", "chr", "cutscene", "event", "font", "map",
+        "material", "menu", "movie", "msg", "other", "param", "parts", "script", "sd", "sfx",
+        "shader", "sound",
+    ];
+
+    const KNOWN_FILE_MARKERS: &[&str] = &["regulation.bin"];
+
+    let mut packages: Vec<Package> = Vec::new();
+    let mut natives: Vec<Native> = Vec::new();
+
+    // 1) Any DLL anywhere under the root becomes a native
+    fn walk_collect_dlls(root: &Path, out: &mut Vec<Native>) -> std::io::Result<()> {
+        for entry in std::fs::read_dir(root)? {
+            let entry = match entry {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+            let path = entry.path();
+            if path.is_dir() {
+                let _ = walk_collect_dlls(&path, out);
+            } else if path.is_file()
+                && path
+                    .extension()
+                    .is_some_and(|e| e.eq_ignore_ascii_case("dll"))
+            {
+                out.push(Native::new(path));
+            }
+        }
+        Ok(())
+    }
+    let _ = walk_collect_dlls(dir, &mut natives);
+
+    // Build a set of DLL stems to avoid adding configuration folders with the same name
+    let dll_stems: std::collections::HashSet<String> = natives
+        .iter()
+        .filter_map(|n| n.source().file_stem().and_then(|s| s.to_str()))
+        .map(|s| s.to_ascii_lowercase())
+        .collect();
+
+    // 2) Immediate subdirectories: include if they contain known markers or are non-empty
+    fn dir_contains_known_markers(path: &Path) -> bool {
+        for marker in KNOWN_FILE_MARKERS {
+            if path.join(marker).exists() {
+                return true;
+            }
+        }
+        for marker in KNOWN_DIR_MARKERS {
+            if path.join(marker).is_dir() {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn dir_is_non_empty(path: &Path) -> bool {
+        std::fs::read_dir(path)
+            .ok()
+            .and_then(|mut it| it.next().transpose().ok())
+            .flatten()
+            .is_some()
+    }
+
     for entry in std::fs::read_dir(dir)? {
         let entry = match entry {
             Ok(e) => e,
             Err(_) => continue,
         };
         let path = entry.path();
-        if path.is_file()
-            && path
-                .extension()
-                .is_some_and(|e| e.eq_ignore_ascii_case("dll"))
-        {
-            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-                native_stems.insert(stem.to_ascii_lowercase());
-            }
-            natives.push(Native::new(path));
+        if !path.is_dir() {
+            continue;
+        }
+
+        // Skip a package dir if its name matches any DLL stem (common pattern for native config folders)
+        let dir_name = path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_ascii_lowercase());
+        let matches_dll = dir_name
+            .as_ref()
+            .is_some_and(|name| dll_stems.contains(name));
+
+        if !matches_dll && (dir_contains_known_markers(&path) || dir_is_non_empty(&path)) {
+            packages.push(Package::new(path));
         }
     }
 
-    // Second pass: collect packages, skipping dirs that match native stems
-    for entry in std::fs::read_dir(dir)? {
-        let entry = match entry {
-            Ok(e) => e,
-            Err(_) => continue,
-        };
-        let path = entry.path();
-        if path.is_dir() {
-            let dir_name = path
-                .file_name()
-                .and_then(|s| s.to_str())
-                .map(|s| s.to_ascii_lowercase());
-            let skip = dir_name
-                .as_ref()
-                .is_some_and(|name| native_stems.contains(name));
-            if !skip {
-                packages.push(Package::new(path));
-            }
-        }
-    }
+    // Stable order for deterministic output
+    packages.sort_by(|a, b| a.source().cmp(&b.source()));
+    natives.sort_by(|a, b| a.source().cmp(&b.source()));
 
     Ok((packages, natives))
 }
