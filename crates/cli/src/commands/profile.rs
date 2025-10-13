@@ -196,17 +196,34 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
     let start_online = profile.start_online_mut();
     *start_online = args.options.start_online;
 
-    // Serialize to TOML, then remove empty `supports = []` if present to avoid clutter
+    // Serialize to TOML, then remove empty top-level arrays to avoid clutter
     let mut contents = toml::to_string_pretty(&profile)?;
-    if contents.contains("supports = []") {
-        contents = contents
+    {
+        // Drop lines like `supports = []`, `packages = []`, and `natives = []` at the top level.
+        const EMPTY_TOP_LEVEL_ARRAYS: [&str; 3] =
+            ["supports = []", "packages = []", "natives = []"];
+
+        let mut changed = false;
+        let filtered: Vec<&str> = contents
             .lines()
-            .filter(|line| !line.trim_start().starts_with("supports = []"))
-            .collect::<Vec<_>>()
-            .join("\n");
-        // Ensure trailing newline for POSIX friendliness
-        if !contents.ends_with('\n') {
-            contents.push('\n');
+            .filter(|line| {
+                let trimmed = line.trim_start();
+                let drop = EMPTY_TOP_LEVEL_ARRAYS
+                    .iter()
+                    .any(|pat| trimmed.starts_with(pat));
+                if drop {
+                    changed = true;
+                }
+                !drop
+            })
+            .collect();
+
+        if changed {
+            contents = filtered.join("\n");
+            // Ensure trailing newline for POSIX friendliness
+            if !contents.ends_with('\n') {
+                contents.push('\n');
+            }
         }
     }
 
