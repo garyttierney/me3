@@ -611,3 +611,94 @@ impl JsonSchema for ModEntryV2 {
         schema_for!(ModEntryV2Layout)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use indexmap::IndexMap;
+
+    use crate::profile::v2::{ModEntryV2, ModEntryV2Layout};
+
+    #[test]
+    fn deserialize_natives() {
+        let map = toml::from_str::<IndexMap<String, ModEntryV2Layout>>(
+            r#"
+                native1 = "foo.dll"
+                native2.path = "some/path/bar.dll"
+                native3 = { kind = "native", path = "so.so", enabled = false }
+                native4 = { path = "foo2.dll", initializer.delay.ms = 1000, optional = true }
+                native5 = { path = "bar2.dll", load_before = [
+                    { id = "native2", optional = true }
+                ] }
+            "#,
+        )
+        .unwrap();
+
+        let entries = map.into_iter().map(ModEntryV2::from).collect::<Vec<_>>();
+
+        assert!(matches!(entries[0], ModEntryV2::Native(_)));
+        assert!(matches!(entries[1], ModEntryV2::Native(_)));
+        assert!(matches!(entries[2], ModEntryV2::Native(_)));
+        assert!(matches!(entries[3], ModEntryV2::Native(_)));
+        assert!(matches!(entries[4], ModEntryV2::Native(_)));
+    }
+
+    #[test]
+    fn deserialize_packages() {
+        let map = toml::from_str::<IndexMap<String, ModEntryV2Layout>>(
+            r#"
+                package1 = "foo"
+                package2.path = "some/path/bar"
+                package3 = { kind = "package", path = "foo.dll", enabled = false }
+                package4 = { path = "foo2", optional = true }
+                package5 = { path = "bar2", load_before = [
+                    { id = "package2", optional = true }
+                ] }
+            "#,
+        )
+        .unwrap();
+
+        let entries = map.into_iter().map(ModEntryV2::from).collect::<Vec<_>>();
+
+        assert!(matches!(entries[0], ModEntryV2::Package(_)));
+        assert!(matches!(entries[1], ModEntryV2::Package(_)));
+        assert!(matches!(entries[2], ModEntryV2::Package(_)));
+        assert!(matches!(entries[3], ModEntryV2::Package(_)));
+        assert!(matches!(entries[4], ModEntryV2::Package(_)));
+    }
+
+    #[test]
+    fn deserialize_profiles() {
+        let map = toml::from_str::<IndexMap<String, ModEntryV2Layout>>(
+            r#"
+                profile1 = "foo.me3"
+                profile2.path = "some/path/bar.me3.toml"
+                profile3 = { kind = "profile", path = "foo.toml", enabled = false }
+                profile4 = "foo.me3.json"
+            "#,
+        )
+        .unwrap();
+
+        let entries = map.into_iter().map(ModEntryV2::from).collect::<Vec<_>>();
+
+        assert!(matches!(entries[0], ModEntryV2::Profile(_)));
+        assert!(matches!(entries[1], ModEntryV2::Profile(_)));
+        assert!(matches!(entries[2], ModEntryV2::Profile(_)));
+        assert!(matches!(entries[3], ModEntryV2::Profile(_)));
+    }
+
+    #[test]
+    fn deserialize_rejects() {
+        let no_name =
+            toml::from_str::<HashMap<String, ModEntryV2Layout>>(r#"entry.kind = "native""#);
+        let empty = toml::from_str::<HashMap<String, ModEntryV2Layout>>(r#"entry = {}"#);
+        let strict = toml::from_str::<HashMap<String, ModEntryV2Layout>>(
+            r#"entry = { kind = "package", initializer.delay.ms = 1000 }"#,
+        );
+
+        assert!(no_name.is_err());
+        assert!(empty.is_err());
+        assert!(strict.is_err());
+    }
+}
