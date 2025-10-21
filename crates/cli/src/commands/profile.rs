@@ -38,24 +38,24 @@ pub struct ProfileCreateArgs {
         short,
         long,
         hide_possible_values = false,
-        help_heading = "Game selection"
+        help_heading = "Game selection",
+        value_enum
     )]
-    #[arg(value_enum)]
     game: Option<Game>,
 
     /// Path to a native DLL, package, file or profile [repeatable option]
     #[clap(
-            short,
-            long("mod"),
-            action = clap::ArgAction::Append,
-        )]
+        short,
+        long("mod"),
+        action = clap::ArgAction::Append,
+    )]
     mods: Vec<PathBuf>,
 
     /// Path to package directory (asset override mod) [repeatable option]
     #[clap(
-            long("native"),
-            action = clap::ArgAction::Append,
-        )]
+        long("native"),
+        action = clap::ArgAction::Append,
+    )]
     natives: Vec<PathBuf>,
 
     /// Path to DLL file (native DLL mod) [repeatable option]

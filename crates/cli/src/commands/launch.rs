@@ -64,24 +64,24 @@ pub struct Selector {
 
     /// Short name of a game to launch.
     #[clap(
-        short('g'),
+        short,
         long,
         hide_possible_values = false,
         help_heading = "Game selection",
-        required = false
+        required = false,
+        value_enum
     )]
-    #[arg(value_enum)]
     game: Option<Game>,
 
     /// Steam APPID of the game to launch.
     #[clap(
-        short('s'),
+        short,
         long,
         alias("steamid"),
         help_heading = "Game selection",
-        required = false
+        required = false,
+        value_parser = clap::value_parser!(u32)
     )]
-    #[arg(value_parser = clap::value_parser!(u32))]
     steam_id: Option<u32>,
 }
 
@@ -103,7 +103,7 @@ pub struct GameOptions {
     pub(crate) skip_steam_init: Option<bool>,
 
     /// Custom path to the game executable.
-    #[clap(short('e'), long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
+    #[clap(short, long, help_heading = "Game selection", value_hint = clap::ValueHint::FilePath)]
     pub(crate) exe: Option<PathBuf>,
 }
 
@@ -143,42 +143,42 @@ pub struct LaunchArgs {
 
     /// Name of a profile in the me3 profile dir, or path to a ModProfile (TOML or JSON)
     /// [repeatable option]
-    #[arg(
-            short,
-            long("profile"),
-            action = clap::ArgAction::Append,
-            help_heading = "Mod configuration",
-            value_hint = clap::ValueHint::FilePath,
-        )]
+    #[clap(
+        short,
+        long("profile"),
+        action = clap::ArgAction::Append,
+        help_heading = "Mod configuration",
+        value_hint = clap::ValueHint::FilePath,
+    )]
     profiles: Vec<String>,
 
     /// Path to a native DLL, package, file or a profile to use [repeatable option]
     #[clap(
-            short,
-            long("mod"),
-            action = clap::ArgAction::Append,
-            help_heading = "Mod configuration",
-            value_hint = clap::ValueHint::AnyPath,
-        )]
+        short,
+        long("mod"),
+        action = clap::ArgAction::Append,
+        help_heading = "Mod configuration",
+        value_hint = clap::ValueHint::AnyPath,
+    )]
     mods: Vec<PathBuf>,
 
     /// Path to package directory (asset override mod) [repeatable option]
     #[clap(
-            long("package"),
-            action = clap::ArgAction::Append,
-            help_heading = "Mod configuration",
-            value_hint = clap::ValueHint::DirPath,
-        )]
+        long("package"),
+        action = clap::ArgAction::Append,
+        help_heading = "Mod configuration",
+        value_hint = clap::ValueHint::DirPath,
+    )]
     packages: Vec<PathBuf>,
 
     /// Path to DLL file (native DLL mod) [repeatable option]
     #[clap(
-            short,
-            long("native"),
-            action = clap::ArgAction::Append,
-            help_heading = "Mod configuration",
-            value_hint = clap::ValueHint::FilePath,
-        )]
+        short,
+        long("native"),
+        action = clap::ArgAction::Append,
+        help_heading = "Mod configuration",
+        value_hint = clap::ValueHint::FilePath,
+    )]
     natives: Vec<PathBuf>,
 
     /// Name of an alternative savefile to use (in the default savefile directory).
