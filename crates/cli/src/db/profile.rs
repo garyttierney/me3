@@ -136,6 +136,8 @@ impl Profile {
         let mut children = root.profile.inner.profiles();
         canonicalize(base_dir, &mut children);
 
+        // FIFO queue used to recursively walk child profiles depth first.
+        // Entries are collected in reverse order and popped.
         let mut remaining = children
             .into_iter()
             .rev()
@@ -154,10 +156,12 @@ impl Profile {
 
         while let Some((next, after)) = remaining.pop() {
             if let Some(index) = profiles.iter().position(|p| p.path == next) {
+                // The profile has already been loaded and needs its load order adjusted.
                 let mut profile = profiles.remove(index);
                 profile.load_after = Some(after);
                 profiles.push(profile);
             } else {
+                // The profile needs to be loaded and recursively walked.
                 let profile = db.load(next.as_ref())?;
                 let profile = ProfileDependency::from_profile(profile, Some(after));
 
@@ -166,6 +170,8 @@ impl Profile {
                 let mut children = profile.profile.inner.profiles();
                 canonicalize(base_dir, &mut children);
 
+                // Depth first, so prioritize children (and children of children).
+                // Reverse to pop in FIFO order.
                 for next in children.into_iter().rev() {
                     remaining.push((
                         ProfilePath::from(&*next.path),
