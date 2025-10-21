@@ -604,7 +604,7 @@ impl JsonSchema for ModProfileV2 {
 
 impl JsonSchema for ModEntryV2 {
     fn schema_name() -> std::borrow::Cow<'static, str> {
-        "Profilemod_entry".into()
+        "ModEntryV2".into()
     }
 
     fn json_schema(_generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
