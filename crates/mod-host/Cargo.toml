@@ -43,6 +43,7 @@ tempfile.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 windows = { workspace = true, features = [
+    "Wdk_System_Threading",
     "Win32_Graphics_Gdi",
     "Win32_Globalization",
     "Win32_Security",
@@ -52,6 +53,7 @@ windows = { workspace = true, features = [
     "Win32_System_LibraryLoader",
     "Win32_System_Memory",
     "Win32_System_SystemInformation",
+    "Win32_System_SystemServices",
     "Win32_System_Threading",
     "Win32_UI_WindowsAndMessaging",
 ] }

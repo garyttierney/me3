@@ -43,14 +43,13 @@ mod skip_logos;
 static INSTANCE: OnceLock<usize> = OnceLock::new();
 static mut TELEMETRY_INSTANCE: OnceLock<me3_telemetry::Telemetry> = OnceLock::new();
 
-dll_syringe::payload_procedure! {
-    fn me_attach(request: AttachRequest) -> AttachResult {
-        if request.config.suspend {
-            debugger::suspend_for_debugger();
-        }
-
-        on_attach(request)
+#[dll_syringe::payload_utils::payload_procedure]
+fn me_attach(request: AttachRequest) -> AttachResult {
+    if request.config.suspend {
+        debugger::suspend_for_debugger();
     }
+
+    on_attach(request)
 }
 
 #[cfg(coverage)]

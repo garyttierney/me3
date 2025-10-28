@@ -77,6 +77,10 @@ tracing-subscriber = { version = "0.3", default-features = false }
 ureq = "3"
 windows = "0.62"
 
+[patch.crates-io.iced-x86]
+git = "https://github.com/icedland/iced.git"
+version = "= 1.21.0"
+
 [profile.dev.package."*"]
 opt-level = 3
 
