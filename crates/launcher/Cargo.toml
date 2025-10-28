@@ -25,7 +25,10 @@ sentry = { workspace = true, optional = true }
 toml.workspace = true
 tracing.workspace = true
 windows = { workspace = true, features = [
+    "Win32_System_Diagnostics_Debug",
     "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_Security",
     "Win32_System_Threading",
 ] }
 
