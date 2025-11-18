@@ -16,14 +16,14 @@ sentry = ["me3-telemetry/sentry"]
 crate-type = ["cdylib"]
 
 [dependencies]
-closure-ffi = { version = "3.0", features = ["coverage", "std", "tuple_trait"] }
+closure-ffi = { version = "5.0", features = ["coverage", "std", "tuple_trait"] }
 color-eyre.workspace = true
 crash-handler.workspace = true
 dearxan = "0.5.1"
 dll-syringe = { workspace = true, features = ["payload-utils"] }
 eyre = { workspace = true, default-features = false, features = ["track-caller"] }
 from-singleton.workspace = true
-libloading = "0.8.8"
+libloading = "0.9.0"
 me3-binary-analysis.workspace = true
 me3-env.workspace = true
 me3-launcher-attach-protocol.workspace = true
