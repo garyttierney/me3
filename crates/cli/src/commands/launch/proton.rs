@@ -65,6 +65,7 @@ impl<'a> CompatTools<'a> {
             "proton_experimental" => 1493710,
             "proton_hotfix" => 2180100,
             "proton_9" => 2805730,
+            "proton_10" => 3658110,
             name => {
                 let tools = CompatTools::new(self.steam);
                 let installations = tools.all();
