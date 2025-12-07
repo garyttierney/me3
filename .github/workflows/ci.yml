@@ -71,7 +71,12 @@ jobs:
         if: ${{ !cancelled() }}
   build:
     name: Build
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
       actions: write
@@ -106,7 +111,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: me3-artifacts
+          name: me3-artifacts-${{ matrix.os }}
           path: |
             installer.sh
             out/me3_installer.exe
@@ -129,7 +134,7 @@ jobs:
       - name: Download installer
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
-          name: me3-artifacts
+          name: me3-artifacts-ubuntu-latest
       - run: ls -R
       - run: ./out/me3_installer.exe /S
 
