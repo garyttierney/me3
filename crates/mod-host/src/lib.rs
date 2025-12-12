@@ -92,12 +92,6 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     let result = me3_telemetry::with_root_span("host", "attach", move || {
         info!("Beginning host attach");
 
-        if debugger::is_debugger_present()
-            && let Err(e) = debugger::prevent_hiding_threads()
-        {
-            warn!("error" = &*e, "may fail to debug some threads");
-        }
-
         // SAFETY: process is still suspended.
         let exe = unsafe { Executable::new() };
 

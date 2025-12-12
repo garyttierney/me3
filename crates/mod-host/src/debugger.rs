@@ -1,62 +1,19 @@
-use std::{
-    mem,
-    os::{raw::c_void, windows::raw::HANDLE},
-};
+use std::mem;
 
-use eyre::OptionExt;
 use windows::{
     core::{s, w},
-    Wdk::System::Threading::{
-        NtQueryInformationProcess, ThreadHideFromDebugger, PROCESSINFOCLASS, THREADINFOCLASS,
-    },
-    Win32::{
-        Foundation::{NTSTATUS, STATUS_SUCCESS},
-        System::{
-            Diagnostics::Debug::IsDebuggerPresent,
-            LibraryLoader::{GetModuleHandleW, GetProcAddress},
-            Threading::GetCurrentProcess,
-        },
+    Wdk::System::Threading::{NtQueryInformationProcess, PROCESSINFOCLASS},
+    Win32::System::{
+        Diagnostics::Debug::IsDebuggerPresent,
+        LibraryLoader::{GetModuleHandleW, GetProcAddress},
+        Threading::GetCurrentProcess,
     },
 };
-
-use crate::host::hook::HookInstaller;
 
 pub fn suspend_for_debugger() {
     while !is_debugger_present() {
         std::thread::sleep(std::time::Duration::from_secs(1));
     }
-}
-
-pub fn prevent_hiding_threads() -> Result<(), eyre::Error> {
-    type NtSetInformationThread = unsafe extern "C" fn(
-        threadhandle: HANDLE,
-        threadinformationclass: THREADINFOCLASS,
-        threadinformation: *const c_void,
-        threadinformationlength: u32,
-    ) -> NTSTATUS;
-
-    let nt_set_information_thread = unsafe {
-        let ntdll = GetModuleHandleW(w!("ntdll.dll"))?;
-        mem::transmute::<_, NtSetInformationThread>(
-            GetProcAddress(ntdll, s!("NtSetInformationThread"))
-                .ok_or_eyre("NtSetInformationThread not found")?,
-        )
-    };
-
-    // Ignore ThreadHideFromDebugger calls to NtSetInformationThread.
-    let hook = HookInstaller::new(nt_set_information_thread)
-        .with_closure(|p1, threadinformationclass, p3, p4, trampoline| unsafe {
-            if threadinformationclass == ThreadHideFromDebugger {
-                return STATUS_SUCCESS;
-            }
-
-            trampoline(p1, threadinformationclass, p3, p4)
-        })
-        .install()?;
-
-    mem::forget(hook);
-
-    Ok(())
 }
 
 pub fn is_debugger_present() -> bool {
