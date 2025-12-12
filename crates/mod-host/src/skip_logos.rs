@@ -18,7 +18,11 @@ use windows::{
     },
 };
 
-use crate::{deferred::defer_until_init, executable::Executable, host::ModHost};
+use crate::{
+    deferred::{defer_init, Deferred},
+    executable::Executable,
+    host::ModHost,
+};
 
 #[instrument(name = "skip_logos", skip_all)]
 pub fn attach_override(
@@ -27,7 +31,7 @@ pub fn attach_override(
 ) -> Result<(), eyre::Error> {
     fix_show_window_flash()?;
 
-    defer_until_init(Span::current(), move || {
+    defer_init(Span::current(), Deferred::AfterMain, move || {
         if attach_config.skip_logos {
             // Different hooks depending on engine version.
             let result = if attach_config.game >= Game::EldenRing {

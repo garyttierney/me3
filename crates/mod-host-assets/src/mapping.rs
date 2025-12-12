@@ -15,7 +15,6 @@ use normpath::PathExt;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use smallvec::{smallvec_inline, SmallVec};
 use thiserror::Error;
-use tracing::error;
 use windows::core::{PCSTR, PCWSTR};
 
 mod savefile;

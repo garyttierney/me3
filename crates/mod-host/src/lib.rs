@@ -197,7 +197,7 @@ fn after_game_main<R: FnOnce() -> Result<(), eyre::Error>>(
             );
 
             if !native.optional {
-                return Err(e.into());
+                return Err(e);
             }
         }
     }

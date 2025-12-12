@@ -13,7 +13,7 @@ const PTR_SIZE: usize = mem::size_of::<*mut u8>();
 const PTR_ALIGN: usize = mem::align_of::<*mut u8>();
 
 pub const DEFAULT_DLALLOC: DlAllocator = DlAllocator {
-    vtable: unsafe { NonNull::new_unchecked(&DEFAULT_DLALLOC_VTABLE as *const _ as _) },
+    vtable: NonNull::from_ref(&DEFAULT_DLALLOC_VTABLE),
 };
 
 const DEFAULT_DLALLOC_VTABLE: DlAllocatorVtable = DlAllocatorVtable {
