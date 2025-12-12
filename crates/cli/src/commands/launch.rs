@@ -381,6 +381,7 @@ impl LaunchArgs {
             skip_logos: opts.skip_logos.unwrap_or(true),
             start_online: profile_options.start_online.unwrap_or(false),
             disable_arxan: profile_options.disable_arxan.unwrap_or(false),
+            mem_patch: !profile_options.no_mem_patch.unwrap_or(false),
             skip_steam_init: opts.skip_steam_init.unwrap_or(false),
         })
     }
@@ -577,6 +578,7 @@ mod tests {
             ProfileOptions {
                 start_online: None,
                 disable_arxan: None,
+                no_mem_patch: None,
             },
         );
     }
@@ -593,6 +595,7 @@ mod tests {
             "--disable-arxan",
             "--skip-steam-init",
             "--online",
+            "--no-mem-patch",
         ]);
 
         let Commands::Launch(launch_args) = cli.command else {
@@ -614,6 +617,7 @@ mod tests {
             ProfileOptions {
                 start_online: Some(true),
                 disable_arxan: Some(true),
+                no_mem_patch: Some(true),
             },
         );
     }
@@ -630,6 +634,7 @@ mod tests {
             "--disable-arxan=false",
             "--skip-steam-init=false",
             "--online=false",
+            "--no-mem-patch=false",
         ]);
 
         let Commands::Launch(launch_args) = cli.command else {
@@ -651,6 +656,7 @@ mod tests {
             ProfileOptions {
                 start_online: Some(false),
                 disable_arxan: Some(false),
+                no_mem_patch: Some(false),
             },
         );
     }
@@ -667,6 +673,7 @@ mod tests {
             "--disable-arxan=true",
             "--skip-steam-init=true",
             "--online=true",
+            "--no-mem-patch=true",
         ]);
 
         let Commands::Launch(launch_args) = cli.command else {
@@ -688,6 +695,7 @@ mod tests {
             ProfileOptions {
                 start_online: Some(true),
                 disable_arxan: Some(true),
+                no_mem_patch: Some(true),
             },
         );
     }

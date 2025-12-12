@@ -63,7 +63,7 @@ pub struct ProfileCreateArgs {
 
 #[derive(Args, Clone, Debug, Default, PartialEq)]
 pub struct ProfileOptions {
-    /// Re-enable online matchmaking (ban risk)?
+    /// Re-enable online matchmaking? (ban risk)
     ///
     /// Supported games are blocked from matchmaking servers by default to prevent accidental
     /// online play with invalid (modded) data. Setting this option to true disables this
@@ -78,6 +78,15 @@ pub struct ProfileOptions {
     /// allows for debugging the games without crashing.
     #[clap(long("disable-arxan"), default_missing_value = "true", num_args=0..=1)]
     pub disable_arxan: Option<bool>,
+
+    /// Do not increase memory limits? (affects game stability)
+    ///
+    /// Mods may require more system resources than the games are configured to provide by default.
+    /// Some supported games (Dark Souls 3, Sekiro and ELDEN RING) include a patch to replace the
+    /// memory allocators for more efficient ones, removing upper memory usage bounds and slightly
+    /// improving game performance.
+    #[clap(long("no-mem-patch"), default_missing_value = "true", num_args=0..=1)]
+    pub no_mem_patch: Option<bool>,
 }
 
 impl ProfileOptions {
@@ -89,6 +98,7 @@ impl ProfileOptions {
                 (_, Some(true)) => Some(true),
                 (a, b) => a.or(b),
             },
+            no_mem_patch: other.no_mem_patch.or(self.no_mem_patch),
         }
     }
 }

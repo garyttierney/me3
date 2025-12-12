@@ -29,7 +29,7 @@ use tracing::{debug, error, info, info_span, instrument, warn};
 use windows::core::{PCSTR, PCWSTR};
 use xxhash_rust::xxh3;
 
-use crate::{executable::Executable, host::ModHost};
+use crate::{alloc_hooks::MIMALLOC_DLALLOC, executable::Executable, host::ModHost};
 
 static VFS_MOUNTS: Mutex<VfsMounts> = Mutex::new(VfsMounts::new());
 
@@ -548,7 +548,7 @@ fn locate_device_manager(
     unsafe impl Sync for DeviceManager {}
 
     DEVICE_MANAGER
-        .get_or_init(|| DeviceManager(dl_device::find_device_manager(exe)))
+        .get_or_init(|| DeviceManager(dl_device::find_device_manager(exe, Some(&MIMALLOC_DLALLOC))))
         .0
         .clone()
 }
