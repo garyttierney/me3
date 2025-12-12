@@ -8,7 +8,7 @@ use std::{
 
 use me3_binary_analysis::pe;
 use me3_mod_host_types::{
-    alloc::DlStdAllocator,
+    alloc::{DlAllocator, DlStdAllocator},
     string::{DlUtf16String, EncodingError},
     vector::DlVector,
 };
@@ -103,7 +103,10 @@ pub struct VfsPushGuard<'a> {
     old_mounts_len: usize,
 }
 
-pub fn find_device_manager<'a, P>(program: P) -> Result<NonNull<DlDeviceManager>, FindError>
+pub fn find_device_manager<'a, P>(
+    program: P,
+    alloc: Option<&DlAllocator>,
+) -> Result<NonNull<DlDeviceManager>, FindError>
 where
     P: Pe<'a>,
 {
@@ -127,7 +130,7 @@ where
 
         let rdata_range = rdata.as_ptr_range();
 
-        verify_dl_device_manager_layout(manager_ptr, data_range, rdata_range)
+        verify_dl_device_manager_layout(manager_ptr, data_range, rdata_range, alloc)
     });
 
     manager_ptr
@@ -142,6 +145,7 @@ unsafe fn verify_dl_device_manager_layout(
     device_manager: *const DlDeviceManager,
     data_range: Range<*const u8>,
     rdata_range: Range<*const u8>,
+    main_alloc: Option<&DlAllocator>,
 ) -> bool {
     if !device_manager.is_aligned() {
         return false;
@@ -155,7 +159,9 @@ unsafe fn verify_dl_device_manager_layout(
             return false;
         };
 
-        if !data_range.contains(&(alloc as *const u8)) {
+        if main_alloc.is_none_or(|main| alloc != &raw const *main as usize)
+            && !data_range.contains(&(alloc as *const u8))
+        {
             return false;
         }
 

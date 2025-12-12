@@ -38,87 +38,88 @@ pub struct DlStdAllocator {
 }
 
 #[repr(C)]
-struct DlAllocator {
-    vtable: NonNull<DlAllocatorVtable>,
+pub struct DlAllocator {
+    pub vtable: NonNull<DlAllocatorVtable>,
 }
 
 #[repr(u32)]
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Default)]
-enum DlHeapDirection {
+pub enum DlHeapDirection {
     #[default]
     Front = 0,
     Back = 1,
 }
 
 #[repr(C)]
-struct DlAllocatorVtable {
-    dtor: extern "C" fn(this: NonNull<ManuallyDrop<DlAllocator>>),
+pub struct DlAllocatorVtable {
+    pub dtor: unsafe extern "C" fn(this: NonNull<ManuallyDrop<DlAllocator>>),
 
-    heap_id: extern "C" fn(this: NonNull<DlAllocator>) -> u32,
+    pub heap_id: unsafe extern "C" fn(this: NonNull<DlAllocator>) -> u32,
 
-    allocator_id: extern "C" fn(this: NonNull<DlAllocator>) -> u32,
+    pub allocator_id: unsafe extern "C" fn(this: NonNull<DlAllocator>) -> u32,
 
-    capability: extern "C" fn(
+    pub capability: unsafe extern "C" fn(
         this: NonNull<DlAllocator>,
         out: NonNull<u32>,
         heap: DlHeapDirection,
     ) -> NonNull<u32>,
 
-    total_size: extern "C" fn(this: NonNull<DlAllocator>) -> usize,
+    pub total_size: unsafe extern "C" fn(this: NonNull<DlAllocator>) -> usize,
 
-    free_size: extern "C" fn(this: NonNull<DlAllocator>) -> usize,
+    pub free_size: unsafe extern "C" fn(this: NonNull<DlAllocator>) -> usize,
 
-    max_size: extern "C" fn(this: NonNull<DlAllocator>) -> usize,
+    pub max_size: unsafe extern "C" fn(this: NonNull<DlAllocator>) -> usize,
 
-    num_blocks: extern "C" fn(this: NonNull<DlAllocator>) -> usize,
+    pub num_blocks: unsafe extern "C" fn(this: NonNull<DlAllocator>) -> usize,
 
-    block_size: extern "C" fn(this: NonNull<DlAllocator>, block: *mut u8) -> usize,
+    pub block_size: unsafe extern "C" fn(this: NonNull<DlAllocator>, block: *mut u8) -> usize,
 
-    allocate: extern "C" fn(this: NonNull<DlAllocator>, size: usize) -> *mut u8,
+    pub allocate: unsafe extern "C" fn(this: NonNull<DlAllocator>, size: usize) -> *mut u8,
 
-    allocate_aligned:
-        extern "C" fn(this: NonNull<DlAllocator>, size: usize, alignment: usize) -> *mut u8,
+    pub allocate_aligned:
+        unsafe extern "C" fn(this: NonNull<DlAllocator>, size: usize, alignment: usize) -> *mut u8,
 
-    reallocate: extern "C" fn(this: NonNull<DlAllocator>, old: *mut u8, new_size: usize) -> *mut u8,
+    pub reallocate:
+        unsafe extern "C" fn(this: NonNull<DlAllocator>, old: *mut u8, new_size: usize) -> *mut u8,
 
-    reallocate_aligned: extern "C" fn(
+    pub reallocate_aligned: unsafe extern "C" fn(
         this: NonNull<DlAllocator>,
         old: *mut u8,
         new_size: usize,
         alignment: usize,
     ) -> *mut u8,
 
-    free: extern "C" fn(this: NonNull<DlAllocator>, ptr: *mut u8),
+    pub free: unsafe extern "C" fn(this: NonNull<DlAllocator>, ptr: *mut u8),
 
-    free_all: extern "C" fn(this: NonNull<DlAllocator>),
+    pub free_all: unsafe extern "C" fn(this: NonNull<DlAllocator>),
 
-    back_allocate: extern "C" fn(this: NonNull<DlAllocator>, size: usize) -> *mut u8,
+    pub back_allocate: unsafe extern "C" fn(this: NonNull<DlAllocator>, size: usize) -> *mut u8,
 
-    back_allocate_aligned:
-        extern "C" fn(this: NonNull<DlAllocator>, size: usize, alignment: usize) -> *mut u8,
+    pub back_allocate_aligned:
+        unsafe extern "C" fn(this: NonNull<DlAllocator>, size: usize, alignment: usize) -> *mut u8,
 
-    back_reallocate:
-        extern "C" fn(this: NonNull<DlAllocator>, old: *mut u8, new_size: usize) -> *mut u8,
+    pub back_reallocate:
+        unsafe extern "C" fn(this: NonNull<DlAllocator>, old: *mut u8, new_size: usize) -> *mut u8,
 
-    back_reallocate_aligned: extern "C" fn(
+    pub back_reallocate_aligned: unsafe extern "C" fn(
         this: NonNull<DlAllocator>,
         old: *mut u8,
         new_size: usize,
         alignment: usize,
     ) -> *mut u8,
 
-    back_free: extern "C" fn(this: NonNull<DlAllocator>, ptr: *mut u8),
+    pub back_free: unsafe extern "C" fn(this: NonNull<DlAllocator>, ptr: *mut u8),
 
-    self_diagnose: extern "C" fn(this: NonNull<DlAllocator>) -> bool,
+    pub self_diagnose: unsafe extern "C" fn(this: NonNull<DlAllocator>) -> bool,
 
-    is_valid_block: extern "C" fn(this: NonNull<DlAllocator>, block: *mut u8) -> bool,
+    pub is_valid_block: unsafe extern "C" fn(this: NonNull<DlAllocator>, block: *mut u8) -> bool,
 
-    lock: extern "C" fn(this: NonNull<DlAllocator>),
+    pub lock: unsafe extern "C" fn(this: NonNull<DlAllocator>),
 
-    unlock: extern "C" fn(this: NonNull<DlAllocator>),
+    pub unlock: unsafe extern "C" fn(this: NonNull<DlAllocator>),
 
-    block_of: extern "C" fn(this: NonNull<DlAllocator>, ptr: *mut u8) -> *mut u8,
+    pub block_of: unsafe extern "C" fn(this: NonNull<DlAllocator>, ptr: *mut u8) -> *mut u8,
 }
 
 impl DlStdAllocator {
@@ -131,6 +132,10 @@ impl DlStdAllocator {
     pub fn addr(self) -> usize {
         self.inner.addr().get()
     }
+
+    pub fn into_inner(self) -> NonNull<DlAllocator> {
+        self.inner
+    }
 }
 
 unsafe impl GlobalAlloc for DlStdAllocator {
@@ -140,13 +145,15 @@ unsafe impl GlobalAlloc for DlStdAllocator {
         let alignment = layout.align();
 
         let vtable = unsafe { self.inner.as_ref().vtable.as_ref() };
-        (vtable.allocate_aligned)(self.inner, size, alignment)
+        unsafe { (vtable.allocate_aligned)(self.inner, size, alignment) }
     }
 
     #[inline]
     unsafe fn dealloc(&self, ptr: *mut u8, _: Layout) {
         let vtable = unsafe { self.inner.as_ref().vtable.as_ref() };
-        (vtable.free)(self.inner, ptr);
+        unsafe {
+            (vtable.free)(self.inner, ptr);
+        }
     }
 }
 

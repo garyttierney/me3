@@ -45,6 +45,9 @@ pub struct AttachConfig {
     /// Try to neutralize Arxan code protection to improve mod stability?
     pub disable_arxan: bool,
 
+    /// Patch memory limits for supported games.
+    pub mem_patch: bool,
+
     /// Should we avoid checking if Steam is running as part of pre-launch checks?
     pub skip_steam_init: bool,
 }

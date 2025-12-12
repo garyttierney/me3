@@ -10,7 +10,11 @@ use regex::bytes::Regex;
 use tracing::{error, instrument, Span};
 use windows::core::PCWSTR;
 
-use crate::{deferred::defer_until_init, executable::Executable, host::ModHost};
+use crate::{
+    deferred::{defer_init, Deferred},
+    executable::Executable,
+    host::ModHost,
+};
 
 type GetBoolProperty = unsafe extern "C" fn(usize, *const (), bool) -> bool;
 
@@ -58,7 +62,7 @@ pub fn attach_override(
 
     // Some games (Dark Souls 3) might employ Arxan encryption
     // that is removed after running the Arxan entrypoint.
-    defer_until_init(Span::current(), move || {
+    defer_init(Span::current(), Deferred::BeforeMain, move || {
         if let Err(e) = do_override() {
             error!("error" = %e, "failed to hook property getter");
         }

@@ -6,9 +6,10 @@
 use std::{
     fs::OpenOptions,
     io::stdout,
-    sync::{Arc, OnceLock},
+    sync::{Arc, Mutex, OnceLock},
 };
 
+use eyre::OptionExt;
 use me3_binary_analysis::{fd4_step::Fd4StepTables, rtti};
 use me3_env::TelemetryVars;
 use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, AttachResult, Attachment};
@@ -24,11 +25,12 @@ use windows::Win32::{
 };
 
 use crate::{
-    deferred::defer_until_init,
+    deferred::{defer_init, Deferred},
     executable::Executable,
     host::{game_properties, ModHost},
 };
 
+mod alloc_hooks;
 mod asset_hooks;
 mod debugger;
 mod deferred;
@@ -99,9 +101,9 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         // SAFETY: process is still suspended.
         let exe = unsafe { Executable::new() };
 
-        ModHost::new().attach();
+        ModHost::new(&attach_config).attach();
 
-        host::dearxan(&attach_config);
+        dearxan(&attach_config)?;
 
         skip_logos::attach_override(attach_config.clone(), exe)?;
 
@@ -122,13 +124,25 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         info!("Host successfully attached");
 
-        defer_until_init(Span::current(), {
-            let override_mapping = override_mapping.clone();
+        let before_main_result = Arc::new(Mutex::new(None));
 
-            move || {
-                if let Err(e) = deferred_attach(attach_config, exe, override_mapping) {
-                    error!("error" = &*e, "deferred attach failed!")
-                }
+        defer_init(Span::current(), Deferred::BeforeMain, {
+            let result = before_main_result.clone();
+            let attach_config = attach_config.clone();
+            move || *result.lock().unwrap() = Some(before_game_main(attach_config, exe))
+        })?;
+
+        defer_init(Span::current(), Deferred::AfterMain, move || {
+            let result = after_game_main(attach_config, exe, override_mapping, move || {
+                before_main_result
+                    .lock()
+                    .unwrap()
+                    .take()
+                    .ok_or_eyre("`before_game_main` did not run?")?
+            });
+
+            if let Err(e) = result {
+                error!("error" = &*e, "deferred attach failed!")
             }
         })?;
 
@@ -140,13 +154,28 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     Ok(result)
 }
 
-fn deferred_attach(
+fn before_game_main(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(), eyre::Error> {
+    if attach_config.mem_patch {
+        alloc_hooks::hook_system_allocator(&attach_config, exe)?;
+    }
+
+    Ok(())
+}
+
+fn after_game_main<R: FnOnce() -> Result<(), eyre::Error>>(
     attach_config: Arc<AttachConfig>,
     exe: Executable,
     override_mapping: Arc<VfsOverrideMapping>,
+    before_main_result: R,
 ) -> Result<(), eyre::Error> {
+    before_main_result()?;
+
     let class_map = Arc::new(rtti::classes(exe)?);
     let step_tables = Fd4StepTables::from_initialized_data(exe)?;
+
+    if attach_config.mem_patch {
+        alloc_hooks::hook_heap_allocators(&attach_config, exe, &class_map)?;
+    }
 
     savefile::oversized_regulation_fix(
         attach_config.clone(),
@@ -208,6 +237,22 @@ fn deferred_attach(
     })?;
 
     Ok(())
+}
+
+fn dearxan(attach_config: &AttachConfig) -> Result<(), eyre::Error> {
+    if !ModHost::get_attached().disable_arxan {
+        return Ok(());
+    }
+
+    info!(
+        "game" = %attach_config.game,
+        "attach_config.disable_arxan" = attach_config.disable_arxan,
+        "will attempt to disable Arxan code protection",
+    );
+
+    defer_init(Span::current(), Deferred::BeforeMain, || {
+        info!("dearxan::disabler::neuter_arxan finished")
+    })
 }
 
 #[unsafe(no_mangle)]

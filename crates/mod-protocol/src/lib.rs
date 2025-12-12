@@ -109,6 +109,12 @@ impl ModProfile {
             ModProfile::V1(v1) => v1.disable_arxan,
         }
     }
+
+    pub fn no_mem_patch(&self) -> Option<bool> {
+        match self {
+            ModProfile::V1(v1) => v1.no_mem_patch,
+        }
+    }
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
@@ -139,6 +145,10 @@ pub struct ModProfileV1 {
     /// Try to neutralize Arxan GuardIT code protection to improve mod stability.
     #[serde(default)]
     disable_arxan: Option<bool>,
+
+    /// Do not patch memory limits for supported games.
+    #[serde(default)]
+    no_mem_patch: Option<bool>,
 }
 
 #[cfg(test)]

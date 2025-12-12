@@ -14,7 +14,7 @@ use libloading::{Library, Symbol};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{native::NativeInitializerCondition, Game, ModProfile};
 use retour::Function;
-use tracing::{error, info, warn, Span};
+use tracing::{error, info, warn};
 
 use self::hook::HookInstaller;
 use crate::{
@@ -34,6 +34,7 @@ pub struct ModHost {
     native_modules: Mutex<Vec<Library>>,
     profiles: Vec<ModProfile>,
     property_overrides: Mutex<HashMap<Vec<u16>, bool>>,
+    pub disable_arxan: bool,
 }
 
 impl Debug for ModHost {
@@ -48,8 +49,14 @@ impl Debug for ModHost {
 
 #[allow(unused)]
 impl ModHost {
-    pub fn new() -> Self {
-        Self::default()
+    #[inline]
+    pub fn new(attach_config: &AttachConfig) -> Self {
+        // Unconditionally disable Arxan in Dark Souls 3.
+        let disable_arxan = attach_config.disable_arxan || attach_config.game == Game::DarkSouls3;
+        Self {
+            disable_arxan,
+            ..Default::default()
+        }
     }
 
     pub fn load_native(
@@ -102,10 +109,12 @@ impl ModHost {
         }
     }
 
+    #[inline]
     pub fn get_attached() -> &'static ModHost {
         ATTACHED_INSTANCE.get().expect("not attached")
     }
 
+    #[inline]
     pub fn attach(self) {
         ATTACHED_INSTANCE.set(self).expect("already attached");
     }
@@ -123,25 +132,5 @@ impl ModHost {
             .lock()
             .unwrap()
             .insert(property.as_ref().encode_utf16().collect(), state);
-    }
-}
-
-pub fn dearxan(attach_config: &AttachConfig) {
-    if !attach_config.disable_arxan && attach_config.game != Game::DarkSouls3 {
-        return;
-    }
-
-    info!(
-        "game" = %attach_config.game,
-        "attach_config.disable_arxan" = attach_config.disable_arxan,
-        "will attempt to disable Arxan code protection",
-    );
-
-    let span = Span::current();
-    unsafe {
-        dearxan::disabler::neuter_arxan(move |result| {
-            let _span_guard = span.enter();
-            info!(?result, "dearxan::disabler::neuter_arxan finished");
-        });
     }
 }
