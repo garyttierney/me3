@@ -7,7 +7,7 @@ use me3_mod_host_types::alloc::DlAllocator;
 use me3_mod_protocol::Game;
 use pelite::pe::{Pe, PeObject};
 use regex::bytes::Regex;
-use tracing::{info, instrument};
+use tracing::{debug, info, instrument};
 
 use crate::{executable::Executable, host::ModHost};
 
@@ -70,14 +70,14 @@ pub fn hook_system_allocator(
         attach_config.game,
         Game::DarkSouls3 | Game::Sekiro | Game::EldenRing
     ) {
-        info!("game" = %attach_config.game, "skipping unsupported game");
+        debug!("game" = %attach_config.game, "skipping unsupported game");
         return Ok(());
     }
 
     let mut result = None;
 
     SYSTEM_ALLOC_IS_HOOKED.get_or_init(|| {
-        info!("game" = %attach_config.game, "hooking system allocator");
+        info!("hooking system allocator");
 
         result = Some(hook_system_allocator_inner(exe));
         result.as_ref().unwrap().is_ok()
@@ -96,11 +96,11 @@ pub fn hook_heap_allocators(
         attach_config.game,
         Game::DarkSouls3 | Game::Sekiro | Game::EldenRing
     ) {
-        info!("game" = %attach_config.game, "skipping unsupported game");
+        debug!("game" = %attach_config.game, "skipping unsupported game");
         return Ok(());
     }
 
-    info!("game" = %attach_config.game, "hooking heap allocators");
+    info!("hooking heap allocators");
 
     if SYSTEM_ALLOC_IS_HOOKED.get().is_none_or(|b| !b) {
         return Err(eyre!("system allocator was not hooked"));
