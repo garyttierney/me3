@@ -248,7 +248,7 @@ unsafe impl<T> RawVec<T> for RawCxxString<T> {
 
         self.cap = new_capacity;
 
-        if ptr::addr_eq(new_buf, unsafe { &raw const self.inner.buf }) {
+        if ptr::addr_eq(new_buf, &raw const self.inner.buf) {
             return;
         }
 
