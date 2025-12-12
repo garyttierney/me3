@@ -88,7 +88,7 @@ impl Profile {
         ProfileOptions {
             start_online: self.profile.start_online(),
             disable_arxan: self.profile.disable_arxan(),
-            no_mem_patch: self.profile.no_mem_patch(),
+            no_mem_patch: self.profile.patch_mem().map(|b| !b),
         }
     }
 

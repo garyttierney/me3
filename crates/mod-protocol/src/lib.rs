@@ -110,9 +110,9 @@ impl ModProfile {
         }
     }
 
-    pub fn no_mem_patch(&self) -> Option<bool> {
+    pub fn patch_mem(&self) -> Option<bool> {
         match self {
-            ModProfile::V1(v1) => v1.no_mem_patch,
+            ModProfile::V1(v1) => v1.patch_mem,
         }
     }
 }
@@ -146,9 +146,9 @@ pub struct ModProfileV1 {
     #[serde(default)]
     disable_arxan: Option<bool>,
 
-    /// Do not patch memory limits for supported games.
+    /// Patch memory limits for supported games to improve mod stability.
     #[serde(default)]
-    no_mem_patch: Option<bool>,
+    patch_mem: Option<bool>,
 }
 
 #[cfg(test)]
