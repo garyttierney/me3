@@ -284,6 +284,14 @@
             "null"
           ],
           "default": null
+        },
+        "patch_mem": {
+          "description": "Patch memory limits for supported games to improve mod stability.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": null
         }
       }
     }
