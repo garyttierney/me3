@@ -22,6 +22,20 @@ pub enum Game {
 }
 
 impl Game {
+    /// The AppID of the Steam compatibility tool that was used to verify this game on Steam Deck.
+    pub const fn verified_on_deck_runtime(self) -> Option<&'static str> {
+        use Game::*;
+        // TODO: we need a better way to deal with this.
+        const PROTON_STABLE: &str = "proton_10";
+        match self {
+            DarkSouls3 => Some("proton_8"),
+            Sekiro => Some(PROTON_STABLE),
+            EldenRing => Some("proton_8"),
+            ArmoredCore6 => Some("proton_8"),
+            Nightreign => Some("proton_9"),
+        }
+    }
+
     /// The primary name of a game as a lowercase string.
     pub const fn name(self) -> &'static str {
         use Game::*;

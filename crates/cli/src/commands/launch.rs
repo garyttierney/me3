@@ -24,7 +24,7 @@ use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{native::Native, package::Package};
 use normpath::PathExt;
 use serde::{Deserialize, Serialize};
-use steamlocate::{CompatTool, Library, SteamDir};
+use steamlocate::{Library, SteamDir};
 use tempfile::NamedTempFile;
 use tracing::{error, info};
 
@@ -185,7 +185,7 @@ impl Launcher for DirectLauncher {
 
 #[derive(Debug)]
 pub struct CompatToolLauncher {
-    tool: CompatTool,
+    tool: proton::CompatTool,
     steam: SteamDir,
     library: Library,
     app_id: u32,
@@ -200,17 +200,13 @@ impl Launcher for CompatToolLauncher {
             .find_app(sniper_id)?
             .ok_or_eyre("unable to find Steam Linux Runtime")?;
 
-        let compat_tools = CompatTools::new(&self.steam);
-        let compat_tool = compat_tools
-            .find(self.tool.name.expect("compat tools must be named"))
-            .ok_or_eyre("unable to find compatibility tool installation")?;
         let sniper_path = sniper_library.resolve_app_dir(&sniper_app);
         let mut command = Command::new(sniper_path.join("run"));
 
         command.args([
             "--batch",
             "--",
-            &*compat_tool.install_path.join("proton").to_string_lossy(),
+            &*self.tool.install_path.join("proton").to_string_lossy(),
             "waitforexitandrun",
             &*launcher.to_string_lossy(),
         ]);
@@ -434,18 +430,27 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
             "Steam was used to locate the WINE configuration and no game installation was found",
         )?;
 
-        let compat_tools = steam_dir.compat_tool_mapping()?;
-        let app_compat_tool = compat_tools
-            .get(&app_id)
-            .or_else(|| compat_tools.get(&0))
-            .ok_or_eyre("unable to find compat tool for game")?;
+        let compat_tool_mapping = steam_dir.compat_tool_mapping()?;
+        let compat_tools = CompatTools::new(&steam_dir);
 
-        info!(?app_compat_tool, "found compat tool for appid");
+        let app_compat_tool = compat_tool_mapping
+            .get(&app_id)
+            .or_else(|| compat_tool_mapping.get(&0));
+
+        let compat_tool_name = app_compat_tool
+            .and_then(|tool| tool.name.clone())
+            .or_else(|| game.0.verified_on_deck_runtime().map(|rt| rt.to_string()))
+            .ok_or_eyre("unable to determine Proton runtime to run game with")?;
+
+        let compat_tool = compat_tools.find(&compat_tool_name).ok_or_eyre(format!(
+            "unable to find installation of Proton runtime {compat_tool_name}"
+        ))?;
+
         let launcher = CompatToolLauncher {
             app_id,
             library: steam_library,
             steam: steam_dir,
-            tool: app_compat_tool.clone(),
+            tool: compat_tool,
         };
 
         launcher.into_command(launcher_path)

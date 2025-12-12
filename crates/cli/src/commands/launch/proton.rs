@@ -64,6 +64,9 @@ impl<'a> CompatTools<'a> {
         let tool_appid = match name {
             "proton_experimental" => 1493710,
             "proton_hotfix" => 2180100,
+            "proton_6" => 1580130,
+            "proton_7" => 1887720,
+            "proton_8" => 2348590,
             "proton_9" => 2805730,
             "proton_10" => 3658110,
             name => {
@@ -88,6 +91,7 @@ impl<'a> CompatTools<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct CompatTool {
     pub name: String,
     pub display_name: String,
