@@ -1641,6 +1641,7 @@ dependencies = [
  "me3-mod-host-types",
  "me3-mod-protocol",
  "me3_telemetry",
+ "miniz_oxide",
  "pelite",
  "pkcs1",
  "rayon",

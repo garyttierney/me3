@@ -2,7 +2,7 @@ use std::{
     alloc::{GlobalAlloc, Layout},
     ffi::OsString,
     fs::OpenOptions,
-    io::{self, Read, Seek, Write},
+    io::{Read, Write},
     os::windows::ffi::{OsStrExt, OsStringExt},
     path::Path,
     ptr::NonNull,
@@ -23,6 +23,11 @@ use me3_mod_host_assets::{
 };
 use me3_mod_host_types::{alloc::DlStdAllocator, string::DlUtf16String};
 use me3_mod_protocol::Game;
+use miniz_oxide::{
+    deflate::compress_to_vec,
+    inflate::stream::{inflate, InflateState},
+    DataFormat, MZFlush,
+};
 use pkcs1::der::Decode;
 use rdvec::{RawVec, Vec as DynVec};
 use tempfile::NamedTempFile;
@@ -297,9 +302,10 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
         // Read the original file for hashing to use as the cached file name.
         let original = Arc::new(std::fs::read(&bhd_path)?);
 
+        // When changing storage or compression defaults, don't forget to change the seed.
         let hash = std::thread::spawn({
             let original = original.clone();
-            move || xxh3::xxh3_128(&original)
+            move || xxh3::xxh3_128_with_seed(&original, 1)
         });
 
         // Write a temporary file with the size of a single block and have the
@@ -330,7 +336,7 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
 
         let hash = hash.join().expect("thread panicked");
 
-        let cached_bhd_path = cache_path.as_ref().join(format!("{hash:032x?}.bhd"));
+        let cached_bhd_path = cache_path.as_ref().join(format!("{hash:032x?}.bhd.zz"));
 
         // Create or open the cache file.
         let mut cached = OpenOptions::new()
@@ -340,12 +346,50 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
             .truncate(false)
             .open(cached_bhd_path)?;
 
-        let cached_len = cached.seek(io::SeekFrom::End(0))? as usize;
-        cached.seek(io::SeekFrom::Start(0))?;
+        let cached_len = {
+            let mut cached_len_bytes = [0; 4];
+            cached
+                .read_exact(&mut cached_len_bytes)
+                .map(|_| u32::from_le_bytes(cached_len_bytes))
+                .ok()
+        };
 
         // If the length of the cached file is zero the file has just been created.
         // If the length does not match there was an error writing the cache or a hash collision.
-        if cached_len == 0 || original_len.is_some_and(|len| cached_len != len as usize) {
+        if let Some(cached_len) = cached_len
+            && let Some(original_len) = original_len
+            && cached_len == original_len
+        {
+            let cached_len = cached_len as usize;
+
+            let mut compressed = vec![];
+            cached.read_to_end(&mut compressed)?;
+
+            // Opened a cached decrypted file, read, decompress and assign its contents.
+            // Use the game's own allocator as it will be freed with it later.
+            let buf = unsafe {
+                let ptr = NonNull::new(
+                    allocator.alloc(Layout::from_size_align_unchecked(cached_len, 4096)),
+                )
+                .ok_or_eyre("failed to allocate buffer for cached file")?;
+
+                slice::from_raw_parts_mut(ptr.as_ptr(), cached_len)
+            };
+
+            let mut state = InflateState::new_boxed(DataFormat::Raw);
+            inflate(&mut state, &compressed, buf, MZFlush::Finish)
+                .status
+                .map_err(|e| eyre!("`miniz_oxide::inflate` failed with status={e:?}"))?;
+
+            unsafe {
+                device
+                    .as_mut()
+                    .as_mut_bhd_holder_unchecked()
+                    .assign_bhd_contents(buf.as_mut_ptr().cast());
+            }
+
+            VFS_MOUNTS.lock().unwrap().append(new_mounts);
+        } else {
             // Clear the file and let the game decrypt the original, before caching it.
             cached.set_len(0)?;
 
@@ -372,35 +416,9 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
 
             // Successfully mounted the ebl, do not report subsequent caching errors.
             let _ = cached
-                .write_all(header.as_slice())
+                .write_all(&header.file_size().to_le_bytes())
+                .and_then(|_| cached.write_all(&compress_to_vec(header.as_slice(), 7)))
                 .and_then(|_| cached.flush());
-        } else {
-            // Opened a cached decrypted file, read and assign its contents.
-            // Use the game's own allocator as it will be freed with it later.
-            let buf = unsafe {
-                let ptr = NonNull::new(
-                    allocator.alloc(Layout::from_size_align_unchecked(cached_len, 4096)),
-                )
-                .ok_or_eyre("failed to allocate buffer for cached file")?;
-
-                slice::from_raw_parts_mut(ptr.as_ptr(), cached_len)
-            };
-
-            cached.read_exact(buf).inspect_err(|_| unsafe {
-                allocator.dealloc(
-                    buf.as_mut_ptr(),
-                    Layout::from_size_align_unchecked(cached_len, 4096),
-                );
-            })?;
-
-            unsafe {
-                device
-                    .as_mut()
-                    .as_mut_bhd_holder_unchecked()
-                    .assign_bhd_contents(buf.as_mut_ptr().cast());
-            }
-
-            VFS_MOUNTS.lock().unwrap().append(new_mounts);
         }
 
         Ok(())
