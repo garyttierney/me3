@@ -10,6 +10,7 @@ use std::{
     sync::{Arc, Mutex, OnceLock},
 };
 
+use base64::{prelude::BASE64_STANDARD, Engine};
 use eyre::{eyre, OptionExt};
 use me3_binary_analysis::{fd4_step::Fd4StepTables, rtti::ClassMap};
 use me3_launcher_attach_protocol::AttachConfig;
@@ -22,8 +23,8 @@ use me3_mod_host_assets::{
 };
 use me3_mod_host_types::{alloc::DlStdAllocator, string::DlUtf16String};
 use me3_mod_protocol::Game;
+use pkcs1::der::Decode;
 use rdvec::{RawVec, Vec as DynVec};
-use rsa::{pkcs1::DecodeRsaPublicKey, traits::PublicKeyParts, RsaPublicKey};
 use tempfile::NamedTempFile;
 use tracing::{debug, error, info, info_span, instrument, warn};
 use windows::core::{PCSTR, PCWSTR};
@@ -291,7 +292,7 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
         let bhd_path = OsString::from_wide(&expanded);
 
         // Parse the public RSA key to know the block size for decryption.
-        let pub_key = key_from_pem_c_str(key_c_str)?;
+        let pub_key_size = key_size_from_pem_c_str(key_c_str)?;
 
         // Read the original file for hashing to use as the cached file name.
         let original = Arc::new(std::fs::read(&bhd_path)?);
@@ -306,7 +307,7 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
         // the original file size.
         let mut stub_file = NamedTempFile::new_in(cache_path.as_ref())?;
 
-        stub_file.write_all(&original[..Ord::min(pub_key.size(), original.len())])?;
+        stub_file.write_all(&original[..Ord::min(pub_key_size, original.len())])?;
 
         let snap = device_manager.snapshot()?;
 
@@ -405,32 +406,32 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
         Ok(())
     }
 
-    fn key_from_pem_c_str(key_c_str: PCSTR) -> Result<RsaPublicKey, eyre::Error> {
+    fn key_size_from_pem_c_str(key_c_str: PCSTR) -> Result<usize, eyre::Error> {
         let key_str = unsafe { str::from_utf8(key_c_str.as_bytes())? };
 
         let mut lines = key_str.lines();
 
-        let mut normalized = String::new();
+        let _ = lines
+            .next()
+            .filter(|str| *str == "-----BEGIN RSA PUBLIC KEY-----")
+            .ok_or_eyre("malformed PEM")?;
 
-        let pre = lines.next().ok_or_eyre("malformed PEM")?;
-
-        normalized.push_str(pre);
-        normalized.push('\n');
-
-        let post = lines.next_back().ok_or_eyre("malformed PEM")?;
+        let _ = lines
+            .next_back()
+            .filter(|str| *str == "-----END RSA PUBLIC KEY-----")
+            .ok_or_eyre("malformed PEM")?;
 
         let is_base64char = |c: &char| c.is_ascii_alphanumeric() | ['+', '/', '='].contains(c);
 
-        for line in lines {
-            normalized.extend(line.chars().filter(is_base64char));
-            normalized.push('\n');
-        }
+        let mut normalized = String::with_capacity(key_str.len());
+        normalized.extend(lines.flat_map(|line| line.chars().filter(is_base64char)));
 
-        normalized.push_str(post);
+        let der = BASE64_STANDARD.decode(&normalized)?;
+        let pub_key = pkcs1::RsaPublicKey::from_der(&der)?;
 
-        let pub_key = RsaPublicKey::from_pkcs1_pem(&normalized)?;
+        let size = pub_key.modulus.len().try_into()?;
 
-        Ok(pub_key)
+        Ok(size)
     }
 
     fn invoke_trampoline<S, F>(trampoline: &F, bhd_path: S) -> Result<(), eyre::Error>

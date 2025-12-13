@@ -34,8 +34,6 @@ bincode = "2"
 chrono = "0.4"
 clap = "4"
 color-eyre = { version = "0.6", default-features = false }
-crash-context = "0.6"
-crash-handler = "0.6"
 ctrlc = "3"
 directories = "6"
 dll-syringe = { version = "0.16", default-features = false, features = ["syringe", "rpc"] }
@@ -52,8 +50,6 @@ me3-mod-host-types = { path = "crates/mod-host-types" }
 me3-mod-protocol = { path = "crates/mod-protocol" }
 me3-telemetry = { package = "me3_telemetry", path = "crates/telemetry" }
 memmap = "0.7"
-minidump-writer = "0.10"
-minidumper = "0.8"
 normpath = "1"
 pelite = "0.10"
 rayon = "1"
@@ -71,10 +67,11 @@ tempfile = "3"
 thiserror = "2"
 toml = { version = "0.9.5", features = ["preserve_order"] }
 tracing = { version = "0.1", features = ["release_max_level_info"] }
-tracing-appender = "0.2"
 tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", default-features = false }
-ureq = "3"
+ureq = { version = "3", default-features = false, features = [
+    "native-tls"
+]}
 windows = "0.61"
 
 [profile.dev.package."*"]
