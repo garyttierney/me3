@@ -17,7 +17,6 @@ eyre = { version = "0.6", default-features = false, features = ["track-caller"] 
 me3-env.workspace = true
 serde.workspace = true
 tracing.workspace = true
-tracing-appender.workspace = true
 tracing-error.workspace = true
 tracing-subscriber = { workspace = true, default-features = false, features = [
     "env-filter",
