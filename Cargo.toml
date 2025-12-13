@@ -39,7 +39,7 @@ directories = "6"
 dll-syringe = { version = "0.16", default-features = false, features = ["syringe", "rpc"] }
 expect-test = "1"
 eyre = { version = "0.6", default-features = false }
-from-singleton = { version = "2", features = ["regex-unicode"] }
+from-singleton = "3"
 is-terminal = "0.4"
 me3-binary-analysis = { path = "crates/binary-analysis" }
 me3-env = { path = "crates/env" }
