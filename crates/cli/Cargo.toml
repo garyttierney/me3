@@ -25,7 +25,7 @@ color-eyre = { workspace = true, default-features = false, features = [
 ctrlc.workspace = true
 directories.workspace = true
 is-terminal.workspace = true
-keyvalues-serde = "0.2.2"
+keyvalues-serde = "0.2.3"
 me3-env.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
@@ -45,7 +45,7 @@ tracing.workspace = true
 windows = { workspace = true, features = ["Win32_System_Console"] }
 winreg = "0.55.0"
 ureq.workspace = true
-semver = "1.0.26"
+semver = "1.0.27"
 
 [build-dependencies]
 winresource = "0.1"
