@@ -5,7 +5,7 @@ use eyre::Context;
 use me3_env::{LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::{AttachConfig, AttachRequest};
 use me3_telemetry::TelemetryConfig;
-use tracing::{error, info, instrument, warn};
+use tracing::{info, instrument, warn};
 
 use crate::{game::Game, steam::require_steam};
 
@@ -37,16 +37,14 @@ fn run() -> LauncherResult<()> {
     }
 
     let game_path = args.exe.parent();
-    let game = Game::launch(&args.exe, game_path)?;
+    let mut game = Game::launch(&args.exe, game_path)?;
     let request = AttachRequest { config };
 
     match game.attach(&args.host_dll, request) {
         Ok(_) => info!("attached to game successfully"),
-        Err(error) => {
-            error!(
-                error = &*error,
-                "an error occurred while loading me3, modded content will not be available"
-            );
+        Err(e) => {
+            game.child.kill()?;
+            return Err(e);
         }
     }
 

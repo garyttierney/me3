@@ -16,6 +16,7 @@ eyre = { workspace = true, default-features = false, features = [
     "track-caller",
 ] }
 me3-mod-protocol.workspace = true
+rkyv.workspace = true
 serde.workspace = true
 serde_derive.workspace = true
 

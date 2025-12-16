@@ -1,6 +1,8 @@
 [workspace]
 members = [
   "crates/cli",
+  "crates/env",
+  "crates/ipc",
   "crates/launcher",
   "crates/launcher-attach-protocol",
   "crates/mod-host",
@@ -8,7 +10,6 @@ members = [
   "crates/mod-host-assets",
   "crates/mod-host-types",
   "crates/telemetry",
-  "crates/env",
   "crates/xtask",
   "crates/binary-analysis",
 ]
@@ -36,13 +37,13 @@ clap = "4"
 color-eyre = { version = "0.6", default-features = false }
 ctrlc = "3"
 directories = "6"
-dll-syringe = { version = "0.16", default-features = false, features = ["syringe", "rpc"] }
 expect-test = "1"
 eyre = { version = "0.6", default-features = false }
 from-singleton = "3"
 is-terminal = "0.4"
 me3-binary-analysis = { path = "crates/binary-analysis" }
 me3-env = { path = "crates/env" }
+me3-ipc = { path = "crates/ipc" }
 me3-launcher-attach-protocol = { path = "crates/launcher-attach-protocol" }
 me3-mod-host = { path = "crates/mod-host" }
 me3-mod-host-assets = { path = "crates/mod-host-assets" }
@@ -55,6 +56,7 @@ pelite = "0.10"
 rayon = "1"
 regex = "1"
 rdvec = "0.2.1"
+rkyv = "0.8.12"
 schemars = "1.0"
 sentry = { version = "0.40", default-features = false }
 serde = "1"
