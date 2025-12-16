@@ -13,15 +13,17 @@ sentry = ["me3-telemetry/sentry", "dep:sentry"]
 default = []
 
 [dependencies]
-dll-syringe.workspace = true
 eyre = { workspace = true, default-features = false, features = ["track-caller"] }
 me3-env.workspace = true
+me3-ipc.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
 me3-telemetry.workspace = true
+rkyv.workspace = true
 toml.workspace = true
 tracing.workspace = true
 windows = { workspace = true, features = [
+    "Win32_System_Diagnostics_Debug",
     "Win32_System_LibraryLoader",
     "Win32_System_Threading",
 ] }

@@ -5,16 +5,17 @@
 
 use std::{
     fs::OpenOptions,
-    io::stdout,
     sync::{Arc, Mutex, OnceLock},
 };
 
 use eyre::OptionExt;
 use me3_binary_analysis::{fd4_step::Fd4StepTables, rtti};
 use me3_env::TelemetryVars;
+use me3_ipc::{message::ArchivedMsgToChild, request::Request};
 use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, AttachResult, Attachment};
 use me3_mod_host_assets::mapping::VfsOverrideMapping;
 use me3_telemetry::TelemetryConfig;
+use rkyv::{api::high::deserialize, rancor};
 use tracing::{error, info, warn, Span};
 use windows::Win32::{
     Globalization::CP_UTF8,
@@ -45,14 +46,12 @@ mod skip_logos;
 static INSTANCE: OnceLock<usize> = OnceLock::new();
 static mut TELEMETRY_INSTANCE: OnceLock<me3_telemetry::Telemetry> = OnceLock::new();
 
-dll_syringe::payload_procedure! {
-    fn me_attach(request: AttachRequest) -> AttachResult {
-        if request.config.suspend {
-            debugger::suspend_for_debugger();
-        }
-
-        on_attach(request)
+fn me_attach(request: AttachRequest) -> AttachResult {
+    if request.config.suspend {
+        debugger::suspend_for_debugger();
     }
+
+    on_attach(request)
 }
 
 #[cfg(coverage)]
@@ -78,9 +77,11 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         .append(true)
         .open(&telemetry_vars.log_file_path)?;
 
+    let bridge = me3_ipc::bridge::to_parent()?;
+
     let telemetry_config = TelemetryConfig::default()
         .enabled(telemetry_vars.enabled)
-        .with_console_writer(stdout)
+        .with_console_writer(move || bridge.log_writer())
         .with_file_writer(telemetry_log_file)
         .capture_panics(true);
 
@@ -253,6 +254,21 @@ fn dearxan(attach_config: &AttachConfig) -> Result<(), eyre::Error> {
     })
 }
 
+fn spawn_msg_thread() {
+    std::thread::spawn(|| {
+        let bridge = me3_ipc::bridge::to_parent().unwrap();
+        bridge.recv_loop(|msg| match msg.unwrap() {
+            ArchivedMsgToChild::Request(req) => {
+                let req = deserialize::<_, rancor::Error>(req).unwrap();
+                let (_, kind) = &req;
+                match kind {
+                    Request::Attach(_) => bridge.fulfill(req, me_attach).unwrap(),
+                }
+            }
+        })
+    });
+}
+
 #[unsafe(no_mangle)]
 pub extern "system" fn DllMain(instance: usize, reason: u32, _: *mut usize) -> i32 {
     match reason {
@@ -263,6 +279,8 @@ pub extern "system" fn DllMain(instance: usize, reason: u32, _: *mut usize) -> i
             };
 
             let _ = INSTANCE.set(instance);
+
+            spawn_msg_thread();
         }
         DLL_PROCESS_DETACH => {
             #[cfg(coverage)]

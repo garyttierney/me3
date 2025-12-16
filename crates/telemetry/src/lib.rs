@@ -1,4 +1,4 @@
-use std::fs::OpenOptions;
+use std::{fs::OpenOptions, io::stdout};
 
 use me3_env::TelemetryVars;
 use tracing::Level;
@@ -89,14 +89,14 @@ impl TryFrom<TelemetryVars> for TelemetryConfig {
             .create(true)
             .append(true)
             .open(&value.log_file_path)?;
-        let monitor = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&value.monitor_file_path)?;
+        // let monitor = OpenOptions::new()
+        //     .create(true)
+        //     .append(true)
+        //     .open(&value.monitor_file_path)?;
 
         Ok(TelemetryConfig::default()
             .enabled(value.enabled)
-            .with_console_writer(monitor)
+            .with_console_writer(stdout)
             .with_file_writer(log)
             .capture_panics(true))
     }

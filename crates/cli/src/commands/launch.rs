@@ -6,12 +6,11 @@ use std::{
     fs::File,
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    time::Duration,
 };
 
 use clap::{
@@ -494,7 +493,10 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
         .with_env_vars(telemetry_vars)
         .env("SteamAppId", app_id.to_string())
         .env("SteamGameId", app_id.to_string())
-        .env("SteamOverlayGameId", app_id.to_string());
+        .env("SteamOverlayGameId", app_id.to_string())
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
 
     info!(?injector_command, "running injector command");
     // Set terminal window title. See console_codes(4)
@@ -506,7 +508,8 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     let monitor_thread_running = running.clone();
 
     let monitor_thread = std::thread::spawn(move || {
-        let mut log_reader = BufReader::new(monitor_log_file);
+        let stdout = launcher_proc.stdout.take().unwrap();
+        let mut stdout = BufReader::new(stdout);
         let mut exit_code = None;
 
         while monitor_thread_running.load(Ordering::SeqCst) {
@@ -517,7 +520,8 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
             });
 
             let mut line = String::new();
-            let read = log_reader.read_line(&mut line);
+
+            let read = stdout.read_line(&mut line);
 
             if let Err(e) = read {
                 error!(error = &e as &dyn Error, "couldn't read log line from game");
@@ -527,13 +531,7 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
                 eprint!("{line}");
             } else if exit_code.is_some() {
                 break;
-            } else {
-                // Back-off the read loop because read_line() returns EOF.
-                // This needs replaced with a proper pipe.
-                std::thread::sleep(Duration::from_millis(250));
             }
-
-            std::thread::yield_now();
         }
 
         let _ = launcher_proc.kill();

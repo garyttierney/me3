@@ -12,7 +12,20 @@ use strum_macros::VariantArray;
 /// Chronologically sorted list of games supported by me3.
 ///
 /// Feature gates can use [`Ord`] comparisons between game type constants.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, VariantArray)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Hash,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    VariantArray,
+    rkyv::Archive,
+    rkyv::Serialize,
+    rkyv::Deserialize,
+)]
 pub enum Game {
     DarkSouls3,
     Sekiro,
