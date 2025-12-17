@@ -30,13 +30,13 @@ collapsible_if = "allow"
 missing_transmute_annotations = "allow"
 
 [workspace.dependencies]
-bincode = "2"
+bincode = "3"
 chrono = "0.4"
 clap = "4"
 color-eyre = { version = "0.6", default-features = false }
 ctrlc = "3"
 directories = "6"
-dll-syringe = { version = "0.16", default-features = false, features = ["syringe", "rpc"] }
+dll-syringe = { version = "0.17", default-features = false, features = ["syringe", "rpc"] }
 expect-test = "1"
 eyre = { version = "0.6", default-features = false }
 from-singleton = "3"
@@ -56,7 +56,7 @@ rayon = "1"
 regex = "1"
 rdvec = "0.2.1"
 schemars = "1.0"
-sentry = { version = "0.40", default-features = false }
+sentry = { version = "0.46", default-features = false }
 serde = "1"
 serde_derive = "1"
 serde_json = "1"
@@ -72,7 +72,7 @@ tracing-subscriber = { version = "0.3", default-features = false }
 ureq = { version = "3", default-features = false, features = [
     "native-tls"
 ]}
-windows = "0.61"
+windows = "0.62"
 
 [profile.dev.package."*"]
 opt-level = 3
