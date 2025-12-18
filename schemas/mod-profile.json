@@ -130,6 +130,16 @@
             "string",
             "null"
           ]
+        },
+        "load_during": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NativeLoadOrder"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -191,6 +201,13 @@
           ],
           "additionalProperties": false
         }
+      ]
+    },
+    "NativeLoadOrder": {
+      "type": "string",
+      "enum": [
+        "premain",
+        "postmain"
       ]
     },
     "Package": {
