@@ -33,7 +33,7 @@ use windows::{
     },
 };
 
-use crate::LauncherResult;
+use crate::{LauncherResult, MONITOR_PIPE};
 
 pub struct Game {
     pub(crate) child: std::process::Child,
@@ -59,8 +59,10 @@ impl Game {
 
         command.creation_flags(CREATE_SUSPENDED.0);
 
-        command.stderr(Stdio::null());
-        command.stdin(Stdio::null());
+        command
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
 
         let bridge = Arc::new(me3_ipc::bridge::to_child(32, &mut command)?);
 
@@ -114,24 +116,28 @@ impl Game {
     }
 
     fn spawn_msg_thread(&self) {
-        std::thread::spawn({
-            let bridge = self.bridge.clone();
-            move || {
-                let mut buf = String::new();
-                let stdout = io::stdout();
-                bridge.recv_loop(|msg| match msg.unwrap() {
+        let bridge = self.bridge.clone();
+        std::thread::spawn(move || {
+            let mut buf = String::new();
+            let stdout = io::stdout();
+            bridge
+                .recv_loop(|msg| match msg.unwrap() {
                     ArchivedMsgToParent::Response(res) => {
                         let res = deserialize::<_, rancor::Error>(res).unwrap();
                         Response::forward(res);
                     }
                     ArchivedMsgToParent::Log(s) => buf.push_str(s),
                     ArchivedMsgToParent::Flush => {
-                        let mut stdout = stdout.lock();
-                        let _ = write!(&mut stdout, "{buf}");
+                        let _ = match MONITOR_PIPE.get() {
+                            Some(monitor_pipe) => {
+                                monitor_pipe.lock().unwrap().write_all(buf.as_bytes())
+                            }
+                            None => stdout.lock().write_all(buf.as_bytes()),
+                        };
                         buf.clear();
                     }
                 })
-            }
+                .unwrap();
         });
     }
 }
