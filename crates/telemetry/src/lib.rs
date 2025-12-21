@@ -89,10 +89,6 @@ impl TryFrom<TelemetryVars> for TelemetryConfig {
             .create(true)
             .append(true)
             .open(&value.log_file_path)?;
-        // let monitor = OpenOptions::new()
-        //     .create(true)
-        //     .append(true)
-        //     .open(&value.monitor_file_path)?;
 
         Ok(TelemetryConfig::default()
             .enabled(value.enabled)

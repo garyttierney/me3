@@ -1,10 +1,11 @@
+mod named_pipe;
 pub mod proton;
 
 use std::{
     error::Error,
     fmt::Debug,
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Read},
     path::{Path, PathBuf},
     process::{Command, Stdio},
     sync::{
@@ -465,14 +466,20 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     std::fs::write(&attach_config_file, toml::to_string_pretty(&attach_config)?)?;
     info!(?attach_config_file, ?attach_config, "wrote attach config");
 
-    let monitor_log_file = NamedTempFile::with_suffix(".log")?;
+    #[cfg(unix)]
+    let monitor_pipe = {
+        let monitor_pipe = tempfile::Builder::new().make(named_pipe::open)?;
+        info!(path = ?monitor_pipe.path(), "monitor pipe created");
+        Some(monitor_pipe)
+    };
+
+    #[cfg(windows)]
+    let monitor_pipe: Option<NamedTempFile<PathBuf>> = None;
 
     let log_file_path = db.logs.create_log_file(profile.name())?;
     // Ensure log file exists so `normalize()` succeeds on Unix
     let log_file = File::create(&log_file_path)?;
     drop(log_file);
-
-    info!(path = ?monitor_log_file.path(), "temporary log file created");
 
     let launcher_vars = LauncherVars {
         exe: game_exe_path,
@@ -480,11 +487,22 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
         host_config_path: attach_config_file.path().to_path_buf(),
     };
 
+    let monitor_pipe_path = match &monitor_pipe {
+        Some(monitor_pipe) => Some(monitor_pipe.path().normalize()?.into_path_buf()),
+        None => None,
+    };
+
     let telemetry_vars = TelemetryVars {
         enabled: config.options.crash_reporting.unwrap_or_default(),
         log_file_path: log_file_path.normalize()?.into_path_buf(),
-        monitor_file_path: monitor_log_file.path().normalize()?.into_path_buf(),
+        monitor_pipe_path,
         trace_id: me3_telemetry::trace_id(),
+    };
+
+    let stdout = if monitor_pipe.is_none() {
+        Stdio::piped()
+    } else {
+        Stdio::null()
     };
 
     injector_command
@@ -495,12 +513,12 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
         .env("SteamGameId", app_id.to_string())
         .env("SteamOverlayGameId", app_id.to_string())
         .stdin(Stdio::null())
-        .stdout(Stdio::piped())
+        .stdout(stdout)
         .stderr(Stdio::null());
 
     info!(?injector_command, "running injector command");
     // Set terminal window title. See console_codes(4)
-    println!("\x1B]0;me3 - {}\x07", profile.name());
+    print!("\x1B]0;me3 - {}\x07", profile.name());
 
     let running = Arc::new(AtomicBool::new(true));
     let mut launcher_proc = injector_command.spawn()?;
@@ -508,8 +526,22 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     let monitor_thread_running = running.clone();
 
     let monitor_thread = std::thread::spawn(move || {
-        let stdout = launcher_proc.stdout.take().unwrap();
-        let mut stdout = BufReader::new(stdout);
+        let mut monitor_pipe = monitor_pipe
+            .and_then(|path| File::open(path).ok())
+            .map(BufReader::new);
+
+        let mut stdout = launcher_proc.stdout.take().map(BufReader::new);
+
+        let reader = monitor_pipe
+            .as_mut()
+            .map(|reader| reader as &mut BufReader<dyn Read>)
+            .or_else(|| {
+                stdout
+                    .as_mut()
+                    .map(|reader| reader as &mut BufReader<dyn Read>)
+            })
+            .expect("could not obtain launcher output reader");
+
         let mut exit_code = None;
 
         while monitor_thread_running.load(Ordering::SeqCst) {
@@ -521,7 +553,7 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
 
             let mut line = String::new();
 
-            let read = stdout.read_line(&mut line);
+            let read = reader.read_line(&mut line);
 
             if let Err(e) = read {
                 error!(error = &e as &dyn Error, "couldn't read log line from game");

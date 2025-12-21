@@ -1688,6 +1688,7 @@ dependencies = [
  "directories",
  "is-terminal",
  "keyvalues-serde",
+ "libc",
  "me3-env",
  "me3-launcher-attach-protocol",
  "me3-mod-protocol",
@@ -1732,6 +1733,7 @@ dependencies = [
  "sentry",
  "toml",
  "tracing",
+ "tracing-subscriber",
  "windows",
  "winresource",
 ]

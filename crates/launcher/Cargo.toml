@@ -22,6 +22,7 @@ me3-telemetry.workspace = true
 rkyv.workspace = true
 toml.workspace = true
 tracing.workspace = true
+tracing-subscriber.workspace = true
 windows = { workspace = true, features = [
     "Win32_System_Diagnostics_Debug",
     "Win32_System_LibraryLoader",
