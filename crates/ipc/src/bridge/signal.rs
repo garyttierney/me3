@@ -10,12 +10,18 @@ use windows::{
 
 use crate::bridge::INHERIT_HANDLE;
 
+/// Multiple producers, single consumer signal.
+///
+/// Misusing it (having multiple consumers) is not unsafe but may lead to deadlocks.
 #[repr(C, align(64))]
 pub struct MpscSignal {
     signaled: AtomicBool,
     handle: HANDLE,
 }
 
+/// Single producer, multiple consumers signal.
+///
+/// Misusing it (having multiple producers) is not unsafe but may lead to deadlocks.
 #[repr(C, align(64))]
 pub struct SpmcSignal {
     asleep: AtomicU32,
@@ -38,6 +44,8 @@ impl MpscSignal {
     #[inline]
     pub fn notify(&self) -> Result<(), WinError> {
         if self.signaled.load(Ordering::Acquire) {
+            // Can get away with this because we only ever expect a single thread
+            // to set this to `false`, so we can elide future OS calls.
             return Ok(());
         }
         self.signaled.store(true, Ordering::Release);
@@ -46,9 +54,9 @@ impl MpscSignal {
 
     #[inline]
     pub fn wait(&self) -> Result<(), WinError> {
-        if self.signaled.swap(false, Ordering::Acquire) {
-            self.signaled.store(false, Ordering::Release);
-            return Ok(());
+        if self.signaled.swap(false, Ordering::AcqRel) {
+            // Was signaled, reset the event to prevent spurious wakeups.
+            return unsafe { ResetEvent(self.handle) };
         }
         match unsafe { WaitForSingleObject(self.handle, INFINITE) } {
             WAIT_OBJECT_0 => Ok(()),
@@ -60,6 +68,7 @@ impl MpscSignal {
 impl SpmcSignal {
     #[inline]
     pub fn new() -> Self {
+        // This event is manual reset since we want to wake up multiple threads.
         let handle = unsafe {
             CreateEventW(INHERIT_HANDLE, true, false, PCWSTR::null()).expect("CreateEventW failed")
         };
@@ -73,6 +82,7 @@ impl SpmcSignal {
     #[inline]
     pub fn notify(&self) -> Result<(), WinError> {
         if self.asleep.load(Ordering::Acquire) == 0 {
+            // No threads are sleeping
             return Ok(());
         }
         unsafe { SetEvent(self.handle) }
@@ -84,7 +94,8 @@ impl SpmcSignal {
         if unsafe { WaitForSingleObject(self.handle, INFINITE) != WAIT_OBJECT_0 } {
             return Err(WinError::from_win32());
         }
-        if self.asleep.fetch_sub(1, Ordering::Release) != 0 {
+        if self.asleep.fetch_sub(1, Ordering::Release) != 1 {
+            // Other threads are sleeping.
             return Ok(());
         }
         fence(Ordering::Acquire);

@@ -5,6 +5,9 @@ use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::request::{Request, Response};
 
+/// Trait for converting distinct types into [`Request`]s.
+///
+/// Also associates it with a corresponding [`ConvertResponse`].
 pub trait ConvertRequest: Sized {
     type Res: ConvertResponse;
 
@@ -12,6 +15,9 @@ pub trait ConvertRequest: Sized {
     fn try_from_req(req: Request) -> Result<Self, TryFromRequestError>;
 }
 
+/// Trait for converting distinct types into [`Response`]s.
+///
+/// Also associates it with a corresponding [`ConvertRequest`].
 pub trait ConvertResponse: Sized {
     type Req: ConvertRequest;
 
