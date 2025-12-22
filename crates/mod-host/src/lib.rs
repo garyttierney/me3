@@ -3,10 +3,7 @@
 #![feature(tuple_trait)]
 #![feature(unboxed_closures)]
 
-use std::{
-    fs::OpenOptions,
-    sync::{Arc, Mutex, OnceLock},
-};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use eyre::OptionExt;
 use me3_binary_analysis::{fd4_step::Fd4StepTables, rtti};
@@ -72,17 +69,16 @@ fn on_attach(request: AttachRequest) -> AttachResult {
     let attach_config = Arc::new(request.config);
 
     let telemetry_vars: TelemetryVars = me3_env::deserialize_from_env()?;
-    let telemetry_log_file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&telemetry_vars.log_file_path)?;
 
     let bridge = me3_ipc::bridge::to_parent()?;
 
+    let console_writer = bridge.console_log_writer();
+    let file_writer = bridge.file_log_writer();
+
     let telemetry_config = TelemetryConfig::default()
         .enabled(telemetry_vars.enabled)
-        .with_console_writer(move || bridge.log_writer())
-        .with_file_writer(telemetry_log_file)
+        .with_console_writer(move || console_writer.clone())
+        .with_file_writer(move || file_writer.clone())
         .capture_panics(true);
 
     let telemetry_guard = me3_telemetry::install(telemetry_config);

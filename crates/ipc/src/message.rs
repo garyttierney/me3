@@ -6,8 +6,11 @@ use crate::request::{Request, RequestError, RequestId, Response};
 /// [`BridgeToChild::recv_loop`](crate::bridge::BridgeToChild::recv_loop).
 #[derive(Clone, Archive, Serialize, Deserialize)]
 pub enum MsgToParent {
-    /// A single log message from the child process.
-    Log(Box<str>),
+    /// A single log message from the child process meant for the console.
+    ConsoleLog(Box<str>),
+
+    /// A single log message from the child process meant for the log file.
+    FileLog(Box<str>),
 
     /// RPC response coming from the child process.
     ///

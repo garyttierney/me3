@@ -17,7 +17,7 @@ use me3_launcher_attach_protocol::{AttachRequest, AttachResult};
 use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::{
-    bridge::SendError,
+    bridge::{Channel, SendError},
     request::convert::{
         ConvertRequest, ConvertResponse, TryFromRequestError, TryFromResponseError,
     },
@@ -54,6 +54,9 @@ pub enum RequestError {
     #[error("bad response: {0}")]
     BadResponse(#[from] TryFromResponseError),
 
+    #[error("tried to send a request from the receive loop")]
+    RequestFromRecv,
+
     #[error("request panicked: {0}")]
     Panic(Box<str>),
 }
@@ -85,6 +88,11 @@ impl Request {
         F: FnOnce((RequestId, Self)) -> Result<(), SendError>,
         Res: ConvertResponse,
     {
+        if Channel::is_in_recv_loop() {
+            // Prevent awaiting a request from the receive loop as it will block the thread.
+            return Err(RequestError::RequestFromRecv);
+        }
+
         // Pin on the stack - we'll block until the response is ready or an error occurs.
         let res: Pin<&AwaitedResponse> = pin!(AwaitedResponse::new(id));
 

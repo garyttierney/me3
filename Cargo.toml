@@ -31,7 +31,6 @@ collapsible_if = "allow"
 missing_transmute_annotations = "allow"
 
 [workspace.dependencies]
-bincode = "2"
 chrono = "0.4"
 clap = "4"
 color-eyre = { version = "0.6", default-features = false }
