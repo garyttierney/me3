@@ -33,11 +33,22 @@ mod rel;
 mod shared;
 mod signal;
 
+/// An IPC bridge to the parent process.
+///
+/// Can be cheaply obtained any number of times with [`to_parent`], but must be preceded by
+/// a single call to [`to_child`] in the parent process that creates it.
+///
+/// This end is [`Clone`] and dropping it does not close the connection.
 #[derive(Clone)]
 pub struct BridgeToParent {
     shared: &'static SharedBridge,
 }
 
+/// An IPC bridge to the child process.
+///
+/// Creating it with [`to_child`] allocates and sets up the connection.
+///
+/// Dropping this end closes the connection.
 pub struct BridgeToChild {
     shared: &'static SharedBridge,
     _file_view: FileView,
@@ -59,14 +70,20 @@ pub enum BridgeError {
 #[derive(Clone)]
 pub struct LogWriter(BridgeToParent);
 
+/// Opens the child end of the IPC bridge to the parent process.
+///
+/// Can be cheaply called any number of times, but must be preceded by
+/// a single call to [`to_child`] in the parent process that creates it.
 pub fn to_parent() -> Result<BridgeToParent, BridgeError> {
     static BRIDGE: LazyLock<Result<BridgeToParent, BridgeError>> = LazyLock::new(|| {
         let file_mapping = deserialize_from_env::<FileMapping>()
             .map_err(|e| BridgeError::Json(e.to_string().into_boxed_str()))?;
         let file_view = file_mapping.to_view()?;
 
+        // SAFETY: the bridge was initialized by the parent process.
         let shared = unsafe { file_view.as_slice().cast::<SharedBridge>().as_ref() };
 
+        // Forget both handles, they will be closed when the process finishes.
         mem::forget(file_view);
         mem::forget(file_mapping);
 
@@ -75,6 +92,13 @@ pub fn to_parent() -> Result<BridgeToParent, BridgeError> {
     BRIDGE.clone()
 }
 
+/// Creates the parent end of the IPC bridge to the child process.
+///
+/// This function allocates and sets up the connection a single time.
+///
+/// `size_mb` represents the size of the shared memory mapping between the processes (in MB).
+/// This function accepts sizes between 1 MB and 1 GB.
+#[must_use = "the connection is closed on drop"]
 pub fn to_child(size_mb: u32, command: &mut Command) -> Result<BridgeToChild, BridgeError> {
     if size_mb == 0 || size_mb > 1024 {
         return Err(BridgeError::Size(size_mb));
@@ -85,6 +109,7 @@ pub fn to_child(size_mb: u32, command: &mut Command) -> Result<BridgeToChild, Br
     let file_mapping = FileMapping::open(size)?;
     let file_view = file_mapping.to_view()?;
 
+    // SAFETY: `file_view` is a contiguous slice of shared memory.
     let shared =
         unsafe { SharedBridge::new_in(file_view.as_slice()).ok_or(BridgeError::Size(size_mb))? };
 
@@ -98,11 +123,17 @@ pub fn to_child(size_mb: u32, command: &mut Command) -> Result<BridgeToChild, Br
 }
 
 impl BridgeToParent {
+    /// Returns a writer implementing [`io::Write`] for sending [`MsgToParent::Log`] messages.
+    ///
+    /// The writer will error if it receives invalid UTF-8.
     #[inline]
     pub fn log_writer(&self) -> LogWriter {
         LogWriter(self.clone())
     }
 
+    /// Fulfill a RPC request from the parent process with the appropriate function.
+    ///
+    /// Sends a [`MsgToParent::Response`] to the parent process.
     #[inline]
     pub fn fulfill<Req, F>(&self, (id, req): (RequestId, Request), f: F) -> Result<(), SendError>
     where
@@ -114,11 +145,15 @@ impl BridgeToParent {
         Ok(())
     }
 
+    /// Send a [`MsgToParent`] to the parent process.
     #[inline]
     pub fn send(&self, msg: MsgToParent) -> Result<(), SendError> {
         self.shared.to_parent.send::<_, rancor::Error>(msg)
     }
 
+    /// Receive messages from the parent process.
+    ///
+    /// Only one thread can be in the scope of [`BridgeToParent::recv_loop`] at a time.
     #[inline]
     pub fn recv_loop<F>(&self, f: F) -> Result<(), RecvError>
     where
@@ -129,6 +164,9 @@ impl BridgeToParent {
 }
 
 impl BridgeToChild {
+    /// Queue a RPC request in the child process and block until it completes, yielding the result.
+    ///
+    /// Sends a [`MsgToChild::Request`] to the child process.
     #[inline]
     pub fn request<Req>(&self, req: Req) -> Result<Req::Res, RequestError>
     where
@@ -139,11 +177,15 @@ impl BridgeToChild {
         req.await_response(id, |(id, req)| self.send(MsgToChild::Request((id, req))))
     }
 
+    /// Send a [`MsgToChild`] to the parent process.
     #[inline]
     pub fn send(&self, msg: MsgToChild) -> Result<(), SendError> {
         self.shared.to_child.send(msg)
     }
 
+    /// Receive messages from the child process.
+    ///
+    /// Only one thread can be in the scope of [`BridgeToChild::recv_loop`] at a time.
     #[inline]
     pub fn recv_loop<F>(&self, f: F) -> Result<(), RecvError>
     where
@@ -168,6 +210,7 @@ impl io::Write for LogWriter {
 
     #[inline]
     fn flush(&mut self) -> io::Result<()> {
+        // Could send `MsgToParent::Flush` here but `recv_loop` already does so automatically.
         Ok(())
     }
 }
@@ -187,6 +230,7 @@ struct FileView {
 
 impl FileMapping {
     fn open(size: usize) -> Result<Self, WinError> {
+        // `INHERIT_HANDLE` so the child process can use the handle directly.
         let handle = unsafe {
             CreateFileMappingW(
                 INVALID_HANDLE_VALUE,
@@ -206,6 +250,8 @@ impl FileMapping {
 
     fn to_view(&self) -> Result<FileView, WinError> {
         let size = self.size;
+
+        // Non-null or bail.
         let ptr = unsafe {
             NonNull::new(MapViewOfFile(self.handle(), FILE_MAP_ALL_ACCESS, 0, 0, size).Value)
                 .ok_or_else(WinError::from_win32)?

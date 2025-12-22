@@ -14,6 +14,7 @@ impl SharedBridge {
             return None;
         }
 
+        // SAFETY: up to caller, including alignment and aliasing.
         unsafe {
             let mut start = block.cast::<Self>();
 

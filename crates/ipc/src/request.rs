@@ -25,14 +25,19 @@ use crate::{
 
 pub mod convert;
 
+/// Opaque unique request ID.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Archive, Serialize, Deserialize)]
 pub struct RequestId(u64);
 
+/// Kinds of requests seen by
+/// [`BridgeToParent::recv_loop`](crate::bridge::BridgeToParent::recv_loop).
 #[derive(Clone, Archive, Serialize, Deserialize)]
 pub enum Request {
     Attach(AttachRequest),
 }
 
+/// Kinds of responses seen by
+/// [`BridgeToChild::recv_loop`](crate::bridge::BridgeToChild::recv_loop).
 #[derive(Clone, Archive, Serialize, Deserialize)]
 pub enum Response {
     Attach(AttachResult),
@@ -61,6 +66,8 @@ impl Request {
         F: FnOnce(Req) -> Req::Res + UnwindSafe,
     {
         let req = Req::try_from_req(self)?;
+
+        // Propagate panics as errors to the parent process.
         match panic::catch_unwind(move || f(req)) {
             Ok(res) => Ok(res),
             Err(payload) => {
@@ -78,9 +85,14 @@ impl Request {
         F: FnOnce((RequestId, Self)) -> Result<(), SendError>,
         Res: ConvertResponse,
     {
+        // Pin on the stack - we'll block until the response is ready or an error occurs.
         let res: Pin<&AwaitedResponse> = pin!(AwaitedResponse::new(id));
+
+        // Register (the id should be unique).
         res.register();
         f((id, self)).map_err(|e| RequestError::Send(e.to_string().into_boxed_str()))?;
+
+        // Block until the response is forwarded.
         res.await_response()
     }
 
@@ -94,6 +106,7 @@ impl Request {
 }
 
 impl Response {
+    /// Forward the response to the waiting thread to unblock it.
     #[inline]
     pub fn forward(res: (RequestId, Result<Self, RequestError>)) {
         AwaitedResponse::forward_response(res);
@@ -110,6 +123,7 @@ struct AwaitedResponse {
 
 struct AwaitedResponsePtr(*const AwaitedResponse);
 
+// Identity hasher because `RequestId` are already hashes (and are unique).
 static AWAITED_RESPONSES: Mutex<HashMap<RequestId, AwaitedResponsePtr, RequestBuildHasher>> =
     Mutex::new(HashMap::with_hasher(RequestBuildHasher));
 
@@ -129,10 +143,15 @@ impl AwaitedResponse {
 
     #[inline]
     fn register(self: Pin<&Self>) {
-        let _ = AWAITED_RESPONSES
+        let with_this_id = AWAITED_RESPONSES
             .lock()
             .unwrap()
             .insert(self.id, AwaitedResponsePtr(self.get_ref()));
+
+        assert!(
+            with_this_id.is_none(),
+            "request with this id was already registered"
+        );
 
         self.is_registered.store(true, Ordering::Relaxed);
     }
@@ -142,6 +161,7 @@ impl AwaitedResponse {
     where
         Res: ConvertResponse,
     {
+        // Start by spinning.
         for _ in 0..Self::SPIN_COUNT {
             if self.is_fulfilled.load(Ordering::Relaxed) {
                 let mut lock = self.payload.0.lock().unwrap();
@@ -151,6 +171,7 @@ impl AwaitedResponse {
             hint::spin_loop();
         }
 
+        // Wait on a condition variable.
         let (lock, cvar) = &self.payload;
         let mut res = lock.lock().unwrap();
         loop {
@@ -165,10 +186,14 @@ impl AwaitedResponse {
     #[inline]
     fn forward_response((id, res): (RequestId, Result<Response, RequestError>)) {
         let mut awaited_responses = AWAITED_RESPONSES.lock().unwrap();
+
+        // Remove the request directly, it saves removing it in the `AwaitedResponse` drop impl.
         let Some(awaited) = awaited_responses.remove(&id).map(|ptr| unsafe { &*ptr.0 }) else {
+            // Unexpected response?
             return;
         };
 
+        // Unregister, fulfill and notify.
         awaited.is_registered.store(false, Ordering::Relaxed);
 
         let (lock, cvar) = &awaited.payload;
@@ -182,12 +207,15 @@ impl AwaitedResponse {
 impl Drop for AwaitedResponse {
     #[inline]
     fn drop(&mut self) {
+        // If we are still registered, remove the request.
         if *self.is_registered.get_mut() {
+            // This only happens if the request isn't fulfilled successfully.
             let _ = AWAITED_RESPONSES.lock().unwrap().remove(&self.id);
         }
     }
 }
 
+/// Identity hasher because `RequestId` are already hashes (and are unique).
 struct RequestBuildHasher;
 
 impl BuildHasher for RequestBuildHasher {

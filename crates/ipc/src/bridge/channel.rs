@@ -12,7 +12,7 @@ use rkyv::{
 use windows::core::Error as WinError;
 
 use crate::bridge::{
-    buffer::BipBuffer,
+    buffer::{BipBuffer, WriteError},
     guard::{SpGuardError, SpSpan},
     signal::{MpscSignal, SpmcSignal},
 };
@@ -28,6 +28,9 @@ pub struct Channel {
 pub enum SendError<E = rancor::Error> {
     #[error(transparent)]
     Os(#[from] WinError),
+
+    #[error("failed to send message: {0}")]
+    Write(#[from] WriteError),
 
     #[error("failed to serialize message: {0}")]
     Serialize(E),
@@ -66,6 +69,7 @@ impl Channel {
         M: for<'a> Serialize<HighSerializer<AlignedVec, ArenaHandle<'a>, E>>,
         E: Source,
     {
+        // Push the message and let the receiver know.
         self.push_msg(msg)?;
         self.has_messages.notify().map_err(SendError::Os)
     }
@@ -81,17 +85,22 @@ impl Channel {
         let _guard = SP_SPAN.enter()?;
 
         loop {
+            // Spin, receiving messages.
             for _ in 0..Self::SPIN_COUNT {
+                // SAFETY: only one thread can call `queue.read()` because of the guard.
                 while unsafe { self.queue.read(|bytes| f(access(bytes))).is_some() } {}
                 hint::spin_loop();
             }
 
+            // There may be senders waiting for space in the queue.
             self.has_capacity.notify()?;
 
+            // Flush, since we've gone through all the messages for now.
             if let Some(flush) = &flush {
                 f(Ok(flush));
             }
 
+            // Wait for more messages.
             self.has_messages.wait()?;
         }
     }
@@ -104,13 +113,13 @@ impl Channel {
     {
         let bytes = to_bytes::<E>(&msg).map_err(SendError::Serialize)?;
 
+        // Block until the message can be written.
         loop {
-            if self.queue.write(&bytes).is_ok() {
-                break;
+            match self.queue.write(&bytes) {
+                Ok(()) => return Ok(()),
+                Err(WriteError::Full) => self.has_capacity.wait()?,
+                Err(e) => return Err(e.into()),
             }
-            self.has_capacity.wait()?;
         }
-
-        Ok(())
     }
 }
