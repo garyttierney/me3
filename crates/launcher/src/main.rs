@@ -1,28 +1,26 @@
 #![windows_subsystem = "windows"]
 #![feature(windows_process_extensions_main_thread_handle)]
 
-use std::{
-    fs::{File, OpenOptions},
-    sync::{Mutex, OnceLock},
-};
+use std::fs::OpenOptions;
 
 use me3_env::{LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::{AttachConfig, AttachRequest};
 use me3_telemetry::TelemetryConfig;
 use tracing::{info, instrument, warn};
-use tracing_subscriber::fmt::writer::MakeWriter;
 
-use crate::{game::Game, steam::require_steam};
+use crate::{game::Game, steam::require_steam, writer::MakeWriterWrapper};
 
 mod game;
 mod steam;
+mod writer;
 
 pub type LauncherResult<T> = eyre::Result<T>;
 
-static MONITOR_PIPE: OnceLock<Mutex<File>> = OnceLock::new();
-
-#[instrument]
-fn run() -> LauncherResult<()> {
+#[instrument(skip_all)]
+fn run(
+    console_log_writer: MakeWriterWrapper,
+    file_log_writer: MakeWriterWrapper,
+) -> LauncherResult<()> {
     info!("Launcher started");
 
     let args: LauncherVars = me3_env::deserialize_from_env()?;
@@ -47,7 +45,7 @@ fn run() -> LauncherResult<()> {
     let mut game = Game::launch(&args.exe, game_path)?;
     let request = AttachRequest { config };
 
-    match game.attach(&args.host_dll, request) {
+    match game.attach(&args.host_dll, console_log_writer, file_log_writer, request) {
         Ok(_) => info!("attached to game successfully"),
         Err(e) => {
             game.child.kill()?;
@@ -65,18 +63,29 @@ fn main() -> LauncherResult<()> {
 
     let mut telemetry_vars = me3_env::deserialize_from_env::<TelemetryVars>()?;
 
-    if let Some(path) = telemetry_vars.monitor_pipe_path.take() {
-        let pipe = OpenOptions::new().read(false).append(true).open(&path)?;
-        MONITOR_PIPE.get_or_init(move || Mutex::new(pipe));
-    }
+    let console_log_writer = match telemetry_vars.monitor_pipe_path.take() {
+        Some(path) => {
+            MakeWriterWrapper::new(OpenOptions::new().read(false).write(true).open(&path)?)
+        }
+        None => MakeWriterWrapper::stdout(),
+    };
 
-    let mut telemetry_config = TelemetryConfig::try_from(telemetry_vars)?;
+    let file_log_writer = MakeWriterWrapper::new(
+        OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&telemetry_vars.log_file_path)?,
+    );
 
-    if let Some(monitor_pipe) = MONITOR_PIPE.get() {
-        telemetry_config = telemetry_config.with_console_writer(|| monitor_pipe.make_writer())
-    }
+    let telemetry_config = TelemetryConfig::default()
+        .enabled(telemetry_vars.enabled)
+        .with_console_writer(console_log_writer.clone())
+        .with_file_writer(file_log_writer.clone())
+        .capture_panics(true);
 
     let _telemetry = me3_telemetry::install(telemetry_config);
 
-    me3_telemetry::with_root_span("launcher", "run", run)
+    me3_telemetry::with_root_span("launcher", "run", move || {
+        run(console_log_writer, file_log_writer)
+    })
 }

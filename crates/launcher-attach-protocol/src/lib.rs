@@ -1,10 +1,5 @@
-use std::{
-    fmt::Debug,
-    io::{Read, Write},
-    path::PathBuf,
-};
+use std::{fmt::Debug, path::PathBuf};
 
-use bincode::{error::DecodeError, Decode, Encode};
 use me3_mod_protocol::{native::Native, package::Package, Game};
 use rkyv::{
     option::ArchivedOption,
@@ -135,36 +130,5 @@ impl<E: Into<eyre::Report>> From<E> for AttachError {
     fn from(value: E) -> Self {
         let err = value.into();
         AttachError(format!("{err:#?}"))
-    }
-}
-
-#[derive(Debug, Decode, Encode)]
-pub enum HostMessage {
-    CrashDumpRequest {
-        /// The address of an `EXCEPTION_POINTERS` in the client's memory
-        exception_pointers: u64,
-        /// The process id of the client process
-        process_id: u32,
-        /// The id of the thread in the client process in which the crash originated
-        thread_id: u32,
-        /// The top level exception code, also found in the
-        /// `EXCEPTION_POINTERS.ExceptionRecord.ExceptionCode`
-        exception_code: i32,
-    },
-}
-
-impl HostMessage {
-    pub fn read_from(reader: &mut impl Read) -> std::io::Result<Self> {
-        bincode::decode_from_std_read(reader, bincode::config::standard()).map_err(
-            |err| match err {
-                DecodeError::Io { inner, .. } => inner,
-                err => std::io::Error::other(err),
-            },
-        )
-    }
-
-    pub fn write_to(self, writer: &mut impl Write) -> std::io::Result<usize> {
-        bincode::encode_into_std_write(&self, writer, bincode::config::standard())
-            .map_err(std::io::Error::other)
     }
 }

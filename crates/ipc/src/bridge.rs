@@ -16,7 +16,7 @@ use windows::{
     },
 };
 
-pub(crate) use crate::bridge::channel::SendError;
+pub(crate) use crate::bridge::channel::{Channel, SendError};
 use crate::{
     bridge::{channel::RecvError, shared::SharedBridge},
     message::{ArchivedMsgToChild, ArchivedMsgToParent, MsgToChild, MsgToParent},
@@ -68,7 +68,10 @@ pub enum BridgeError {
 }
 
 #[derive(Clone)]
-pub struct LogWriter(BridgeToParent);
+pub struct LogWriter<F: Fn(Box<str>) -> MsgToParent + Clone> {
+    bridge: BridgeToParent,
+    to_msg: F,
+}
 
 /// Opens the child end of the IPC bridge to the parent process.
 ///
@@ -123,12 +126,30 @@ pub fn to_child(size_mb: u32, command: &mut Command) -> Result<BridgeToChild, Br
 }
 
 impl BridgeToParent {
-    /// Returns a writer implementing [`io::Write`] for sending [`MsgToParent::Log`] messages.
+    /// Returns a writer implementing [`io::Write`] for sending [`MsgToParent::ConsoleLog`]
+    /// messages.
     ///
     /// The writer will error if it receives invalid UTF-8.
     #[inline]
-    pub fn log_writer(&self) -> LogWriter {
-        LogWriter(self.clone())
+    pub fn console_log_writer(
+        &self,
+    ) -> LogWriter<impl Fn(Box<str>) -> MsgToParent + Clone + 'static> {
+        LogWriter {
+            bridge: self.clone(),
+            to_msg: MsgToParent::ConsoleLog,
+        }
+    }
+
+    /// Returns a writer implementing [`io::Write`] for sending [`MsgToParent::FileLog`]
+    /// messages.
+    ///
+    /// The writer will error if it receives invalid UTF-8.
+    #[inline]
+    pub fn file_log_writer(&self) -> LogWriter<impl Fn(Box<str>) -> MsgToParent + Clone + 'static> {
+        LogWriter {
+            bridge: self.clone(),
+            to_msg: MsgToParent::FileLog,
+        }
     }
 
     /// Fulfill a RPC request from the parent process with the appropriate function.
@@ -196,13 +217,13 @@ impl BridgeToChild {
     }
 }
 
-impl io::Write for LogWriter {
+impl<F: Fn(Box<str>) -> MsgToParent + Clone> io::Write for LogWriter<F> {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let str = str::from_utf8(buf).map_err(|_| io::Error::from(io::ErrorKind::InvalidData))?;
 
-        self.0
-            .send(MsgToParent::Log(str.into()))
+        self.bridge
+            .send((self.to_msg)(str.into()))
             .map_err(io::Error::other)?;
 
         Ok(str.len())

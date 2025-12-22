@@ -13,7 +13,7 @@ use windows::core::Error as WinError;
 
 use crate::bridge::{
     buffer::{BipBuffer, WriteError},
-    guard::{SpGuardError, SpSpan},
+    guard::{GuardError, RecvLoopSpan},
     signal::{MpscSignal, SpmcSignal},
 };
 
@@ -42,7 +42,7 @@ pub enum RecvError {
     Os(#[from] WinError),
 
     #[error(transparent)]
-    Producer(#[from] SpGuardError),
+    Producer(#[from] GuardError),
 }
 
 impl Channel {
@@ -81,8 +81,8 @@ impl Channel {
         A: Portable + for<'a> CheckBytes<HighValidator<'a, E>>,
         E: Source,
     {
-        static SP_SPAN: SpSpan = SpSpan::new();
-        let _guard = SP_SPAN.enter()?;
+        // Prevent more than one thread from entering the loop at a time.
+        let _guard = RECV_LOOP_SPAN.enter()?;
 
         loop {
             // Spin, receiving messages.
@@ -106,6 +106,11 @@ impl Channel {
     }
 
     #[inline]
+    pub fn is_in_recv_loop() -> bool {
+        RECV_LOOP_SPAN.is_entered_by_current_thread()
+    }
+
+    #[inline]
     fn push_msg<M, E>(&self, msg: M) -> Result<(), SendError<E>>
     where
         M: for<'a> Serialize<HighSerializer<AlignedVec, ArenaHandle<'a>, E>>,
@@ -123,3 +128,5 @@ impl Channel {
         }
     }
 }
+
+static RECV_LOOP_SPAN: RecvLoopSpan = RecvLoopSpan::new();

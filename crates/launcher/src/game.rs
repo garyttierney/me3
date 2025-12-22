@@ -1,6 +1,6 @@
 use std::{
     ffi::c_void,
-    io::{self, Write},
+    io::Write,
     iter, mem,
     os::windows::{
         ffi::OsStrExt,
@@ -12,12 +12,13 @@ use std::{
     sync::Arc,
 };
 
-use eyre::eyre;
+use eyre::{eyre, Context};
 use me3_env::{deserialize_from_env, serialize_into_command, TelemetryVars};
 use me3_ipc::{bridge::BridgeToChild, message::ArchivedMsgToParent, request::Response};
 use me3_launcher_attach_protocol::{AttachRequest, Attachment};
 use rkyv::{api::high::deserialize, rancor};
 use tracing::{info, instrument};
+use tracing_subscriber::fmt::MakeWriter;
 use windows::{
     core::{s, w, Error as WinError},
     Win32::{
@@ -33,7 +34,7 @@ use windows::{
     },
 };
 
-use crate::{LauncherResult, MONITOR_PIPE};
+use crate::{writer::MakeWriterWrapper, LauncherResult};
 
 pub struct Game {
     pub(crate) child: std::process::Child,
@@ -80,18 +81,20 @@ impl Game {
     pub fn attach(
         &self,
         dll_path: &Path,
+        console_log_writer: MakeWriterWrapper,
+        log_file_writer: MakeWriterWrapper,
         attach_request: AttachRequest,
     ) -> LauncherResult<Attachment> {
         let pid = self.child.id();
 
         info!(pid, "attaching to process");
 
-        self.spawn_msg_thread();
+        self.spawn_msg_thread(console_log_writer, log_file_writer);
 
         let thread_handle = self.child.main_thread_handle();
         let process_handle = self.child.as_handle().try_clone_to_owned()?;
 
-        inject_dll(&process_handle, dll_path)?;
+        inject_dll(&process_handle, dll_path).wrap_err("failed to inject mod host DLL")?;
 
         if attach_request.config.suspend {
             info!("Process will be suspended until a debugger is attached...");
@@ -115,26 +118,36 @@ impl Game {
         let _ = self.child.wait();
     }
 
-    fn spawn_msg_thread(&self) {
+    fn spawn_msg_thread(
+        &self,
+        console_log_writer: MakeWriterWrapper,
+        log_file_writer: MakeWriterWrapper,
+    ) {
         let bridge = self.bridge.clone();
         std::thread::spawn(move || {
-            let mut buf = String::new();
-            let stdout = io::stdout();
+            let mut console_buf = String::new();
+            let mut file_buf = String::new();
+
             bridge
                 .recv_loop(|msg| match msg.unwrap() {
                     ArchivedMsgToParent::Response(res) => {
                         let res = deserialize::<_, rancor::Error>(res).unwrap();
                         Response::forward(res);
                     }
-                    ArchivedMsgToParent::Log(s) => buf.push_str(s),
+                    ArchivedMsgToParent::ConsoleLog(s) => console_buf.push_str(s),
+                    ArchivedMsgToParent::FileLog(s) => file_buf.push_str(s),
                     ArchivedMsgToParent::Flush => {
-                        let _ = match MONITOR_PIPE.get() {
-                            Some(monitor_pipe) => {
-                                monitor_pipe.lock().unwrap().write_all(buf.as_bytes())
-                            }
-                            None => stdout.lock().write_all(buf.as_bytes()),
-                        };
-                        buf.clear();
+                        if !console_buf.is_empty() {
+                            let _ = console_log_writer
+                                .make_writer()
+                                .write_all(console_buf.as_bytes());
+                            console_buf.clear();
+                        }
+
+                        if !file_buf.is_empty() {
+                            let _ = log_file_writer.make_writer().write_all(file_buf.as_bytes());
+                            file_buf.clear();
+                        }
                     }
                 })
                 .unwrap();
