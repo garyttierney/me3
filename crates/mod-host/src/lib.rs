@@ -14,7 +14,6 @@ use me3_binary_analysis::{fd4_step::Fd4StepTables, rtti};
 use me3_env::TelemetryVars;
 use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, AttachResult, Attachment};
 use me3_mod_host_assets::mapping::VfsOverrideMapping;
-use me3_mod_protocol::native::NativeLoadOrder;
 use me3_telemetry::TelemetryConfig;
 use tracing::{error, info, warn, Span};
 use windows::Win32::{
@@ -100,12 +99,6 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         dearxan(&attach_config)?;
 
-        for native in &attach_config.natives {
-            if matches!(native.load_during, Some(NativeLoadOrder::PostMain)) {
-                ModHost::get_attached().load_native(&native.path, &native.initializer)?;
-            }
-        }
-
         skip_logos::attach_override(attach_config.clone(), exe)?;
 
         game_properties::attach_override(attach_config.clone(), exe)?;
@@ -160,6 +153,10 @@ fn before_game_main(attach_config: Arc<AttachConfig>, exe: Executable) -> Result
         alloc_hooks::hook_system_allocator(&attach_config, exe)?;
     }
 
+    for native in &attach_config.early_natives {
+        ModHost::get_attached().load_native(&native.path, &native.initializer)?;
+    }
+
     Ok(())
 }
 
@@ -196,15 +193,6 @@ fn after_game_main<R: FnOnce() -> Result<(), eyre::Error>>(
     let (immediate, delayed) = attach_config.natives.split_at(first_delayed_offset);
 
     for native in immediate {
-        if native
-            .load_during
-            .as_ref()
-            .is_some_and(|order| matches!(order, NativeLoadOrder::PreMain))
-        {
-            // TODO: this ideally would be more structured
-            continue;
-        }
-
         if let Err(e) = ModHost::get_attached().load_native(&native.path, &native.initializer) {
             warn!(
                 error = &*e,

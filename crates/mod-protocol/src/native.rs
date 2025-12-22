@@ -25,15 +25,6 @@ pub enum NativeInitializerCondition {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-pub enum NativeLoadOrder {
-    #[serde(rename = "premain")]
-    PreMain,
-
-    #[serde(rename = "postmain")]
-    PostMain,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Native {
     /// Path to the DLL. Can be relative to the mod profile.
     pub path: ModFile,
@@ -58,7 +49,8 @@ pub struct Native {
     /// An optional symbol to be called when this native successfully is queued for unload.
     pub finalizer: Option<String>,
 
-    pub load_during: Option<NativeLoadOrder>,
+    #[serde(default = "off")]
+    pub load_early: bool,
 }
 
 impl Native {
@@ -71,7 +63,7 @@ impl Native {
             load_before: vec![],
             initializer: None,
             finalizer: None,
-            load_during: None,
+            load_early: false,
         }
     }
 }

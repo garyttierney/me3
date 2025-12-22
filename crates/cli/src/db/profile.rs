@@ -1,12 +1,13 @@
 use std::{
+    collections::HashMap,
     ffi::OsStr,
     fs::DirEntry,
     path::{Path, PathBuf},
 };
 
-use color_eyre::eyre::Context;
+use color_eyre::eyre::{eyre, Context};
 use me3_mod_protocol::{
-    dependency::sort_dependencies,
+    dependency::{sort_dependencies, Dependency, Dependent},
     native::Native,
     package::{Package, WithPackageSource},
     Game, ModProfile,
@@ -93,7 +94,7 @@ impl Profile {
     }
 
     /// Compile this profile into a load order of native DLLs and packages to be loaded.
-    pub fn compile(&self) -> color_eyre::Result<(Vec<Native>, Vec<Package>)> {
+    pub fn compile(&self) -> color_eyre::Result<(Vec<Native>, Vec<Native>, Vec<Package>)> {
         fn exists<S: WithPackageSource>(p: &S) -> bool {
             match p.source().try_exists() {
                 Ok(true) => true,
@@ -125,7 +126,42 @@ impl Profile {
         ordered_natives.retain(|native| native.enabled);
         ordered_packages.retain(|package| package.enabled);
 
-        Ok((ordered_natives, ordered_packages))
+        let natives_by_id = ordered_natives
+            .iter()
+            .map(|native| (native.id(), native))
+            .collect::<HashMap<_, _>>();
+
+        let find_load_early_native = |natives: &[Dependent<String>], load_early: bool| {
+            natives.iter().find_map(|native| {
+                let id = native.id();
+                let native = natives_by_id.get(id)?;
+                (native.load_early == load_early).then_some(id)
+            })
+        };
+
+        for (native_id, native) in &natives_by_id {
+            if native.load_early {
+                if let Some(after_id) = find_load_early_native(native.loads_after(), false) {
+                    return Err(eyre!(
+                        "load_early native {} loads after {}, which itself is not load_early",
+                        native_id,
+                        after_id
+                    ));
+                }
+            } else if let Some(before_id) = find_load_early_native(native.loads_before(), true) {
+                return Err(eyre!(
+                    "load_early native {} loads after {}, which itself is not load_early",
+                    before_id,
+                    native_id
+                ));
+            }
+        }
+
+        ordered_natives.sort_by_key(|native| !native.load_early);
+        let early_natives =
+            ordered_natives.split_off(ordered_natives.partition_point(|native| !native.load_early));
+
+        Ok((ordered_natives, early_natives, ordered_packages))
     }
 }
 
