@@ -135,7 +135,7 @@ impl Profile {
             natives.iter().find_map(|native| {
                 let id = native.id();
                 let native = natives_by_id.get(id)?;
-                (native.load_early == load_early).then_some(id)
+                (native.load_early == load_early).then(|| id.clone())
             })
         };
 
