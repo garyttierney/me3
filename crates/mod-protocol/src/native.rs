@@ -48,6 +48,9 @@ pub struct Native {
 
     /// An optional symbol to be called when this native successfully is queued for unload.
     pub finalizer: Option<String>,
+
+    #[serde(default = "off")]
+    pub load_early: bool,
 }
 
 impl Native {
@@ -60,6 +63,7 @@ impl Native {
             load_before: vec![],
             initializer: None,
             finalizer: None,
+            load_early: false,
         }
     }
 }

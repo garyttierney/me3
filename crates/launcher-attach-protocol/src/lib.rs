@@ -21,6 +21,9 @@ pub struct AttachConfig {
     /// An ordered list of natives to be loaded on attach.
     pub natives: Vec<Native>,
 
+    /// An ordered list of natives to be loaded early on attach.
+    pub early_natives: Vec<Native>,
+
     /// An ordered list of packages to be loaded on attach.
     pub packages: Vec<Package>,
 

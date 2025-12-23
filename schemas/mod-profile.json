@@ -130,6 +130,10 @@
             "string",
             "null"
           ]
+        },
+        "load_early": {
+          "type": "boolean",
+          "default": false
         }
       },
       "required": [

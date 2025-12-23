@@ -343,7 +343,7 @@ impl LaunchArgs {
             .map(|normalized| Native::new(normalized.into_path_buf()))
             .collect::<Vec<_>>();
 
-        let (ordered_natives, ordered_packages) = profile.compile()?;
+        let (ordered_natives, early_natives, ordered_packages) = profile.compile()?;
 
         packages.extend(ordered_packages);
         natives.extend(ordered_natives);
@@ -370,6 +370,7 @@ impl LaunchArgs {
             game: game.into(),
             packages,
             natives,
+            early_natives,
             savefile,
             cache_path: cache_path.map(|path| path.into_path_buf()),
             suspend: self.suspend,

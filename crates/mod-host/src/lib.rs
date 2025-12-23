@@ -153,6 +153,10 @@ fn before_game_main(attach_config: Arc<AttachConfig>, exe: Executable) -> Result
         alloc_hooks::hook_system_allocator(&attach_config, exe)?;
     }
 
+    for native in &attach_config.early_natives {
+        ModHost::get_attached().load_native(&native.path, &native.initializer)?;
+    }
+
     Ok(())
 }
 
