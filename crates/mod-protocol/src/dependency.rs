@@ -8,7 +8,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub trait DependencyId: Eq + PartialEq + Hash + Clone {}
-impl<T: Eq + PartialEq + Hash + Clone + for<'de> Deserialize<'de> + Serialize> DependencyId for T {}
+impl<T: Eq + PartialEq + Hash + Clone> DependencyId for T {}
 
 #[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
 pub struct Dependent<T: DependencyId> {
@@ -17,8 +17,8 @@ pub struct Dependent<T: DependencyId> {
 }
 
 impl<T: DependencyId> Dependent<T> {
-    pub fn id(&self) -> T {
-        self.id.clone()
+    pub fn id(&self) -> &T {
+        &self.id
     }
 }
 
@@ -38,7 +38,7 @@ pub trait Dependency {
 
     fn id(&self) -> Self::UniqueId;
 
-    fn dependencies(&self) -> impl Iterator<Item = DependencyLink<Self::UniqueId>> {
+    fn dependencies(&self) -> impl Iterator<Item = DependencyLink<&Self::UniqueId>> {
         self.loads_after()
             .iter()
             .map(|dep| DependencyLink {
@@ -68,12 +68,12 @@ pub enum DependencyError<T: Dependency> {
 }
 
 #[derive(Clone)]
-struct DependencyNode<T> {
+struct DependencyNode<'a, T> {
     num_prec: usize,
-    succ: HashSet<T>,
+    succ: HashSet<&'a T>,
 }
 
-impl<T> DependencyNode<T> {
+impl<T> DependencyNode<'_, T> {
     fn new() -> Self {
         Self {
             num_prec: 0,
@@ -82,29 +82,29 @@ impl<T> DependencyNode<T> {
     }
 }
 
-trait DependencySorter {
+trait DependencySorter<'a> {
     type UniqueId: DependencyId;
 
-    fn add_dependency(&mut self, prec: Self::UniqueId, succ: Self::UniqueId);
-    fn pop_dependency(&mut self) -> Option<(Self::UniqueId, bool)>;
+    fn add_dependency(&mut self, prec: &'a Self::UniqueId, succ: &'a Self::UniqueId);
+    fn pop_dependency(&mut self) -> Option<(&'a Self::UniqueId, bool)>;
 }
 
 // <https://crates.io/crates/topological-sort>
-impl<T> DependencySorter for IndexMap<T, DependencyNode<T>>
+impl<'a, T> DependencySorter<'a> for IndexMap<&'a T, DependencyNode<'a, T>>
 where
     T: DependencyId + Clone,
 {
     type UniqueId = T;
 
-    fn add_dependency(&mut self, prec: T, succ: T) {
+    fn add_dependency(&mut self, prec: &'a T, succ: &'a T) {
         match self.entry(prec) {
             Entry::Vacant(e) => {
                 let mut dep = DependencyNode::new();
-                dep.succ.insert(succ.clone());
+                dep.succ.insert(succ);
                 e.insert(dep);
             }
             Entry::Occupied(e) => {
-                if !e.into_mut().succ.insert(succ.clone()) {
+                if !e.into_mut().succ.insert(succ) {
                     // Already registered
                     return;
                 }
@@ -123,9 +123,9 @@ where
         }
     }
 
-    fn pop_dependency(&mut self) -> Option<(T, bool)> {
+    fn pop_dependency(&mut self) -> Option<(&'a T, bool)> {
         self.iter()
-            .find_map(|(k, v)| (v.num_prec == 0).then_some(k.clone()))
+            .find_map(|(k, v)| (v.num_prec == 0).then_some(*k))
             .map(|key| {
                 if let Some(p) = self.shift_remove(&key) {
                     for s in &p.succ {
@@ -176,17 +176,23 @@ impl<T> Ord for DependencyRun<T> {
     }
 }
 
-pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Result<Vec<T>, DependencyError<T>> {
-    let mut sorter = IndexMap::<T::UniqueId, DependencyNode<T::UniqueId>>::new();
-    let mut all = items
-        .into_iter()
+pub fn sort_dependencies<T: Dependency + Clone>(
+    items: Vec<T>,
+) -> Result<Vec<T>, DependencyError<T>> {
+    let item_ids = items.iter().map(|item| item.id()).collect::<Vec<_>>();
+
+    let mut all = item_ids
+        .iter()
+        .zip(&items)
         .enumerate()
-        .map(|(index, item)| (item.id(), (item, index)))
+        .map(|(index, (id, item))| (id, (item, index)))
         .collect::<IndexMap<_, _, RandomState>>();
+
+    let mut sorter = IndexMap::<&T::UniqueId, DependencyNode<T::UniqueId>>::new();
 
     for (id, (item, _)) in &all {
         for dep in item.dependencies() {
-            if !all.contains_key(&dep.id) {
+            if !all.contains_key(dep.id) {
                 if !dep.optional {
                     return Err(DependencyError::MissingDependency(dep.id.clone()));
                 }
@@ -194,8 +200,8 @@ pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Result<Vec<T>, Depende
             }
 
             let (prec, succ) = match dep.order {
-                DependencyOrder::Before => (id.clone(), dep.id),
-                DependencyOrder::After => (dep.id, id.clone()),
+                DependencyOrder::Before => (*id, dep.id),
+                DependencyOrder::After => (dep.id, *id),
             };
 
             sorter.add_dependency(prec, succ)
@@ -203,12 +209,12 @@ pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Result<Vec<T>, Depende
     }
 
     let mut all_runs = BinaryHeap::new();
-    let mut current_run = DependencyRun::<T>::default();
+    let mut current_run = DependencyRun::<&T>::default();
 
     let mut max_index = None;
 
     while let Some((key, has_succ)) = sorter.pop_dependency() {
-        let (item, index) = all.shift_remove(&key).expect("item already removed?");
+        let (item, index) = all.shift_remove(key).expect("item already removed?");
 
         if max_index.is_none() && item.loads_after().is_empty() && item.loads_before().is_empty() {
             max_index = Some(index);
@@ -223,7 +229,9 @@ pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Result<Vec<T>, Depende
     }
 
     if !sorter.is_empty() {
-        return Err(DependencyError::Cyclic(all.keys().cloned().collect()));
+        return Err(DependencyError::Cyclic(
+            all.keys().cloned().cloned().collect(),
+        ));
     }
 
     let mut sorted = vec![];
@@ -237,7 +245,7 @@ pub fn sort_dependencies<T: Dependency>(items: Vec<T>) -> Result<Vec<T>, Depende
 
     sorted.extend(all_runs.into_iter().flat_map(|run| run.dependencies));
 
-    Ok(sorted)
+    Ok(sorted.into_iter().cloned().collect())
 }
 
 #[cfg(test)]
