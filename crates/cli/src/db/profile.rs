@@ -157,7 +157,7 @@ impl Profile {
             }
         }
 
-        ordered_natives.sort_by_key(|native| !native.load_early);
+        ordered_natives.sort_by_key(|native| native.load_early);
         let early_natives =
             ordered_natives.split_off(ordered_natives.partition_point(|native| !native.load_early));
 
