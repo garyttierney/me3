@@ -106,7 +106,9 @@ fn hook_file_init(
         .hook(init_fn)
         .with_span(info_span!("hook"))
         .with_closure(move |p1, trampoline| {
-            debug!("entering CSFileStep::STEP_Init");
+            warn!("entering CSFileStep::STEP_Init and aborting process");
+
+            std::process::abort();
 
             let result = hook_device_manager(exe, mapping.clone())
                 .and_then(|_| hook_mount_ebl(attach_config.clone(), exe))

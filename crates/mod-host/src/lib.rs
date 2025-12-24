@@ -119,7 +119,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         let override_mapping = Arc::new(override_mapping);
 
-        filesystem::attach_override(override_mapping.clone())?;
+        // filesystem::attach_override(override_mapping.clone())?;
 
         info!("Host successfully attached");
 
