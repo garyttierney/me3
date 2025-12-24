@@ -12,6 +12,7 @@ V1(
                 load_after: [],
                 initializer: None,
                 finalizer: None,
+                load_early: false,
             },
         ],
         packages: [
