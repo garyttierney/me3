@@ -19,13 +19,18 @@ me3-env.workspace = true
 me3-launcher-attach-protocol.workspace = true
 me3-mod-protocol.workspace = true
 me3-telemetry.workspace = true
-sentry = { workspace = true, optional = true }
 toml.workspace = true
 tracing.workspace = true
 windows = { workspace = true, features = [
     "Win32_System_LibraryLoader",
     "Win32_System_Threading",
 ] }
+
+[dependencies.sentry]
+workspace = true
+default-features = false
+features = ["tracing", "backtrace", "contexts", "debug-images", "panic", "ureq", "native-tls", "release-health"]
+optional = true
 
 [build-dependencies]
 winresource = "0.1"

@@ -27,9 +27,10 @@ tracing-subscriber = { workspace = true, default-features = false, features = [
 ] }
 
 [dependencies.sentry]
-default-features = false
-features = ["tracing", "backtrace", "contexts", "debug-images", "panic", "ureq", "release-health"]
-optional = true
 workspace = true
+default-features = false
+features = ["tracing", "backtrace", "contexts", "debug-images", "panic", "ureq", "native-tls", "release-health"]
+optional = true
+
 [lints]
 workspace = true
