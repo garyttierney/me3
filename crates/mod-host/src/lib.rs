@@ -95,6 +95,11 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         // SAFETY: process is still suspended.
         let exe = unsafe { Executable::new() };
 
+        match exe.version() {
+            Ok(ver) => info!("Attaching to {ver}"),
+            Err(e) => warn!("error" = %e, "could not detect game version"),
+        }
+
         ModHost::new(&attach_config).attach();
 
         dearxan(&attach_config)?;
