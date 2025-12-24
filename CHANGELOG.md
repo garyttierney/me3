@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
-## me3 - [v0.10.0](https://github.com/garyttierney/me3/releases/v0.10.0) - 2025-12-23
+## me3 - [v0.10.1](https://github.com/garyttierney/me3/releases/v0.10.1) - 2025-12-24
 
 ### 🚀 Features
 
@@ -52,6 +52,14 @@ All notable changes to this project will be documented in this file.
   > ... ME3_LAUNCHER_HOST_DLL="\"/run/host/usr/lib64/me3/x86_64-windows/me3_mod_host.dll\""
   > ... proton" "waitforexitandrun" "/run/host/usr/lib64/me3/x86_64-windows/me3-launcher.exe"
   > ```
+
+- [dd3918d](https://github.com/garyttierney/me3/commit/dd3918d555285459a0ec84dae68631f5925ed488) Fix load_early with multiple natives in [#634](https://github.com/garyttierney/me3/pull/634)
+
+
+
+- [829328e](https://github.com/garyttierney/me3/commit/829328ed13ed0303d32b641c19045c0668ee4f7b) Update sentry features to use `native-tls` in [#635](https://github.com/garyttierney/me3/pull/635)
+
+
 
 - [e682d0c](https://github.com/garyttierney/me3/commit/e682d0cb66945243add50c727642f1c878935e57) Make it possible to load natives premain in [#624](https://github.com/garyttierney/me3/pull/624)
 
@@ -2648,7 +2656,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
-[0.10.0]: https://github.com/garyttierney/me3/compare/v0.9.0..v0.10.0
+[0.10.1]: https://github.com/garyttierney/me3/compare/v0.9.0..v0.10.1
 [0.9.0]: https://github.com/garyttierney/me3/compare/v0.8.1..v0.9.0
 [0.8.1]: https://github.com/garyttierney/me3/compare/v0.7.0..v0.8.1
 [0.7.0]: https://github.com/garyttierney/me3/compare/v0.6.1..v0.7.0
