@@ -85,7 +85,7 @@ fn enable_loose_params(attach_config: &AttachConfig, mapping: &VfsOverrideMappin
     }
 }
 
-#[instrument(name = "file_step", skip_all)]
+#[instrument(name = "file_step", skip_all, err)]
 fn hook_file_init(
     attach_config: Arc<AttachConfig>,
     exe: Executable,
@@ -93,6 +93,8 @@ fn hook_file_init(
     step_tables: &Fd4StepTables,
     mapping: Arc<VfsOverrideMapping>,
 ) -> Result<(), eyre::Error> {
+    debug!(?exe, "hooking CSFileStep::STEP_Init");
+
     let init_fn = step_tables
         .by_name("CSFileStep::STEP_Init")
         .or_else(|| step_tables.by_name("SprjFileStep::STEP_Init"))
@@ -104,6 +106,8 @@ fn hook_file_init(
         .hook(init_fn)
         .with_span(info_span!("hook"))
         .with_closure(move |p1, trampoline| {
+            debug!("entering CSFileStep::STEP_Init");
+
             let result = hook_device_manager(exe, mapping.clone())
                 .and_then(|_| hook_mount_ebl(attach_config.clone(), exe))
                 .inspect_err(|e| error!("error" = &**e, "failed apply pre-hooks"));
@@ -117,6 +121,8 @@ fn hook_file_init(
             {
                 error!("error" = &*e, "failed to apply post-hooks");
             }
+
+            debug!("exiting CSFileStep::STEP_Init");
         })
         .install()?;
 
@@ -166,9 +172,15 @@ fn hook_device_manager(
     exe: Executable,
     mapping: Arc<VfsOverrideMapping>,
 ) -> Result<(), eyre::Error> {
+    debug!("hooking device manager");
+
     let device_manager = locate_device_manager(exe)?;
 
+    debug!(?device_manager);
+
     let open_disk_file = DlDeviceManager::lock(device_manager).open_disk_file();
+
+    debug!(?open_disk_file);
 
     let override_path = {
         let mapping = mapping.clone();
@@ -467,6 +479,8 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
             false => Err(eyre!("trampoline returned null")),
         }
     }
+
+    debug!("hooking mount_ebl");
 
     let mount_ebl = mount_ebl(exe).ok_or_eyre("MountEbl not found")?;
 

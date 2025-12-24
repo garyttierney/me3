@@ -101,6 +101,16 @@ unsafe impl PeObject<'static> for Executable {
 
 unsafe impl Pe<'static> for Executable {}
 
+impl fmt::Debug for Executable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let image = self.image();
+        f.debug_struct("Executable")
+            .field("image_base", &image.as_ptr())
+            .field("size", &image.len())
+            .finish()
+    }
+}
+
 impl fmt::Display for Version {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(

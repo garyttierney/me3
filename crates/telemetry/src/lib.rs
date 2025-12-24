@@ -222,7 +222,7 @@ pub fn install(config: TelemetryConfig) -> Telemetry {
     });
 
     let console_layer = config.console_writer.map(|writer| {
-        let filter_layer = log_filter("ME3_CONSOLE_LOG_LEVEL", Level::INFO);
+        let filter_layer = log_filter("ME3_CONSOLE_LOG_LEVEL", Level::DEBUG);
 
         fmt::layer()
             .without_time()
