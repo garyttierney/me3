@@ -130,16 +130,47 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         let push_entry_slist = unsafe {
             let ntdll = GetModuleHandleW(w!("ntdll.dll"))?;
+            debug!(?ntdll);
+            let thunk = GetProcAddress(ntdll, s!("RtlInterlockedPushEntrySList"))
+                .expect("RtlInterlockedPushEntrySList not found")
+                as *const u8;
+            let thunk_bytes = std::slice::from_raw_parts(thunk, 16);
+            debug!("thunk bytes: {:x?}", thunk_bytes);
+            let fn_ptr = match &thunk_bytes[..6] {
+                &[0xE9, b0, b1, b2, b3, ..] => {
+                    let disp32 = i32::from_le_bytes([b0, b1, b2, b3]);
+                    thunk.add(5).offset(disp32 as isize)
+                }
+                &[0xff, 0x25, b0, b1, b2, b3] => {
+                    let disp32 = i32::from_le_bytes([b0, b1, b2, b3]);
+                    thunk
+                        .add(6)
+                        .offset(disp32 as isize)
+                        .cast::<*const u8>()
+                        .read()
+                }
+                _ => thunk,
+            };
+            debug!(?fn_ptr);
             mem::transmute::<_, unsafe extern "C" fn(*mut c_void, *mut c_void) -> *mut c_void>(
-                GetProcAddress(ntdll, s!("RtlInterlockedPushEntrySList")),
+                fn_ptr,
             )
         };
 
         ModHost::get_attached()
             .hook(push_entry_slist)
             .with_closure(|param_1, param_2, original| unsafe {
-                let backtrace = backtrace::Backtrace::new_unresolved();
-                debug!("{backtrace:#?}");
+                if VirtualQuery(
+                    Some(param_1),
+                    &mut MEMORY_BASIC_INFORMATION::default(),
+                    size_of::<MEMORY_BASIC_INFORMATION>(),
+                ) == 0
+                {
+                    let backtrace = backtrace::Backtrace::new_unresolved();
+                    debug!("{backtrace:#?}");
+                    std::thread::sleep(std::time::Duration::from_secs(10));
+                    std::process::abort();
+                }
                 original(param_1, param_2)
             })
             .install()?;
