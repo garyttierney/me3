@@ -25,7 +25,6 @@ use windows::{
         System::{
             Console::SetConsoleOutputCP,
             LibraryLoader::{GetModuleHandleW, GetProcAddress},
-            Memory::{VirtualQuery, MEMORY_BASIC_INFORMATION},
             SystemServices::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH},
         },
     },
@@ -136,12 +135,12 @@ fn on_attach(request: AttachRequest) -> AttachResult {
                 as *const u8;
             let thunk_bytes = std::slice::from_raw_parts(thunk, 16);
             debug!("thunk bytes: {:x?}", thunk_bytes);
-            let fn_ptr = match &thunk_bytes[..6] {
-                &[0xE9, b0, b1, b2, b3, ..] => {
+            let fn_ptr = match thunk_bytes[..6] {
+                [0xE9, b0, b1, b2, b3, ..] => {
                     let disp32 = i32::from_le_bytes([b0, b1, b2, b3]);
                     thunk.add(5).offset(disp32 as isize)
                 }
-                &[0xff, 0x25, b0, b1, b2, b3] => {
+                [0xff, 0x25, b0, b1, b2, b3] => {
                     let disp32 = i32::from_le_bytes([b0, b1, b2, b3]);
                     thunk
                         .add(6)
@@ -160,17 +159,8 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         ModHost::get_attached()
             .hook(push_entry_slist)
             .with_closure(|param_1, param_2, original| unsafe {
-                if VirtualQuery(
-                    Some(param_1),
-                    &mut MEMORY_BASIC_INFORMATION::default(),
-                    size_of::<MEMORY_BASIC_INFORMATION>(),
-                ) == 0
-                {
-                    let backtrace = backtrace::Backtrace::new_unresolved();
-                    debug!("{backtrace:#?}");
-                    std::thread::sleep(std::time::Duration::from_secs(10));
-                    std::process::abort();
-                }
+                let backtrace = backtrace::Backtrace::new_unresolved();
+                debug!("{backtrace:#?}");
                 original(param_1, param_2)
             })
             .install()?;
