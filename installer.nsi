@@ -3,6 +3,7 @@
 !include nsDialogs.nsh
 !include Integration.nsh
 
+
 !define PRODUCT "garyttierney\me3"
 !define PRODUCT_URL "https://github.com/garyttierney/me3"
 
@@ -107,19 +108,38 @@ Var Dialog
 Var Label
 Var Checkbox
 Var Text
+Var IsUpgrade
+
 
 
 Function .onInit
     ; Set the uninstall registry key path here
     StrCpy $UNINSTALL_REG_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\me3"
     StrCpy $TelemetryEnabled "${BST_CHECKED}"
+
+    ; Check for existing installation
+    ReadRegStr $R0 HKCU "Software\${PRODUCT}" "Install_Dir"
+    ${If} $R0 != ""
+      MessageBox MB_YESNO|MB_ICONQUESTION "Mod Engine 3 installation was found at $R0.$\n$\nDo you want to reinstall/upgrade?" IDYES +2
+      Abort
+      StrCpy $IsUpgrade 1
+    ${EndIf}
+
 FunctionEnd
 
 Function onFinish
   ExecShell "open" "$LOCALAPPDATA\garyttierney\me3\config\profiles"
 FunctionEnd
 
+Function DirectoryPre
+  ${If} $IsUpgrade == 1
+    Abort
+  ${EndIf}
+FunctionEnd
+
+
 Page custom nsDialogsPage nsDialogsPageLeave
+!define MUI_PAGE_CUSTOMFUNCTION_PRE DirectoryPre
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_SHOWREADME "https://me3.readthedocs.io/"
@@ -245,6 +265,10 @@ end:
 SectionEnd
 
 Section "Uninstall"
+    ; Remove from PATH
+    DetailPrint "Removing me3 from PATH..."
+    nsExec::Exec '"$INSTDIR\bin\me3.exe" remove-from-path'
+
     Delete "$INSTDIR\bin\me3-launcher.exe"
     Delete "$INSTDIR\bin\me3_mod_host.dll"
     Delete "$INSTDIR\bin\me3.exe"
@@ -263,6 +287,11 @@ Section "Uninstall"
     RMDir "$SMPROGRAMS\me3"
     RMDir "$INSTDIR\assets"
     RMDir "$INSTDIR\bin"
-
+    
+    DetailPrint "Removing registry keys..."
     DeleteRegKey HKCU "$UNINSTALL_REG_KEY"
+
+    DeleteRegValue HKCU "Software\${PRODUCT}" "Install_Dir"
+    DeleteRegKey /ifempty HKCU "Software\${PRODUCT}"
+
 SectionEnd

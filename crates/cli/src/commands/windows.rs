@@ -43,6 +43,37 @@ pub fn add_to_path() -> color_eyre::Result<()> {
     Ok(())
 }
 
+pub fn remove_from_path() -> color_eyre::Result<()> {
+    let hklm = RegKey::predef(HKEY_CURRENT_USER);
+    let environment = hklm
+        .open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)
+        .context("couldn't find Environment regkey")?;
+
+    let path: String = environment.get_value("Path").ok().unwrap_or_default();
+    let mut path_entries: Vec<String> = path.split(';').map(|s| s.to_string()).collect();
+
+    info!("current path: {path}");
+
+    let current_exe = std::env::current_exe()?;
+    let current_exe_dir = current_exe
+        .parent()
+        .ok_or_eyre("unable to determine binary path")?
+        .to_string_lossy();
+
+    if !path_entries.iter().any(|p| p == &*current_exe_dir) {
+        info!("not on path");
+        return Ok(());
+    }
+
+    info!("removing from path: {current_exe_dir}");
+    path_entries.retain(|p| p != &*current_exe_dir);
+
+    let new_path = path_entries.join(";");
+    environment.set_value("Path", &new_path)?;
+
+    Ok(())
+}
+
 pub fn update() -> color_eyre::Result<()> {
     const RELEASE_URI: &str = "https://api.github.com/repos/garyttierney/me3/releases/latest";
     let response = ureq::get(RELEASE_URI)

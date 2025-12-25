@@ -27,6 +27,10 @@ pub enum Commands {
     #[clap(hide = true)]
     AddToPath,
 
+    #[cfg(target_os = "windows")]
+    #[clap(hide = true)]
+    RemoveFromPath,
+
     /// Check for and launch a new version of the me3 installer.
     #[cfg(target_os = "windows")]
     Update,
