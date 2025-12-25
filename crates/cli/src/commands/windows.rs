@@ -48,7 +48,12 @@ pub fn update() -> color_eyre::Result<()> {
     use ureq::tls::{RootCerts, TlsConfig, TlsProvider};
 
     let agent = ureq::Agent::config_builder()
-        .tls_config(TlsConfig::builder().provider(TlsProvider::NativeTls).root_certs(RootCerts::PlatformVerifier).build())
+        .tls_config(
+            TlsConfig::builder()
+                .provider(TlsProvider::NativeTls)
+                .root_certs(RootCerts::PlatformVerifier)
+                .build(),
+        )
         .build()
         .new_agent();
 
@@ -86,7 +91,10 @@ pub fn update() -> color_eyre::Result<()> {
 
         info!(installer_url, "Downloading installer");
 
-        let response = agent.get(&installer_url).header("User-Agent", "me3-cli").call()?;
+        let response = agent
+            .get(&installer_url)
+            .header("User-Agent", "me3-cli")
+            .call()?;
 
         let mut installer_file: tempfile::NamedTempFile = tempfile::Builder::new()
             .disable_cleanup(true)
