@@ -138,17 +138,8 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         ModHost::get_attached()
             .hook(push_entry_slist)
             .with_closure(|param_1, param_2, original| unsafe {
-                if VirtualQuery(
-                    Some(param_1),
-                    &mut MEMORY_BASIC_INFORMATION::default(),
-                    size_of::<MEMORY_BASIC_INFORMATION>(),
-                ) == 0
-                {
-                    let backtrace = backtrace::Backtrace::new_unresolved();
-                    debug!("{backtrace:#?}");
-                    std::thread::sleep(std::time::Duration::from_secs(10));
-                    std::process::abort();
-                }
+                let backtrace = backtrace::Backtrace::new_unresolved();
+                debug!("{backtrace:#?}");
                 original(param_1, param_2)
             })
             .install()?;
