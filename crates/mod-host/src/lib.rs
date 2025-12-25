@@ -6,6 +6,8 @@
 use std::{
     fs::OpenOptions,
     io::stdout,
+    mem,
+    os::raw::c_void,
     sync::{Arc, Mutex, OnceLock},
 };
 
@@ -15,12 +17,17 @@ use me3_env::TelemetryVars;
 use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, AttachResult, Attachment};
 use me3_mod_host_assets::mapping::VfsOverrideMapping;
 use me3_telemetry::TelemetryConfig;
-use tracing::{error, info, warn, Span};
-use windows::Win32::{
-    Globalization::CP_UTF8,
-    System::{
-        Console::SetConsoleOutputCP,
-        SystemServices::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH},
+use tracing::{debug, error, info, warn, Span};
+use windows::{
+    core::{s, w},
+    Win32::{
+        Globalization::CP_UTF8,
+        System::{
+            Console::SetConsoleOutputCP,
+            LibraryLoader::{GetModuleHandleW, GetProcAddress},
+            Memory::{VirtualQuery, MEMORY_BASIC_INFORMATION},
+            SystemServices::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH},
+        },
     },
 };
 
@@ -119,7 +126,32 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         let override_mapping = Arc::new(override_mapping);
 
-        // filesystem::attach_override(override_mapping.clone())?;
+        filesystem::attach_override(override_mapping.clone())?;
+
+        let push_entry_slist = unsafe {
+            let ntdll = GetModuleHandleW(w!("ntdll.dll"))?;
+            mem::transmute::<_, unsafe extern "C" fn(*mut c_void, *mut c_void) -> *mut c_void>(
+                GetProcAddress(ntdll, s!("RtlInterlockedPushEntrySList")),
+            )
+        };
+
+        ModHost::get_attached()
+            .hook(push_entry_slist)
+            .with_closure(|param_1, param_2, original| unsafe {
+                if VirtualQuery(
+                    Some(param_1),
+                    &mut MEMORY_BASIC_INFORMATION::default(),
+                    size_of::<MEMORY_BASIC_INFORMATION>(),
+                ) == 0
+                {
+                    let backtrace = backtrace::Backtrace::new_unresolved();
+                    debug!("{backtrace:#?}");
+                    std::thread::sleep(std::time::Duration::from_secs(10));
+                    std::process::abort();
+                }
+                original(param_1, param_2)
+            })
+            .install()?;
 
         info!("Host successfully attached");
 

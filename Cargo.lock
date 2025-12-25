@@ -1751,6 +1751,7 @@ dependencies = [
 name = "me3-mod-host"
 version = "0.10.1"
 dependencies = [
+ "backtrace",
  "base64",
  "closure-ffi",
  "color-eyre",

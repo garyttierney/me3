@@ -58,6 +58,7 @@ xxhash-rust = { version = "0.8", features = ["std", "xxh3"] }
 pkcs1 = { version = "0.7.5", features = ["std"] }
 base64 = "0.22.1"
 miniz_oxide = { version = "0.8.9", features = ["std"] }
+backtrace = { version = "0.3.76", features = ["dbghelp", "kernel32"] }
 
 [build-dependencies]
 winresource = "0.1"
