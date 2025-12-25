@@ -45,7 +45,15 @@ pub fn add_to_path() -> color_eyre::Result<()> {
 
 pub fn update() -> color_eyre::Result<()> {
     const RELEASE_URI: &str = "https://api.github.com/repos/garyttierney/me3/releases/latest";
-    let response = ureq::get(RELEASE_URI)
+    use ureq::tls::{RootCerts, TlsConfig, TlsProvider};
+
+    let agent = ureq::Agent::config_builder()
+        .tls_config(TlsConfig::builder().provider(TlsProvider::NativeTls).root_certs(RootCerts::PlatformVerifier).build())
+        .build()
+        .new_agent();
+
+    let response = agent
+        .get(RELEASE_URI)
         .header("Accept", "application/vnd.github.v3+json")
         .header("User-Agent", "me3-cli")
         .call()?;
@@ -78,9 +86,7 @@ pub fn update() -> color_eyre::Result<()> {
 
         info!(installer_url, "Downloading installer");
 
-        let response = ureq::get(&installer_url)
-            .header("User-Agent", "me3-cli")
-            .call()?;
+        let response = agent.get(&installer_url).header("User-Agent", "me3-cli").call()?;
 
         let mut installer_file: tempfile::NamedTempFile = tempfile::Builder::new()
             .disable_cleanup(true)
