@@ -88,7 +88,7 @@ fn hook_cmd_to_argv(exe: Executable) -> Result<(), eyre::Error> {
 
     debug!(?shell32_imports);
 
-    let mut int = iter::from_fn({
+    let int = iter::from_fn({
         let mut pos = shell32_imports.OriginalFirstThunk;
         move || {
             let entry = exe.derva_copy::<u64>(pos).ok()?;
@@ -97,24 +97,25 @@ fn hook_cmd_to_argv(exe: Executable) -> Result<(), eyre::Error> {
         }
     });
 
-    let cmd_to_argv_hint = int
-        .find_map(|entry| {
+    let cmd_to_argv_i = int
+        .enumerate()
+        .find_map(|(i, entry)| {
             if entry & IMAGE_ORDINAL_FLAG == 0 {
-                let hint = exe.derva_copy::<u16>(entry as u32).ok()?;
                 let name = exe.derva_c_str(entry as u32 + 2).ok()?;
-                (name == b"CommandLineToArgvW").then_some(hint)
+                (name == b"CommandLineToArgvW").then_some(i)
             } else {
                 None
             }
         })
         .ok_or_eyre("CommandLineToArgvW not found in import table")?;
 
-    debug!(?cmd_to_argv_hint);
+    debug!(?cmd_to_argv_i);
 
     let cmd_to_argv = unsafe {
-        exe.image().as_ptr().byte_add(
-            shell32_imports.FirstThunk as usize + cmd_to_argv_hint as usize * size_of::<u64>(),
-        ) as *mut CmdToArgvW
+        exe.image()
+            .as_ptr()
+            .byte_add(shell32_imports.FirstThunk as usize + cmd_to_argv_i * size_of::<u64>())
+            as *mut CmdToArgvW
     };
 
     debug!("CommandLineToArgvW" = ?unsafe{ cmd_to_argv.read_unaligned() });
