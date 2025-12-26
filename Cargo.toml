@@ -66,7 +66,7 @@ strum_macros = "0.27"
 tempfile = "3"
 thiserror = "2"
 toml = { version = "0.9.5", features = ["preserve_order"] }
-tracing = { version = "0.1", features = ["release_max_level_info"] }
+tracing = "0.1"
 tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", default-features = false }
 ureq = { version = "3", default-features = false, features = [
