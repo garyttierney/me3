@@ -1,16 +1,18 @@
 use std::{
-    mem,
-    sync::{LazyLock, Mutex, Once},
+    ffi::c_int,
+    iter,
+    sync::{Mutex, Once, OnceLock},
 };
 
 use eyre::{eyre, OptionExt};
-use tracing::{info, instrument, Level, Span};
-use windows::{
-    core::{s, w},
-    Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW},
+use pelite::{
+    image::{IMAGE_DIRECTORY_ENTRY_IMPORT, IMAGE_IMPORT_DESCRIPTOR},
+    pe::{image::IMAGE_ORDINAL_FLAG, Pe, PeObject},
 };
+use tracing::{debug, info, instrument, Span};
+use windows::core::{PCWSTR, PWSTR};
 
-use crate::host::ModHost;
+use crate::{executable::Executable, host::ModHost};
 
 pub enum Deferred {
     BeforeMain,
@@ -26,7 +28,7 @@ static DEFERRED_AFTER_MAIN: Mutex<DeferredOnce> = Mutex::new(Some(Vec::new()));
 ///
 /// Trying to defer a closure's execution after the point of initialization returns an error.
 #[instrument(skip_all, err)]
-pub fn defer_init<F>(span: Span, until: Deferred, f: F) -> Result<(), eyre::Error>
+pub fn defer_init<F>(span: Span, exe: Executable, until: Deferred, f: F) -> Result<(), eyre::Error>
 where
     F: FnOnce() + Send + 'static,
 {
@@ -38,10 +40,12 @@ where
             &DEFERRED_BEFORE_MAIN
         }
         Deferred::AfterMain => {
-            static HOOKED_STEAM_INIT: LazyLock<Result<(), eyre::Error>> =
-                LazyLock::new(hook_steam_init);
+            static HOOKED: OnceLock<Result<(), eyre::Error>> = OnceLock::new();
 
-            HOOKED_STEAM_INIT.as_ref().map_err(|e| eyre!(e))?;
+            HOOKED
+                .get_or_init(|| hook_cmd_to_argv(exe))
+                .as_ref()
+                .map_err(|e| eyre!(e))?;
 
             &DEFERRED_AFTER_MAIN
         }
@@ -55,34 +59,72 @@ where
         .ok_or_eyre("tried to defer function after init")
 }
 
-#[instrument]
-fn hook_steam_init() -> Result<(), eyre::Error> {
-    ModHost::get_attached()
-        .hook(steam_init_fn()?)
-        .with_closure(|trampoline| {
-            let result = unsafe { trampoline() };
+#[instrument(skip_all)]
+fn hook_cmd_to_argv(exe: Executable) -> Result<(), eyre::Error> {
+    type CmdToArgvW = Option<unsafe extern "C" fn(PCWSTR, *mut c_int) -> PWSTR>;
 
-            if result && let Some(deferred) = DEFERRED_AFTER_MAIN.lock().unwrap().take() {
-                deferred.into_iter().for_each(|f| f());
-            }
+    static mut CMD_TO_ARGV_ORIGINAL: CmdToArgvW = None;
 
-            result
+    unsafe extern "C" fn hook(cmd_line: PCWSTR, num_args: *mut c_int) -> PWSTR {
+        if let Some(deferred) = DEFERRED_AFTER_MAIN.lock().unwrap().take() {
+            deferred.into_iter().for_each(|f| f());
+        }
+        unsafe { CMD_TO_ARGV_ORIGINAL.unwrap()(cmd_line, num_args) }
+    }
+
+    let imports_dir = exe.data_directory()[IMAGE_DIRECTORY_ENTRY_IMPORT];
+    debug!(?imports_dir);
+
+    let mut imports = (0..imports_dir.Size)
+        .step_by(size_of::<IMAGE_IMPORT_DESCRIPTOR>())
+        .map(|pos| exe.derva_copy::<IMAGE_IMPORT_DESCRIPTOR>(imports_dir.VirtualAddress + pos));
+
+    let shell32_imports = imports
+        .find(|desc| {
+            desc.and_then(|desc| exe.derva_c_str(desc.Name))
+                .is_ok_and(|name| name.to_ascii_lowercase() == b"shell32.dll")
         })
-        .install()?;
+        .ok_or_eyre("shell32.dll import table not found")??;
+
+    debug!(?shell32_imports);
+
+    let mut int = iter::from_fn({
+        let mut pos = shell32_imports.OriginalFirstThunk;
+        move || {
+            let entry = exe.derva_copy::<u64>(pos).ok()?;
+            pos += size_of::<u64>() as u32;
+            Some(entry)
+        }
+    });
+
+    let cmd_to_argv_hint = int
+        .find_map(|entry| {
+            if entry & IMAGE_ORDINAL_FLAG == 0 {
+                let hint = exe.derva_copy::<u16>(entry as u32).ok()?;
+                let name = exe.derva_c_str(entry as u32 + 2).ok()?;
+                (name == b"CommandLineToArgvW").then_some(hint)
+            } else {
+                None
+            }
+        })
+        .ok_or_eyre("CommandLineToArgvW not found in import table")?;
+
+    debug!(?cmd_to_argv_hint);
+
+    let cmd_to_argv = unsafe {
+        exe.image().as_ptr().byte_add(
+            shell32_imports.FirstThunk as usize + cmd_to_argv_hint as usize * size_of::<u64>(),
+        ) as *mut CmdToArgvW
+    };
+
+    debug!("CommandLineToArgvW" = ?unsafe{ cmd_to_argv.read_unaligned() });
+
+    unsafe {
+        CMD_TO_ARGV_ORIGINAL = cmd_to_argv.read_unaligned();
+        cmd_to_argv.write_unaligned(Some(hook));
+    };
 
     Ok(())
-}
-
-#[instrument(ret(level = Level::DEBUG))]
-fn steam_init_fn() -> Result<unsafe extern "C" fn() -> bool, eyre::Error> {
-    unsafe {
-        let steam_dll = LoadLibraryW(w!("steam_api64.dll"))?;
-
-        let steam_init =
-            GetProcAddress(steam_dll, s!("SteamAPI_Init")).ok_or_eyre("SteamAPI_Init not found")?;
-
-        Ok(mem::transmute(steam_init))
-    }
 }
 
 #[instrument]

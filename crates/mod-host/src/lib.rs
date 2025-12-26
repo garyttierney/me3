@@ -102,7 +102,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         ModHost::new(&attach_config).attach();
 
-        dearxan(&attach_config)?;
+        dearxan(&attach_config, exe)?;
 
         skip_logos::attach_override(attach_config.clone(), exe)?;
 
@@ -125,13 +125,13 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         let before_main_result = Arc::new(Mutex::new(None));
 
-        defer_init(Span::current(), Deferred::BeforeMain, {
+        defer_init(Span::current(), exe, Deferred::BeforeMain, {
             let result = before_main_result.clone();
             let attach_config = attach_config.clone();
             move || *result.lock().unwrap() = Some(before_game_main(attach_config, exe))
         })?;
 
-        defer_init(Span::current(), Deferred::AfterMain, move || {
+        defer_init(Span::current(), exe, Deferred::AfterMain, move || {
             let result = after_game_main(attach_config, exe, override_mapping, move || {
                 before_main_result
                     .lock()
@@ -242,7 +242,7 @@ fn after_game_main<R: FnOnce() -> Result<(), eyre::Error>>(
     Ok(())
 }
 
-fn dearxan(attach_config: &AttachConfig) -> Result<(), eyre::Error> {
+fn dearxan(attach_config: &AttachConfig, exe: Executable) -> Result<(), eyre::Error> {
     if !ModHost::get_attached().disable_arxan {
         return Ok(());
     }
@@ -253,7 +253,7 @@ fn dearxan(attach_config: &AttachConfig) -> Result<(), eyre::Error> {
         "will attempt to disable Arxan code protection",
     );
 
-    defer_init(Span::current(), Deferred::BeforeMain, || {
+    defer_init(Span::current(), exe, Deferred::BeforeMain, || {
         info!("dearxan::disabler::neuter_arxan finished")
     })
 }
