@@ -31,7 +31,7 @@ pub fn attach_override(
 ) -> Result<(), eyre::Error> {
     fix_show_window_flash()?;
 
-    defer_init(Span::current(), Deferred::AfterMain, move || {
+    defer_init(Span::current(), exe, Deferred::AfterMain, move || {
         if attach_config.skip_logos {
             // Different hooks depending on engine version.
             let result = if attach_config.game >= Game::EldenRing {

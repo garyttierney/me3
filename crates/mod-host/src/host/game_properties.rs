@@ -62,7 +62,7 @@ pub fn attach_override(
 
     // Some games (Dark Souls 3) might employ Arxan encryption
     // that is removed after running the Arxan entrypoint.
-    defer_init(Span::current(), Deferred::BeforeMain, move || {
+    defer_init(Span::current(), exe, Deferred::BeforeMain, move || {
         if let Err(e) = do_override() {
             error!("error" = %e, "failed to hook property getter");
         }
