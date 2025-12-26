@@ -12,7 +12,13 @@ use winreg::{
     RegKey,
 };
 
-pub fn add_to_path() -> color_eyre::Result<()> {
+#[derive(Copy, Clone, Debug)]
+enum PathOp {
+    Add,
+    Remove,
+}
+
+fn update_user_path(op: PathOp) -> color_eyre::Result<()> {
     let hklm = RegKey::predef(HKEY_CURRENT_USER);
     let environment = hklm
         .open_subkey_with_flags("Environment", KEY_READ | KEY_WRITE)
@@ -29,18 +35,39 @@ pub fn add_to_path() -> color_eyre::Result<()> {
         .ok_or_eyre("unable to determine binary path")?
         .to_string_lossy();
 
-    if path_entries.contains(&&*current_exe_dir) {
-        info!("already on path");
-        return Ok(());
-    }
+    match op {
+        PathOp::Add => {
+            if path_entries.contains(&&*current_exe_dir) {
+                info!("already on path");
+                return Ok(());
+            }
 
-    info!("current exe dir: {current_exe_dir}");
-    path_entries.insert(0, &current_exe_dir);
+            info!("current exe dir: {current_exe_dir}");
+            path_entries.insert(0, &*current_exe_dir);
+        }
+        PathOp::Remove => {
+            if !path_entries.contains(&&*current_exe_dir) {
+                info!("not on path");
+                return Ok(());
+            }
+
+            info!("removing from path: {current_exe_dir}");
+            path_entries.retain(|p| *p != &*current_exe_dir);
+        }
+    }
 
     let new_path = path_entries.join(";");
     environment.set_value("Path", &new_path)?;
 
     Ok(())
+}
+
+pub fn add_to_path() -> color_eyre::Result<()> {
+    update_user_path(PathOp::Add)
+}
+
+pub fn remove_from_path() -> color_eyre::Result<()> {
+    update_user_path(PathOp::Remove)
 }
 
 pub fn update() -> color_eyre::Result<()> {

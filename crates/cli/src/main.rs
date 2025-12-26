@@ -143,6 +143,8 @@ fn main() {
         #[cfg(target_os = "windows")]
         Commands::AddToPath => commands::windows::add_to_path(),
         #[cfg(target_os = "windows")]
+        Commands::RemoveFromPath => commands::windows::remove_from_path(),
+        #[cfg(target_os = "windows")]
         Commands::Update => commands::windows::update(),
     });
 
