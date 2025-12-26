@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
-## me3 - [v0.10.1](https://github.com/garyttierney/me3/releases/v0.10.1) - 2025-12-24
+## me3 - [v0.11.0](https://github.com/garyttierney/me3/releases/v0.11.0) - 2025-12-26
 
 ### 🚀 Features
 
@@ -16,6 +16,10 @@ All notable changes to this project will be documented in this file.
   > Set it relatively late to avoid flicker if the launch fails early e.g.
   > invalid options or anything not found.
 
+- [357ea39](https://github.com/garyttierney/me3/commit/357ea399ea1d6967a9a06d84ee21bd04f9330c05)  *(host)* Log game version on attach in [#639](https://github.com/garyttierney/me3/pull/639)
+
+
+
 - [e4508a9](https://github.com/garyttierney/me3/commit/e4508a9442eaf37bed27c704271b20c897e030dd)  *(host)* Compress bhd cache with deflate in [#615](https://github.com/garyttierney/me3/pull/615)
 
 
@@ -24,7 +28,23 @@ All notable changes to this project will be documented in this file.
 
 
 
+- [0b5092f](https://github.com/garyttierney/me3/commit/0b5092fbee7b1ad0d33ef4fc11a2981bd7e027a9)  *(installer)* Improve upgrade logic and clean uninstallation in [#645](https://github.com/garyttierney/me3/pull/645)
+
+
+  > fix #644
+  > 
+  > ---------
+
 ### 🐛 Bug Fixes
+
+- [ede89b5](https://github.com/garyttierney/me3/commit/ede89b5c065cf440e646cfe5bd9c8c5d1efb509b)  *(cli)* Avoid me3 update crash by using explicit native TLS agent in [#643](https://github.com/garyttierney/me3/pull/643)
+
+
+  > fix #642
+  > Upstream:https://github.com/algesten/ureq/blob/main/src/tls/mod.rs#L29-L42
+  > https://github.com/algesten/ureq/blob/main/src/lib.rs#L599-L616
+  > 
+  > ---------
 
 - [e2bba6e](https://github.com/garyttierney/me3/commit/e2bba6ef9c9719d47e8a1c95cd75de29ce41d405)  *(linux)* Add appid for Proton 10 in [#584](https://github.com/garyttierney/me3/pull/584)
 
@@ -2656,7 +2676,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
-[0.10.1]: https://github.com/garyttierney/me3/compare/v0.9.0..v0.10.1
+[0.11.0]: https://github.com/garyttierney/me3/compare/v0.9.0..v0.11.0
 [0.9.0]: https://github.com/garyttierney/me3/compare/v0.8.1..v0.9.0
 [0.8.1]: https://github.com/garyttierney/me3/compare/v0.7.0..v0.8.1
 [0.7.0]: https://github.com/garyttierney/me3/compare/v0.6.1..v0.7.0
