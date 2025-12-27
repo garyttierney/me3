@@ -61,21 +61,21 @@ fn run(
 fn main() -> LauncherResult<()> {
     me3_telemetry::install_error_handler();
 
-    let mut telemetry_vars = me3_env::deserialize_from_env::<TelemetryVars>()?;
+    let telemetry_vars = me3_env::deserialize_from_env::<TelemetryVars>()?;
 
-    let console_log_writer = match telemetry_vars.monitor_pipe_path.take() {
-        Some(path) => {
-            MakeWriterWrapper::new(OpenOptions::new().read(false).write(true).open(&path)?)
-        }
-        None => MakeWriterWrapper::stdout(),
-    };
+    let monitor_pipe = OpenOptions::new()
+        .read(false)
+        .write(true)
+        .open(&telemetry_vars.monitor_pipe_path)?;
 
-    let file_log_writer = MakeWriterWrapper::new(
-        OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&telemetry_vars.log_file_path)?,
-    );
+    let console_log_writer = MakeWriterWrapper::new(monitor_pipe);
+
+    let log_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&telemetry_vars.log_file_path)?;
+
+    let file_log_writer = MakeWriterWrapper::new(log_file);
 
     let telemetry_config = TelemetryConfig::default()
         .enabled(telemetry_vars.enabled)

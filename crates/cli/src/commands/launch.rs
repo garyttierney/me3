@@ -5,7 +5,7 @@ use std::{
     error::Error,
     fmt::Debug,
     fs::File,
-    io::{BufRead, BufReader, Read},
+    io::{BufRead, BufReader},
     path::{Path, PathBuf},
     process::{Command, Stdio},
     sync::{
@@ -29,7 +29,10 @@ use tempfile::NamedTempFile;
 use tracing::{error, info};
 
 use crate::{
-    commands::{launch::proton::CompatTools, profile::ProfileOptions},
+    commands::{
+        launch::{named_pipe::NamedPipe, proton::CompatTools},
+        profile::ProfileOptions,
+    },
     config::Config,
     db::{profile::Profile, DbContext},
     Game,
@@ -466,15 +469,8 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     std::fs::write(&attach_config_file, toml::to_string_pretty(&attach_config)?)?;
     info!(?attach_config_file, ?attach_config, "wrote attach config");
 
-    #[cfg(unix)]
-    let monitor_pipe = {
-        let monitor_pipe = tempfile::Builder::new().make(named_pipe::open)?;
-        info!(path = ?monitor_pipe.path(), "monitor pipe created");
-        Some(monitor_pipe)
-    };
-
-    #[cfg(windows)]
-    let monitor_pipe: Option<NamedTempFile<PathBuf>> = None;
+    let mut monitor_pipe = NamedPipe::create()?;
+    info!(path = ?monitor_pipe.path(), "monitor pipe created");
 
     let log_file_path = db.logs.create_log_file(profile.name())?;
     // Ensure log file exists so `normalize()` succeeds on Unix
@@ -487,22 +483,13 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
         host_config_path: attach_config_file.path().to_path_buf(),
     };
 
-    let monitor_pipe_path = match &monitor_pipe {
-        Some(monitor_pipe) => Some(monitor_pipe.path().normalize()?.into_path_buf()),
-        None => None,
-    };
+    let monitor_pipe_path = monitor_pipe.path().normalize()?.into_path_buf();
 
     let telemetry_vars = TelemetryVars {
         enabled: config.options.crash_reporting.unwrap_or_default(),
         log_file_path: log_file_path.normalize()?.into_path_buf(),
         monitor_pipe_path,
         trace_id: me3_telemetry::trace_id(),
-    };
-
-    let stdout = if monitor_pipe.is_none() {
-        Stdio::piped()
-    } else {
-        Stdio::null()
     };
 
     injector_command
@@ -513,7 +500,7 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
         .env("SteamGameId", app_id.to_string())
         .env("SteamOverlayGameId", app_id.to_string())
         .stdin(Stdio::null())
-        .stdout(stdout)
+        .stdout(Stdio::null())
         .stderr(Stdio::null());
 
     info!(?injector_command, "running injector command");
@@ -526,25 +513,18 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     let monitor_thread_running = running.clone();
 
     let monitor_thread = std::thread::spawn(move || {
-        let mut monitor_pipe = monitor_pipe
-            .and_then(|path| File::open(path).ok())
-            .map(BufReader::new);
+        monitor_pipe.disable_cleanup(true);
 
-        let mut stdout = launcher_proc.stdout.take().map(BufReader::new);
+        let monitor_pipe = monitor_pipe
+            .into_file()
+            .open()
+            .expect("failed to open pipe");
 
-        let reader = monitor_pipe
-            .as_mut()
-            .map(|reader| reader as &mut BufReader<dyn Read>)
-            .or_else(|| {
-                stdout
-                    .as_mut()
-                    .map(|reader| reader as &mut BufReader<dyn Read>)
-            })
-            .expect("could not obtain launcher output reader");
+        let mut reader = BufReader::new(monitor_pipe);
 
         let mut exit_code = None;
 
-        while monitor_thread_running.load(Ordering::SeqCst) {
+        while monitor_thread_running.load(Ordering::Relaxed) {
             exit_code = exit_code.or_else(|| {
                 launcher_proc
                     .try_wait()
@@ -570,7 +550,7 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     });
 
     ctrlc::set_handler(move || {
-        running.store(false, Ordering::SeqCst);
+        running.store(false, Ordering::Relaxed);
     })?;
 
     let _ = monitor_thread.join();
