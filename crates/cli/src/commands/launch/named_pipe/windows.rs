@@ -65,7 +65,7 @@ impl NamedPipe {
         let mut rand_bytes = [0; 15];
         getrandom::fill(&mut rand_bytes)?;
 
-        let path = URL_SAFE.encode(&rand_bytes);
+        let path = URL_SAFE.encode(rand_bytes);
         let file = Self::create(Path::new(&path))?;
 
         let mut temp_file = NamedTempFile::from_parts(f(file), TempPath::from_path(path));
