@@ -3,6 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use rkyv::with::AsString;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -16,8 +17,17 @@ pub trait WithPackageSource {
 
 /// A filesystem path to the contents of a package. May be relative to the [ModProfile] containing
 /// it.
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
-pub struct ModFile(pub(crate) PathBuf);
+#[derive(
+    Clone,
+    Debug,
+    Deserialize,
+    Serialize,
+    JsonSchema,
+    rkyv::Archive,
+    rkyv::Serialize,
+    rkyv::Deserialize,
+)]
+pub struct ModFile(#[rkyv(with = AsString)] pub(crate) PathBuf);
 
 impl Deref for ModFile {
     type Target = PathBuf;
@@ -47,7 +57,16 @@ fn on() -> bool {
 /// A package is a source for files that override files within the existing games DVDBND archives.
 /// It points to a local path containing assets matching the hierarchy they would be served under in
 /// the DVDBND.
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(
+    Clone,
+    Debug,
+    Deserialize,
+    Serialize,
+    JsonSchema,
+    rkyv::Archive,
+    rkyv::Serialize,
+    rkyv::Deserialize,
+)]
 pub struct Package {
     /// The unique identifier for this package.
     pub(crate) id: Option<String>,

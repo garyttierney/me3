@@ -1,21 +1,26 @@
 #![windows_subsystem = "windows"]
 #![feature(windows_process_extensions_main_thread_handle)]
 
-use eyre::Context;
+use std::fs::OpenOptions;
+
 use me3_env::{LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::{AttachConfig, AttachRequest};
 use me3_telemetry::TelemetryConfig;
-use tracing::{error, info, instrument, warn};
+use tracing::{info, instrument, warn};
 
-use crate::{game::Game, steam::require_steam};
+use crate::{game::Game, steam::require_steam, writer::MakeWriterWrapper};
 
 mod game;
 mod steam;
+mod writer;
 
 pub type LauncherResult<T> = eyre::Result<T>;
 
-#[instrument]
-fn run() -> LauncherResult<()> {
+#[instrument(skip_all)]
+fn run(
+    console_log_writer: MakeWriterWrapper,
+    file_log_writer: MakeWriterWrapper,
+) -> LauncherResult<()> {
     info!("Launcher started");
 
     let args: LauncherVars = me3_env::deserialize_from_env()?;
@@ -37,16 +42,14 @@ fn run() -> LauncherResult<()> {
     }
 
     let game_path = args.exe.parent();
-    let game = Game::launch(&args.exe, game_path)?;
+    let mut game = Game::launch(&args.exe, game_path)?;
     let request = AttachRequest { config };
 
-    match game.attach(&args.host_dll, request) {
+    match game.attach(&args.host_dll, console_log_writer, file_log_writer, request) {
         Ok(_) => info!("attached to game successfully"),
-        Err(error) => {
-            error!(
-                error = &*error,
-                "an error occurred while loading me3, modded content will not be available"
-            );
+        Err(e) => {
+            game.child.kill()?;
+            return Err(e);
         }
     }
 
@@ -55,14 +58,34 @@ fn run() -> LauncherResult<()> {
     Ok(())
 }
 
-fn main() {
+fn main() -> LauncherResult<()> {
     me3_telemetry::install_error_handler();
 
-    let telemetry_config = me3_env::deserialize_from_env()
-        .wrap_err("couldn't deserialize env vars")
-        .and_then(|vars: TelemetryVars| TelemetryConfig::try_from(vars))
-        .expect("couldn't get telemetry config");
+    let telemetry_vars = me3_env::deserialize_from_env::<TelemetryVars>()?;
+
+    let monitor_pipe = OpenOptions::new()
+        .read(false)
+        .write(true)
+        .open(&telemetry_vars.monitor_pipe_path)?;
+
+    let console_log_writer = MakeWriterWrapper::new(monitor_pipe);
+
+    let log_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&telemetry_vars.log_file_path)?;
+
+    let file_log_writer = MakeWriterWrapper::new(log_file);
+
+    let telemetry_config = TelemetryConfig::default()
+        .enabled(telemetry_vars.enabled)
+        .with_console_writer(console_log_writer.clone())
+        .with_file_writer(file_log_writer.clone())
+        .capture_panics(true);
+
     let _telemetry = me3_telemetry::install(telemetry_config);
 
-    let _ = me3_telemetry::with_root_span("launcher", "run", run);
+    me3_telemetry::with_root_span("launcher", "run", move || {
+        run(console_log_writer, file_log_writer)
+    })
 }

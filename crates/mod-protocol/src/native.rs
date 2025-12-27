@@ -16,7 +16,16 @@ fn on() -> bool {
     true
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(
+    Clone,
+    Debug,
+    Deserialize,
+    Serialize,
+    JsonSchema,
+    rkyv::Archive,
+    rkyv::Serialize,
+    rkyv::Deserialize,
+)]
 pub enum NativeInitializerCondition {
     #[serde(rename = "delay")]
     Delay { ms: usize },
@@ -24,7 +33,16 @@ pub enum NativeInitializerCondition {
     Function(String),
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(
+    Clone,
+    Debug,
+    Deserialize,
+    Serialize,
+    JsonSchema,
+    rkyv::Archive,
+    rkyv::Serialize,
+    rkyv::Deserialize,
+)]
 pub struct Native {
     /// Path to the DLL. Can be relative to the mod profile.
     pub path: ModFile,

@@ -10,7 +10,16 @@ use serde::{Deserialize, Serialize};
 pub trait DependencyId: Eq + PartialEq + Hash + Clone {}
 impl<T: Eq + PartialEq + Hash + Clone> DependencyId for T {}
 
-#[derive(Clone, Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(
+    Clone,
+    Debug,
+    Deserialize,
+    Serialize,
+    JsonSchema,
+    rkyv::Archive,
+    rkyv::Serialize,
+    rkyv::Deserialize,
+)]
 pub struct Dependent<T: DependencyId> {
     id: T,
     optional: bool,

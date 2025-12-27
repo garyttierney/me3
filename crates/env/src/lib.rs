@@ -14,7 +14,7 @@ pub struct TelemetryVars {
 
     pub log_file_path: PathBuf,
 
-    pub monitor_file_path: PathBuf,
+    pub monitor_pipe_path: PathBuf,
 
     pub trace_id: Option<String>,
 }
