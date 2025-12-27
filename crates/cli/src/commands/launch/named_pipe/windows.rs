@@ -1,10 +1,14 @@
 #![cfg(windows)]
 
 use std::{
+    ffi::OsString,
     fs::File,
     io, mem,
-    os::windows::{ffi::OsStrExt, io::FromRawHandle},
-    path::Path,
+    os::windows::{
+        ffi::{OsStrExt, OsStringExt},
+        io::FromRawHandle,
+    },
+    path::{Path, PathBuf},
 };
 
 use base64::{engine::general_purpose::URL_SAFE, Engine};
@@ -14,12 +18,15 @@ use windows::{
     Win32::{
         Foundation::{CloseHandle, HANDLE, INVALID_HANDLE_VALUE},
         Storage::FileSystem::PIPE_ACCESS_INBOUND,
-        System::Pipes::{ConnectNamedPipe, CreateNamedPipeW, PIPE_READMODE_BYTE, PIPE_WAIT},
+        System::Pipes::{
+            ConnectNamedPipe, CreateNamedPipeW, DisconnectNamedPipe, PIPE_READMODE_BYTE, PIPE_WAIT,
+        },
     },
 };
 
 pub struct NamedPipe {
     handle: HANDLE,
+    path: PathBuf,
 }
 
 impl NamedPipe {
@@ -57,16 +64,17 @@ impl NamedPipe {
             return Err(io::Error::last_os_error());
         }
 
-        Ok(Self { handle })
+        let path = OsString::from_wide(&name[..name.len() - 1]).into();
+        Ok(Self { handle, path })
     }
 
     #[inline]
     pub fn create_temp<T, F: FnMut(Self) -> T>(mut f: F) -> io::Result<NamedTempFile<T>> {
-        let mut rand_bytes = [0; 15];
+        let mut rand_bytes = [0; 16];
         getrandom::fill(&mut rand_bytes)?;
 
-        let path = URL_SAFE.encode(rand_bytes);
-        let file = Self::create(Path::new(&path))?;
+        let file = Self::create(Path::new(&URL_SAFE.encode(rand_bytes)))?;
+        let path = file.path.clone();
 
         let mut temp_file = NamedTempFile::from_parts(f(file), TempPath::from_path(path));
         temp_file.disable_cleanup(true);
@@ -80,6 +88,7 @@ impl NamedPipe {
         mem::forget(self);
 
         unsafe {
+            DisconnectNamedPipe(handle)?;
             ConnectNamedPipe(handle, None)?;
         }
 
