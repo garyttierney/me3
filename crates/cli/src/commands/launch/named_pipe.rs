@@ -1,21 +1,22 @@
-#![cfg(unix)]
+mod unix;
+mod windows;
 
-use std::{
-    ffi::CString,
-    fs::File,
-    io,
-    os::unix::ffi::OsStrExt,
-    path::{Path, PathBuf},
-};
+use std::{fs::File, io};
 
-use libc::mkfifo;
+use tempfile::NamedTempFile;
+#[cfg(unix)]
+use unix::NamedPipe as OsNamedPipe;
+#[cfg(windows)]
+use windows::NamedPipe as OsNamedPipe;
 
-pub fn open(path: &Path) -> io::Result<PathBuf> {
-    let c_str = CString::new(path.as_os_str().as_bytes()).map_err(io::Error::other)?;
+pub struct NamedPipe(OsNamedPipe);
 
-    if unsafe { mkfifo(c_str.as_ptr(), 0o666) != 0 } {
-        return Err(io::Error::last_os_error());
+impl NamedPipe {
+    pub fn create() -> io::Result<NamedTempFile<Self>> {
+        OsNamedPipe::create_temp(Self)
     }
 
-    Ok(path.to_path_buf())
+    pub fn open(self) -> io::Result<File> {
+        self.0.open()
+    }
 }

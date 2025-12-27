@@ -1631,11 +1631,13 @@ name = "me3-cli"
 version = "0.10.1"
 dependencies = [
  "assert_fs",
+ "base64",
  "chrono",
  "clap",
  "color-eyre",
  "ctrlc",
  "directories",
+ "getrandom 0.3.4",
  "is-terminal",
  "keyvalues-serde",
  "libc",
