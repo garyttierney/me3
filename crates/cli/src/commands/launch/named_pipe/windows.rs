@@ -68,10 +68,10 @@ impl NamedPipe {
         let path = URL_SAFE.encode(&rand_bytes);
         let file = Self::create(Path::new(&path))?;
 
-        Ok(NamedTempFile::from_parts(
-            f(file),
-            TempPath::from_path(path),
-        ))
+        let mut temp_file = NamedTempFile::from_parts(f(file), TempPath::from_path(path));
+        temp_file.disable_cleanup(true);
+
+        Ok(temp_file)
     }
 
     #[inline]
