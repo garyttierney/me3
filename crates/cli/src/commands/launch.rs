@@ -2,7 +2,6 @@ mod named_pipe;
 pub mod proton;
 
 use std::{
-    error::Error,
     fmt::Debug,
     fs::File,
     io::{BufRead, BufReader},
@@ -535,8 +534,8 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
 
             let read = reader.read_line(&mut line);
 
-            if let Err(e) = read {
-                error!(error = &e as &dyn Error, "couldn't read log line from game");
+            if let Err(error) = read {
+                error!(%error, "couldn't read log line from game");
             }
 
             if !line.is_empty() {

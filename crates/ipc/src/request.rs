@@ -17,7 +17,8 @@ use me3_launcher_attach_protocol::{AttachRequest, AttachResult};
 use rkyv::{Archive, Deserialize, Serialize};
 
 use crate::{
-    bridge::{Channel, SendError},
+    bridge::SendError,
+    identity_hasher::IdentityBuildHasher,
     request::convert::{
         ConvertRequest, ConvertResponse, TryFromRequestError, TryFromResponseError,
     },
@@ -62,7 +63,6 @@ pub enum RequestError {
 }
 
 impl Request {
-    #[inline]
     pub(crate) fn fulfill<Req, F>(self, f: F) -> Result<Req::Res, RequestError>
     where
         Req: ConvertRequest + UnwindSafe,
@@ -82,17 +82,11 @@ impl Request {
         }
     }
 
-    #[inline]
     pub(crate) fn await_response<Res, F>(self, id: RequestId, f: F) -> Result<Res, RequestError>
     where
         F: FnOnce((RequestId, Self)) -> Result<(), SendError>,
         Res: ConvertResponse,
     {
-        if Channel::is_in_recv_loop() {
-            // Prevent awaiting a request from the receive loop as it will block the thread.
-            return Err(RequestError::RequestFromRecv);
-        }
-
         // Pin on the stack - we'll block until the response is ready or an error occurs.
         let res: Pin<&AwaitedResponse> = pin!(AwaitedResponse::new(id));
 
@@ -104,7 +98,6 @@ impl Request {
         res.await_response()
     }
 
-    #[inline]
     pub(crate) fn generate_id() -> RequestId {
         let mut hasher = RandomState::new().build_hasher();
         std::thread::current().id().hash(&mut hasher);
@@ -115,7 +108,6 @@ impl Request {
 
 impl Response {
     /// Forward the response to the waiting thread to unblock it.
-    #[inline]
     pub fn forward(res: (RequestId, Result<Self, RequestError>)) {
         AwaitedResponse::forward_response(res);
     }
@@ -132,13 +124,12 @@ struct AwaitedResponse {
 struct AwaitedResponsePtr(*const AwaitedResponse);
 
 // Identity hasher because `RequestId` are already hashes (and are unique).
-static AWAITED_RESPONSES: Mutex<HashMap<RequestId, AwaitedResponsePtr, RequestBuildHasher>> =
-    Mutex::new(HashMap::with_hasher(RequestBuildHasher));
+static AWAITED_RESPONSES: Mutex<HashMap<RequestId, AwaitedResponsePtr, IdentityBuildHasher>> =
+    Mutex::new(HashMap::with_hasher(IdentityBuildHasher));
 
 impl AwaitedResponse {
     const SPIN_COUNT: u32 = 1000;
 
-    #[inline]
     fn new(id: RequestId) -> Self {
         Self {
             id,
@@ -149,7 +140,6 @@ impl AwaitedResponse {
         }
     }
 
-    #[inline]
     fn register(self: Pin<&Self>) {
         let with_this_id = AWAITED_RESPONSES
             .lock()
@@ -164,7 +154,6 @@ impl AwaitedResponse {
         self.is_registered.store(true, Ordering::Relaxed);
     }
 
-    #[inline]
     fn await_response<Res>(self: Pin<&Self>) -> Result<Res, RequestError>
     where
         Res: ConvertResponse,
@@ -191,7 +180,6 @@ impl AwaitedResponse {
         }
     }
 
-    #[inline]
     fn forward_response((id, res): (RequestId, Result<Response, RequestError>)) {
         let mut awaited_responses = AWAITED_RESPONSES.lock().unwrap();
 
@@ -213,45 +201,12 @@ impl AwaitedResponse {
 }
 
 impl Drop for AwaitedResponse {
-    #[inline]
     fn drop(&mut self) {
         // If we are still registered, remove the request.
         if *self.is_registered.get_mut() {
             // This only happens if the request isn't fulfilled successfully.
             let _ = AWAITED_RESPONSES.lock().unwrap().remove(&self.id);
         }
-    }
-}
-
-/// Identity hasher because `RequestId` are already hashes (and are unique).
-struct RequestBuildHasher;
-
-impl BuildHasher for RequestBuildHasher {
-    type Hasher = RequestHasher;
-
-    #[inline]
-    fn build_hasher(&self) -> Self::Hasher {
-        RequestHasher(0)
-    }
-}
-
-struct RequestHasher(u64);
-
-impl Hasher for RequestHasher {
-    #[inline]
-    fn write(&mut self, bytes: &[u8]) {
-        let a = std::array::from_fn(|i| bytes.get(i).cloned().unwrap_or(0));
-        self.0 = u64::from_le_bytes(a);
-    }
-
-    #[inline]
-    fn write_u64(&mut self, i: u64) {
-        self.0 = i;
-    }
-
-    #[inline]
-    fn finish(&self) -> u64 {
-        self.0
     }
 }
 

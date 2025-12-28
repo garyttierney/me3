@@ -36,7 +36,6 @@ regex.workspace = true
 rdvec.workspace = true
 rayon.workspace = true
 retour = { git = "https://github.com/Hpmason/retour-rs" }
-rkyv.workspace = true
 seq-macro = "0.3.6"
 serde_json.workspace = true
 tempfile.workspace = true

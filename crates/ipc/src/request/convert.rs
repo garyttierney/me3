@@ -51,12 +51,10 @@ impl TryFromError {
 impl ConvertRequest for AttachRequest {
     type Res = AttachResult;
 
-    #[inline]
     fn into_req(self) -> Request {
         Request::Attach(self)
     }
 
-    #[inline]
     fn try_from_req(req: Request) -> Result<Self, TryFromRequestError> {
         match req {
             Request::Attach(req) => Ok(req),
@@ -68,12 +66,10 @@ impl ConvertRequest for AttachRequest {
 impl ConvertResponse for AttachResult {
     type Req = AttachRequest;
 
-    #[inline]
     fn into_res(self) -> Response {
         Response::Attach(self)
     }
 
-    #[inline]
     fn try_from_res(res: Response) -> Result<Self, TryFromResponseError> {
         match res {
             Response::Attach(res) => Ok(res),

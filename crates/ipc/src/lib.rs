@@ -1,4 +1,4 @@
-#![feature(thread_id_value)]
+mod identity_hasher;
 
 pub mod bridge;
 pub mod message;

@@ -1674,7 +1674,7 @@ dependencies = [
 
 [[package]]
 name = "me3-ipc"
-version = "0.9.0"
+version = "0.10.1"
 dependencies = [
  "me3-env",
  "me3-launcher-attach-protocol",
@@ -1694,7 +1694,6 @@ dependencies = [
  "me3-launcher-attach-protocol",
  "me3-mod-protocol",
  "me3_telemetry",
- "rkyv",
  "sentry",
  "toml",
  "tracing",
@@ -1741,7 +1740,6 @@ dependencies = [
  "rdvec",
  "regex",
  "retour",
- "rkyv",
  "seq-macro",
  "serde_json",
  "tempfile",

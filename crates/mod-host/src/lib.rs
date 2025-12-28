@@ -8,12 +8,15 @@ use std::sync::{Arc, Mutex, OnceLock};
 use eyre::OptionExt;
 use me3_binary_analysis::{fd4_step::Fd4StepTables, rtti};
 use me3_env::TelemetryVars;
-use me3_ipc::{message::ArchivedMsgToChild, request::Request};
+use me3_ipc::{
+    bridge::BridgeToParent,
+    message::MsgToChild,
+    request::{Request, RequestId},
+};
 use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, AttachResult, Attachment};
 use me3_mod_host_assets::mapping::VfsOverrideMapping;
 use me3_telemetry::TelemetryConfig;
-use rkyv::{api::high::deserialize, rancor};
-use tracing::{error, info, warn, Span};
+use tracing::{error, info, instrument, warn, Span};
 use windows::Win32::{
     Globalization::CP_UTF8,
     System::{
@@ -253,16 +256,33 @@ fn dearxan(attach_config: &AttachConfig) -> Result<(), eyre::Error> {
 fn spawn_msg_thread() {
     std::thread::spawn(|| {
         let bridge = me3_ipc::bridge::to_parent().unwrap();
-        bridge.recv_loop(|msg| match msg.unwrap() {
-            ArchivedMsgToChild::Request(req) => {
-                let req = deserialize::<_, rancor::Error>(req).unwrap();
-                let (_, kind) = &req;
-                match kind {
-                    Request::Attach(_) => bridge.fulfill(req, me_attach).unwrap(),
+        let recv_span = bridge.enter_recv_span().unwrap();
+
+        loop {
+            let msg = match recv_span.recv() {
+                Ok(msg) => msg,
+                Err(error) => {
+                    error!(%error, "failed to receive message");
+                    continue;
                 }
+            };
+
+            match msg {
+                MsgToChild::Request(req) => fulfill_request(&bridge, req),
             }
-        })
+        }
     });
+}
+
+#[instrument(skip_all)]
+fn fulfill_request(bridge: &BridgeToParent, (id, req): (RequestId, Request)) {
+    let result = match req {
+        Request::Attach(_) => bridge.fulfill((id, req), me_attach),
+    };
+
+    if let Err(error) = result {
+        error!(%error, "failed to fulfill request");
+    }
 }
 
 #[unsafe(no_mangle)]

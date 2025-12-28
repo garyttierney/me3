@@ -12,7 +12,6 @@ pub struct MakeWriterWrapper {
 }
 
 impl MakeWriterWrapper {
-    #[inline]
     pub fn new(f: File) -> Self {
         Self {
             inner: Arc::new(Mutex::new(f)),
@@ -23,7 +22,6 @@ impl MakeWriterWrapper {
 impl<'a> MakeWriter<'a> for MakeWriterWrapper {
     type Writer = WriterWrapper<'a>;
 
-    #[inline]
     fn make_writer(&'a self) -> Self::Writer {
         WriterWrapper(self.inner.lock().unwrap())
     }

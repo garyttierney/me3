@@ -22,7 +22,10 @@ impl<T> RelPtr<T> {
     /// # Safety
     ///
     /// Both pointers must belong to the same allocation. See [`NonNull::byte_offset_from`].
-    #[inline]
+    ///
+    /// # Panics
+    ///
+    /// If `ptr` is more than 4 gigabytes away from `origin` (offset cannot fit in a `u32`).
     pub const unsafe fn new(ptr: NonNull<T>, origin: NonNull<()>) -> Self {
         // SAFETY: upheld by caller.
         let offset = unsafe { ptr.cast::<()>().byte_offset_from_unsigned(origin) };
@@ -45,23 +48,13 @@ impl<T> RelPtr<T> {
     /// # Safety
     ///
     /// `origin` must be the same as the one passed to [`RelPtr::new`].
-    #[inline]
     pub const unsafe fn get(self, origin: NonNull<()>) -> NonNull<T> {
         // SAFETY: upheld by caller.
         unsafe { origin.byte_add(self.inner.get() as usize - 1).cast::<T>() }
     }
-
-    // #[inline]
-    // pub const fn cast<U>(self) -> RelPtr<U> {
-    //     RelPtr {
-    //         inner: self.inner,
-    //         marker: PhantomData,
-    //     }
-    // }
 }
 
 impl<T> Clone for RelPtr<T> {
-    #[inline]
     fn clone(&self) -> Self {
         *self
     }
@@ -70,7 +63,6 @@ impl<T> Clone for RelPtr<T> {
 impl<T> Copy for RelPtr<T> {}
 
 impl<T> fmt::Debug for RelPtr<T> {
-    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.inner.fmt(f)
     }

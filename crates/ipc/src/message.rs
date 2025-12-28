@@ -17,9 +17,6 @@ pub enum MsgToParent {
     /// The message thread must use [`Response::forward`](crate::request::Response::forward) to
     /// unblock the thread waiting on the response.
     Response((RequestId, Result<Response, RequestError>)),
-
-    /// A hint to flush the log buffer, if there is one.
-    Flush,
 }
 
 /// Messages that can be received by

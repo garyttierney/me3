@@ -14,10 +14,9 @@ use std::{
 
 use eyre::{eyre, Context};
 use me3_env::{deserialize_from_env, serialize_into_command, TelemetryVars};
-use me3_ipc::{bridge::BridgeToChild, message::ArchivedMsgToParent, request::Response};
+use me3_ipc::{bridge::BridgeToChild, message::MsgToParent, request::Response};
 use me3_launcher_attach_protocol::{AttachRequest, Attachment};
-use rkyv::{api::high::deserialize, rancor};
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 use tracing_subscriber::fmt::MakeWriter;
 use windows::{
     core::{s, w, Error as WinError},
@@ -81,15 +80,15 @@ impl Game {
     pub fn attach(
         &self,
         dll_path: &Path,
-        console_log_writer: MakeWriterWrapper,
-        log_file_writer: MakeWriterWrapper,
+        console_log: MakeWriterWrapper,
+        file_log: MakeWriterWrapper,
         attach_request: AttachRequest,
     ) -> LauncherResult<Attachment> {
         let pid = self.child.id();
 
         info!(pid, "attaching to process");
 
-        self.spawn_msg_thread(console_log_writer, log_file_writer);
+        self.spawn_msg_thread(console_log, file_log);
 
         let thread_handle = self.child.main_thread_handle();
         let process_handle = self.child.as_handle().try_clone_to_owned()?;
@@ -118,39 +117,30 @@ impl Game {
         let _ = self.child.wait();
     }
 
-    fn spawn_msg_thread(
-        &self,
-        console_log_writer: MakeWriterWrapper,
-        log_file_writer: MakeWriterWrapper,
-    ) {
+    fn spawn_msg_thread(&self, console_log: MakeWriterWrapper, file_log: MakeWriterWrapper) {
         let bridge = self.bridge.clone();
         std::thread::spawn(move || {
-            let mut console_buf = String::new();
-            let mut file_buf = String::new();
+            let recv_span = bridge.enter_recv_span().unwrap();
 
-            bridge
-                .recv_loop(|msg| match msg.unwrap() {
-                    ArchivedMsgToParent::Response(res) => {
-                        let res = deserialize::<_, rancor::Error>(res).unwrap();
-                        Response::forward(res);
+            loop {
+                let msg = match recv_span.recv() {
+                    Ok(msg) => msg,
+                    Err(error) => {
+                        error!(%error, "failed to receive message");
+                        continue;
                     }
-                    ArchivedMsgToParent::ConsoleLog(s) => console_buf.push_str(s),
-                    ArchivedMsgToParent::FileLog(s) => file_buf.push_str(s),
-                    ArchivedMsgToParent::Flush => {
-                        if !console_buf.is_empty() {
-                            let _ = console_log_writer
-                                .make_writer()
-                                .write_all(console_buf.as_bytes());
-                            console_buf.clear();
-                        }
+                };
 
-                        if !file_buf.is_empty() {
-                            let _ = log_file_writer.make_writer().write_all(file_buf.as_bytes());
-                            file_buf.clear();
-                        }
+                match msg {
+                    MsgToParent::Response(res) => Response::forward(res),
+                    MsgToParent::ConsoleLog(s) => {
+                        let _ = console_log.make_writer().write_all(s.as_bytes());
                     }
-                })
-                .unwrap();
+                    MsgToParent::FileLog(s) => {
+                        let _ = file_log.make_writer().write_all(s.as_bytes());
+                    }
+                }
+            }
         });
     }
 }

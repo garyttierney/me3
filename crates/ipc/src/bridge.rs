@@ -16,10 +16,11 @@ use windows::{
     },
 };
 
-pub(crate) use crate::bridge::channel::{Channel, SendError};
+pub(crate) use crate::bridge::channel::SendError;
+pub use crate::bridge::channel::{RecvError, RecvSpanGuard, SpanError};
 use crate::{
-    bridge::{channel::RecvError, shared::SharedBridge},
-    message::{ArchivedMsgToChild, ArchivedMsgToParent, MsgToChild, MsgToParent},
+    bridge::shared::SharedBridge,
+    message::{MsgToChild, MsgToParent},
     request::{
         convert::{ConvertRequest, ConvertResponse},
         Request, RequestError, RequestId,
@@ -28,7 +29,6 @@ use crate::{
 
 mod buffer;
 mod channel;
-mod guard;
 mod rel;
 mod shared;
 mod signal;
@@ -155,7 +155,6 @@ impl BridgeToParent {
     /// Fulfill a RPC request from the parent process with the appropriate function.
     ///
     /// Sends a [`MsgToParent::Response`] to the parent process.
-    #[inline]
     pub fn fulfill<Req, F>(&self, (id, req): (RequestId, Request), f: F) -> Result<(), SendError>
     where
         Req: ConvertRequest + UnwindSafe,
@@ -167,20 +166,17 @@ impl BridgeToParent {
     }
 
     /// Send a [`MsgToParent`] to the parent process.
-    #[inline]
     pub fn send(&self, msg: MsgToParent) -> Result<(), SendError> {
         self.shared.to_parent.send::<_, rancor::Error>(msg)
     }
 
     /// Receive messages from the parent process.
     ///
-    /// Only one thread can be in the scope of [`BridgeToParent::recv_loop`] at a time.
-    #[inline]
-    pub fn recv_loop<F>(&self, f: F) -> Result<(), RecvError>
-    where
-        F: FnMut(Result<&ArchivedMsgToChild, rancor::Error>),
-    {
-        self.shared.to_child.recv_loop(f, None)
+    /// Only one thread can be in this span at a time.
+    pub fn enter_recv_span(
+        &self,
+    ) -> Result<RecvSpanGuard<'_, MsgToChild, rancor::Error>, SpanError> {
+        self.shared.to_child.enter_recv_span()
     }
 }
 
@@ -188,32 +184,32 @@ impl BridgeToChild {
     /// Queue a RPC request in the child process and block until it completes, yielding the result.
     ///
     /// Sends a [`MsgToChild::Request`] to the child process.
-    #[inline]
     pub fn request<Req>(&self, req: Req) -> Result<Req::Res, RequestError>
     where
         Req: ConvertRequest,
     {
+        if self.shared.to_parent.is_current_thread_recv() {
+            // Prevent awaiting a request from the receive loop as it will block the thread.
+            return Err(RequestError::RequestFromRecv);
+        }
+
         let req = req.into_req();
         let id = Request::generate_id();
         req.await_response(id, |(id, req)| self.send(MsgToChild::Request((id, req))))
     }
 
     /// Send a [`MsgToChild`] to the parent process.
-    #[inline]
     pub fn send(&self, msg: MsgToChild) -> Result<(), SendError> {
         self.shared.to_child.send(msg)
     }
 
     /// Receive messages from the child process.
     ///
-    /// Only one thread can be in the scope of [`BridgeToChild::recv_loop`] at a time.
-    #[inline]
-    pub fn recv_loop<F>(&self, f: F) -> Result<(), RecvError>
-    where
-        F: FnMut(Result<&ArchivedMsgToParent, rancor::Error>),
-    {
-        let flush = ArchivedMsgToParent::Flush;
-        self.shared.to_parent.recv_loop(f, Some(flush))
+    /// Only one thread can be in this span at a time.
+    pub fn enter_recv_span(
+        &self,
+    ) -> Result<RecvSpanGuard<'_, MsgToParent, rancor::Error>, SpanError> {
+        self.shared.to_parent.enter_recv_span()
     }
 }
 
