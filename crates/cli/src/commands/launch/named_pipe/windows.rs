@@ -30,7 +30,6 @@ pub struct NamedPipe {
 }
 
 impl NamedPipe {
-    #[inline]
     pub fn create(path: &Path) -> io::Result<Self> {
         // https://learn.microsoft.com/en-us/windows/win32/api/namedpipeapi/nf-namedpipeapi-createnamedpipew#parameters
         // 1. The name must start with "\\.\pipe\".
@@ -68,7 +67,6 @@ impl NamedPipe {
         Ok(Self { handle, path })
     }
 
-    #[inline]
     pub fn create_temp<T, F: FnMut(Self) -> T>(mut f: F) -> io::Result<NamedTempFile<T>> {
         let mut rand_bytes = [0; 16];
         getrandom::fill(&mut rand_bytes)?;
@@ -82,7 +80,6 @@ impl NamedPipe {
         Ok(temp_file)
     }
 
-    #[inline]
     pub fn open(self) -> io::Result<File> {
         let handle = self.handle;
         mem::forget(self);
@@ -100,7 +97,6 @@ impl NamedPipe {
 }
 
 impl Drop for NamedPipe {
-    #[inline]
     fn drop(&mut self) {
         unsafe {
             let _ = CloseHandle(self.handle);

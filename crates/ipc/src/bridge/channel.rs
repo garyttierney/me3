@@ -1,27 +1,40 @@
-use std::{hint, ptr::NonNull};
+use std::{
+    hash::BuildHasher,
+    marker::PhantomData,
+    ptr::NonNull,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 use rkyv::{
-    api::high::{access, HighSerializer, HighValidator},
+    api::high::{access, deserialize, HighDeserializer, HighSerializer, HighValidator},
     bytecheck::CheckBytes,
     rancor::{self, Source},
     ser::allocator::ArenaHandle,
     to_bytes,
     util::AlignedVec,
-    Portable, Serialize,
+    Archive, Deserialize, Serialize,
 };
 use windows::core::Error as WinError;
 
-use crate::bridge::{
-    buffer::{BipBuffer, WriteError},
-    guard::{GuardError, RecvLoopSpan},
-    signal::{MpscSignal, SpmcSignal},
+use crate::{
+    bridge::{
+        buffer::{BipBuffer, WriteError},
+        signal::{MpscSignal, SpmcSignal},
+    },
+    identity_hasher::IdentityBuildHasher,
 };
 
 #[repr(C)]
 pub struct Channel {
-    pub(super) queue: BipBuffer,
-    pub(super) has_messages: MpscSignal,
-    pub(super) has_capacity: SpmcSignal,
+    queue: BipBuffer,
+    has_messages: MpscSignal,
+    has_capacity: SpmcSignal,
+    recv_thread_id: AtomicU64,
+}
+
+pub struct RecvSpanGuard<'a, T, E> {
+    channel: &'a Channel,
+    _marker: PhantomData<Result<T, E>>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -37,33 +50,41 @@ pub enum SendError<E = rancor::Error> {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum RecvError {
+pub enum RecvError<E = rancor::Error> {
     #[error(transparent)]
     Os(#[from] WinError),
 
-    #[error(transparent)]
-    Producer(#[from] GuardError),
+    #[error("failed to deserialize message: {0}")]
+    Deserialize(E),
 }
 
-impl Channel {
-    const SPIN_COUNT: u32 = 1000;
+#[derive(Debug, thiserror::Error)]
+#[error("another thread has already entered this span")]
+pub struct SpanError;
 
-    #[inline]
+impl Channel {
     pub fn new() -> Self {
         Self {
             queue: BipBuffer::new(),
             has_messages: MpscSignal::new(),
             has_capacity: SpmcSignal::new(),
+            recv_thread_id: AtomicU64::new(0),
         }
     }
 
+    /// # Safety
+    ///
+    /// `buf` must be a pointer within the same allocation as `self`.
+    ///
+    /// # Panics
+    ///
+    /// If `buf` is more than 4 gigabytes away from `self`.
     pub unsafe fn init(&mut self, buf: NonNull<u8>, len: u32) {
         unsafe {
             self.queue.init(buf, len);
         }
     }
 
-    #[inline]
     pub fn send<M, E>(&self, msg: M) -> Result<(), SendError<E>>
     where
         M: for<'a> Serialize<HighSerializer<AlignedVec, ArenaHandle<'a>, E>>,
@@ -71,46 +92,67 @@ impl Channel {
     {
         // Push the message and let the receiver know.
         self.push_msg(msg)?;
-        self.has_messages.notify().map_err(SendError::Os)
+        self.has_messages.notify()?;
+        Ok(())
     }
 
-    #[inline]
-    pub fn recv_loop<F, A, E>(&self, mut f: F, flush: Option<A>) -> Result<(), RecvError>
+    /// Try to enter the single threaded recv span, which returns an error if
+    /// another thread has already entered.
+    pub fn enter_recv_span<T, E>(&self) -> Result<RecvSpanGuard<'_, T, E>, SpanError>
     where
-        F: FnMut(Result<&A, E>),
-        A: Portable + for<'a> CheckBytes<HighValidator<'a, E>>,
+        T: Archive,
+        T::Archived: Deserialize<T, HighDeserializer<E>> + for<'a> CheckBytes<HighValidator<'a, E>>,
         E: Source,
     {
-        // Prevent more than one thread from entering the loop at a time.
-        let _guard = RECV_LOOP_SPAN.enter()?;
-
-        loop {
-            // Spin, receiving messages.
-            for _ in 0..Self::SPIN_COUNT {
-                // SAFETY: only one thread can call `queue.read()` because of the guard.
-                while unsafe { self.queue.read(|bytes| f(access(bytes))).is_some() } {}
-                hint::spin_loop();
-            }
-
-            // There may be senders waiting for space in the queue.
-            self.has_capacity.notify()?;
-
-            // Flush, since we've gone through all the messages for now.
-            if let Some(flush) = &flush {
-                f(Ok(flush));
-            }
-
-            // Wait for more messages.
-            self.has_messages.wait()?;
+        // `current_thread_id` returns a nonzero value, so 0 can be the sentinel.
+        let id = current_thread_id();
+        match self
+            .recv_thread_id
+            .compare_exchange(0, id, Ordering::Acquire, Ordering::Relaxed)
+        {
+            Ok(_) => Ok(RecvSpanGuard {
+                channel: self,
+                _marker: PhantomData,
+            }),
+            Err(_) => Err(SpanError),
         }
     }
 
-    #[inline]
-    pub fn is_in_recv_loop() -> bool {
-        RECV_LOOP_SPAN.is_entered_by_current_thread()
+    /// Checks if the current thread is within the recv span.
+    pub fn is_current_thread_recv(&self) -> bool {
+        current_thread_id() == self.recv_thread_id.load(Ordering::Relaxed)
     }
 
-    #[inline]
+    /// # Safety
+    ///
+    /// This function can only be called by one thread at a time. See [`RecvSpanGuard::recv`].
+    unsafe fn recv<T, E>(&self) -> Result<T, RecvError<E>>
+    where
+        T: Archive,
+        T::Archived: Deserialize<T, HighDeserializer<E>> + for<'a> CheckBytes<HighValidator<'a, E>>,
+        E: Source,
+    {
+        let message = loop {
+            self.has_messages.wait()?;
+
+            // SAFETY: upheld by caller.
+            let result = unsafe {
+                self.queue.read(|bytes| {
+                    let archived = access::<T::Archived, E>(bytes)?;
+                    deserialize::<T, E>(archived)
+                })
+            };
+
+            if let Some(result) = result {
+                break result.map_err(RecvError::Deserialize);
+            }
+        };
+
+        self.has_capacity.notify()?;
+
+        message
+    }
+
     fn push_msg<M, E>(&self, msg: M) -> Result<(), SendError<E>>
     where
         M: for<'a> Serialize<HighSerializer<AlignedVec, ArenaHandle<'a>, E>>,
@@ -129,4 +171,25 @@ impl Channel {
     }
 }
 
-static RECV_LOOP_SPAN: RecvLoopSpan = RecvLoopSpan::new();
+impl<T, E> RecvSpanGuard<'_, T, E>
+where
+    T: Archive,
+    T::Archived: Deserialize<T, HighDeserializer<E>> + for<'a> CheckBytes<HighValidator<'a, E>>,
+    E: Source,
+{
+    pub fn recv(&self) -> Result<T, RecvError<E>> {
+        // SAFETY: this guard ensures singlethreaded access to the channel.
+        unsafe { self.channel.recv() }
+    }
+}
+
+fn current_thread_id() -> u64 {
+    IdentityBuildHasher.hash_one(std::thread::current().id())
+}
+
+impl<T, E> Drop for RecvSpanGuard<'_, T, E> {
+    fn drop(&mut self) {
+        // Another thread can enter the span.
+        self.channel.recv_thread_id.store(0, Ordering::Release);
+    }
+}

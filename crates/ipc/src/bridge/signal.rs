@@ -1,4 +1,4 @@
-use std::sync::atomic::{fence, AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{fence, AtomicU32, Ordering};
 
 use windows::{
     core::{Error as WinError, PCWSTR},
@@ -13,50 +13,43 @@ use crate::bridge::INHERIT_HANDLE;
 /// Multiple producers, single consumer signal.
 ///
 /// Misusing it (having multiple consumers) is not unsafe but may lead to deadlocks.
-#[repr(C, align(64))]
+#[repr(C, align(128))]
 pub struct MpscSignal {
-    signaled: AtomicBool,
+    notify_count: AtomicU32,
     handle: HANDLE,
 }
 
 /// Single producer, multiple consumers signal.
 ///
 /// Misusing it (having multiple producers) is not unsafe but may lead to deadlocks.
-#[repr(C, align(64))]
+#[repr(C, align(128))]
 pub struct SpmcSignal {
     asleep: AtomicU32,
     handle: HANDLE,
 }
 
 impl MpscSignal {
-    #[inline]
     pub fn new() -> Self {
         let handle = unsafe {
             CreateEventW(INHERIT_HANDLE, false, false, PCWSTR::null()).expect("CreateEventW failed")
         };
 
         Self {
-            signaled: AtomicBool::new(false),
+            notify_count: AtomicU32::new(1),
             handle,
         }
     }
 
-    #[inline]
     pub fn notify(&self) -> Result<(), WinError> {
-        if self.signaled.load(Ordering::Acquire) {
-            // Can get away with this because we only ever expect a single thread
-            // to set this to `false`, so we can elide future OS calls.
+        if self.notify_count.fetch_add(1, Ordering::AcqRel) != 0 {
             return Ok(());
         }
-        self.signaled.store(true, Ordering::Release);
         unsafe { SetEvent(self.handle) }
     }
 
-    #[inline]
     pub fn wait(&self) -> Result<(), WinError> {
-        if self.signaled.swap(false, Ordering::AcqRel) {
-            // Was signaled, reset the event to prevent spurious wakeups.
-            return unsafe { ResetEvent(self.handle) };
+        if self.notify_count.fetch_sub(1, Ordering::AcqRel) != 1 {
+            return Ok(());
         }
         match unsafe { WaitForSingleObject(self.handle, INFINITE) } {
             WAIT_OBJECT_0 => Ok(()),
@@ -66,7 +59,6 @@ impl MpscSignal {
 }
 
 impl SpmcSignal {
-    #[inline]
     pub fn new() -> Self {
         // This event is manual reset since we want to wake up multiple threads.
         let handle = unsafe {
@@ -79,7 +71,6 @@ impl SpmcSignal {
         }
     }
 
-    #[inline]
     pub fn notify(&self) -> Result<(), WinError> {
         if self.asleep.load(Ordering::Acquire) == 0 {
             // No threads are sleeping
@@ -88,7 +79,6 @@ impl SpmcSignal {
         unsafe { SetEvent(self.handle) }
     }
 
-    #[inline]
     pub fn wait(&self) -> Result<(), WinError> {
         let _ = self.asleep.fetch_add(1, Ordering::Relaxed);
         if unsafe { WaitForSingleObject(self.handle, INFINITE) != WAIT_OBJECT_0 } {
@@ -104,7 +94,6 @@ impl SpmcSignal {
 }
 
 impl Drop for MpscSignal {
-    #[inline]
     fn drop(&mut self) {
         unsafe {
             let _ = CloseHandle(self.handle);
@@ -113,7 +102,6 @@ impl Drop for MpscSignal {
 }
 
 impl Drop for SpmcSignal {
-    #[inline]
     fn drop(&mut self) {
         unsafe {
             let _ = CloseHandle(self.handle);

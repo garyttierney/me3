@@ -26,7 +26,7 @@ pub struct BipBuffer {
     r: CachePaddedAtomicU32,
 }
 
-#[repr(C, align(64))]
+#[repr(C, align(128))]
 struct CachePaddedAtomicU32(AtomicU32);
 
 #[derive(Debug, thiserror::Error)]
@@ -52,6 +52,13 @@ impl BipBuffer {
         }
     }
 
+    /// # Safety
+    ///
+    /// `buf` must be a pointer within the same allocation as `self`.
+    ///
+    /// # Panics
+    ///
+    /// If `buf` is more than 4 gigabytes away from `self`.
     pub unsafe fn init(&mut self, buf: NonNull<u8>, len: u32) {
         // SAFETY: up to caller.
         self.buf = unsafe { RelPtr::new(buf, NonNull::from_ref(self).cast()) };
@@ -62,8 +69,8 @@ impl BipBuffer {
 
     /// # Safety
     ///
-    /// Only one thread is permitted to read from the buffer at a time.
-    #[inline]
+    /// - [`Self::init`] has been called prior.
+    /// - Only one thread is permitted to read from the buffer at a time.
     pub unsafe fn read<T, F: FnOnce(&mut [u8]) -> T>(&self, f: F) -> Option<T> {
         let r = self.r.load(Ordering::Relaxed);
         let w = self.w.load(Ordering::Acquire);
@@ -100,7 +107,6 @@ impl BipBuffer {
         Some(value)
     }
 
-    #[inline]
     pub fn write(&self, bytes: &[u8]) -> Result<(), WriteError> {
         let len = bytes.len();
         let leb_len = size_of_leb128(len as u32);
@@ -112,15 +118,12 @@ impl BipBuffer {
         }
         let len = len as u32;
 
-        let r = self.r.load(Ordering::Acquire);
-
         // Have to spin to make writes atomic.
         struct LockGuard<'a>(&'a AtomicU32);
 
         impl Drop for LockGuard<'_> {
-            #[inline]
             fn drop(&mut self) {
-                self.0.store(0, Ordering::Relaxed);
+                self.0.store(0, Ordering::Release);
             }
         }
 
@@ -144,6 +147,8 @@ impl BipBuffer {
         let write_start = unsafe { buf.add(w as usize) };
 
         let mut new_pos = (w + leb_len).next_multiple_of(Self::ALIGN);
+
+        let r = self.r.load(Ordering::Acquire);
         let mut w_left_of_r = w < r;
 
         // Using LEB128_CAP to make sure that `w` cannot reach `r`.
@@ -173,7 +178,6 @@ impl BipBuffer {
         Ok(())
     }
 
-    #[inline]
     fn buf(&self) -> NonNull<u8> {
         unsafe { self.buf.get(NonNull::from_ref(self).cast()) }
     }
@@ -182,7 +186,6 @@ impl BipBuffer {
 const LEB128_CAP: u32 = size_of_leb128(u32::MAX);
 
 /// Little endian base 128 implementation. Set high bit indicates the end.
-#[inline]
 const fn size_of_leb128(value: u32) -> u32 {
     match value {
         0 => 1,
@@ -191,7 +194,11 @@ const fn size_of_leb128(value: u32) -> u32 {
 }
 
 /// Little endian base 128 implementation. Set high bit indicates the end.
-#[inline]
+///
+/// # Safety
+///
+/// `cursor` must point to the start of a properly encoded LEB128 number (as written by
+/// [`write_leb128`]).
 unsafe fn read_leb128(cursor: &mut NonNull<u8>) -> u32 {
     let mut x = 0u32;
     let mut pos = 0u32;
@@ -211,7 +218,11 @@ unsafe fn read_leb128(cursor: &mut NonNull<u8>) -> u32 {
 }
 
 /// Little endian base 128 implementation. Set high bit indicates the end.
-#[inline]
+///
+/// # Safety
+///
+/// The caller must ensure there are enough safely writable bytes for [`size_of_leb128`] of `x`
+/// writes.
 unsafe fn write_leb128(mut cursor: NonNull<u8>, mut x: u32) {
     loop {
         let byte = unsafe {
@@ -237,14 +248,12 @@ impl CachePaddedAtomicU32 {
 impl Deref for CachePaddedAtomicU32 {
     type Target = AtomicU32;
 
-    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
 impl DerefMut for CachePaddedAtomicU32 {
-    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }

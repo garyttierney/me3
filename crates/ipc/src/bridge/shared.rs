@@ -9,14 +9,21 @@ pub struct SharedBridge {
 }
 
 impl SharedBridge {
+    /// # Safety
+    ///
+    /// Ownership of `block` is transferred to the function, and it must be wholly writable and
+    /// `'static`. It must not be aliased.
     pub unsafe fn new_in<'a>(block: NonNull<[u8]>) -> Option<&'a mut Self> {
-        if block.len() < size_of::<Self>() {
+        let start = block.cast::<u8>();
+        let align_offset = start.align_offset(align_of::<Self>());
+
+        if block.len() < size_of::<Self>() + align_offset {
             return None;
         }
 
-        // SAFETY: up to caller, including alignment and aliasing.
+        // SAFETY: upheld by caller.
         unsafe {
-            let mut start = block.cast::<Self>();
+            let mut start = start.add(align_offset).cast::<Self>();
 
             let ptr = start.as_ptr();
             (&raw mut (*ptr).to_parent).write(Channel::new());
@@ -24,11 +31,13 @@ impl SharedBridge {
 
             let bridge = start.as_mut();
 
-            let len = ((block.len() - size_of::<Self>()) / 2).min(u32::MAX as usize) as u32;
+            let remaining = block.len() - align_offset - size_of::<Self>();
+            let len = (remaining / 2).min(u32::MAX as usize) as u32;
+
             bridge.to_parent.init(start.add(1).cast(), len);
             bridge
                 .to_child
-                .init(start.add(1).byte_add(len as usize).cast(), len);
+                .init(start.add(1).cast::<u8>().add(len as usize), len);
 
             Some(start.as_mut())
         }
