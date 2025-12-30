@@ -185,7 +185,7 @@ fn inject_dll(process: &OwnedHandle, path: &Path) -> LauncherResult<()> {
         )?;
 
         if WaitForSingleObject(thread, INFINITE) != WAIT_OBJECT_0 {
-            return Err(WinError::from_win32().into());
+            return Err(WinError::from_thread().into());
         }
 
         CloseHandle(thread)?;
