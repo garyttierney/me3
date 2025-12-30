@@ -271,7 +271,7 @@ impl FileMapping {
         // Non-null or bail.
         let ptr = unsafe {
             NonNull::new(MapViewOfFile(self.handle(), FILE_MAP_ALL_ACCESS, 0, 0, size).Value)
-                .ok_or_else(WinError::from_win32)?
+                .ok_or_else(WinError::from_thread)?
         };
 
         Ok(FileView { ptr, size })

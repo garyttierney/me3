@@ -53,7 +53,7 @@ impl MpscSignal {
         }
         match unsafe { WaitForSingleObject(self.handle, INFINITE) } {
             WAIT_OBJECT_0 => Ok(()),
-            _ => Err(WinError::from_win32()),
+            _ => Err(WinError::from_thread()),
         }
     }
 }
@@ -82,7 +82,7 @@ impl SpmcSignal {
     pub fn wait(&self) -> Result<(), WinError> {
         let _ = self.asleep.fetch_add(1, Ordering::Relaxed);
         if unsafe { WaitForSingleObject(self.handle, INFINITE) != WAIT_OBJECT_0 } {
-            return Err(WinError::from_win32());
+            return Err(WinError::from_thread());
         }
         if self.asleep.fetch_sub(1, Ordering::Release) != 1 {
             // Other threads are sleeping.
