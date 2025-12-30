@@ -56,8 +56,8 @@ rayon = "1"
 regex = "1"
 rdvec = "0.2.1"
 rkyv = "0.8.12"
-schemars = "1.0"
-sentry = { version = "0.40", default-features = false }
+schemars = "1.2"
+sentry = { version = "0.46", default-features = false }
 serde = "1"
 serde_derive = "1"
 serde_json = "1"
@@ -66,14 +66,14 @@ strum = "0.27"
 strum_macros = "0.27"
 tempfile = "3"
 thiserror = "2"
-toml = { version = "0.9.5", features = ["preserve_order"] }
+toml = { version = "0.9.10", features = ["preserve_order"] }
 tracing = { version = "0.1", features = ["release_max_level_info"] }
 tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", default-features = false }
 ureq = { version = "3", default-features = false, features = [
     "native-tls"
 ]}
-windows = "0.61"
+windows = "0.62"
 
 [profile.dev.package."*"]
 opt-level = 3
