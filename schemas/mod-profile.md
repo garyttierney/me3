@@ -44,7 +44,7 @@ before the DVDBND. Default: `[]`.
 
 
   - **`enabled`** *(boolean)*: Should this native be loaded? Default: `true`.
-  - **`load_early`** *(boolean)*: Should this native be loaded before others? Default: `false`.
+  - **`load_early`** *(boolean)*: Should this native be loaded before the game has initialized? Default: `false`.
   - **`finalizer`** *(['string', 'null'])*: An optional symbol to be called when this native successfully is queued for unload.
   - **`initializer`**: An optional symbol to be called after this native successfully loads.
     - **Any of**
