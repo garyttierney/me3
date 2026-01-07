@@ -1,6 +1,10 @@
 use std::{fmt::Debug, path::PathBuf};
 
-use me3_mod_protocol::{native::Native, package::Package, Game};
+use me3_mod_protocol::{
+    native::Native,
+    package::{Package, WithPackageSource as _},
+    Game,
+};
 use rkyv::{
     option::ArchivedOption,
     rancor::{Fallible, Source},
@@ -9,7 +13,6 @@ use rkyv::{
     Archive, SerializeUnsized,
 };
 use serde::{Deserialize, Serialize};
-
 #[derive(
     Clone, Debug, Serialize, Deserialize, rkyv::Archive, rkyv::Deserialize, rkyv::Serialize,
 )]
@@ -109,6 +112,25 @@ where
             ArchivedOption::Some(field) => Ok(Some(PathBuf::from(field.as_str()))),
             ArchivedOption::None => Ok(None),
         }
+    }
+}
+
+impl AttachConfig {
+    pub fn base_dirs(&self) -> impl Iterator<Item = PathBuf> {
+        let native_base_dirs = self
+            .early_natives
+            .iter()
+            .chain(self.natives.iter())
+            .filter_map(|native| native.path.parent().map(PathBuf::from));
+
+        let package_base_dirs = self
+            .packages
+            .iter()
+            .filter_map(|pkg| pkg.source().parent().map(PathBuf::from));
+
+        native_base_dirs
+            .chain(package_base_dirs)
+            .chain(self.cache_path.clone())
     }
 }
 
