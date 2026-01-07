@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     fs::File,
+    io::{BufRead as _, BufReader},
     path::{Path, PathBuf},
 };
 
@@ -8,6 +9,27 @@ use normpath::PathExt;
 use serde::Deserialize;
 use steamlocate::SteamDir;
 use tracing::info;
+
+// TODO(gtierney): can we parse /proc/self/mountinfo instead and compare the mount_id with
+// name_to_handle_at, or are we already in a new mount namespace when launched as a steam shortcut?
+pub fn active_mounts() -> std::io::Result<Vec<PathBuf>> {
+    let file = File::open("/proc/mounts")?;
+    let reader = BufReader::new(file);
+    let mut mounts = Vec::new();
+
+    for line in reader.lines() {
+        let line = line?;
+        let parts: Vec<&str> = line.split_whitespace().collect();
+
+        if parts.len() >= 2 {
+            mounts.push(PathBuf::from(parts[1]));
+        }
+    }
+
+    mounts.sort_by(|a, b| b.as_os_str().len().cmp(&a.as_os_str().len()));
+
+    Ok(mounts)
+}
 
 pub struct CompatTools<'a> {
     steam: &'a SteamDir,

@@ -2,6 +2,9 @@ mod named_pipe;
 pub mod proton;
 
 use std::{
+    collections::HashSet,
+    error::Error,
+    ffi::OsString,
     fmt::Debug,
     fs::File,
     io::{BufRead, BufReader},
@@ -25,7 +28,7 @@ use normpath::PathExt;
 use serde::{Deserialize, Serialize};
 use steamlocate::{Library, SteamDir};
 use tempfile::NamedTempFile;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::{
     commands::{
@@ -191,6 +194,9 @@ pub struct CompatToolLauncher {
     steam: SteamDir,
     library: Library,
     app_id: u32,
+
+    /// Every directory path that may be used by an app launched by this launcher.
+    base_dirs: Vec<PathBuf>,
 }
 
 impl Launcher for CompatToolLauncher {
@@ -229,6 +235,30 @@ impl Launcher for CompatToolLauncher {
                     .join(format!("steamapps/compatdata/{}", self.app_id))
             });
 
+        let active_mount_points = proton::active_mounts()?;
+        let mut used_mount_points = HashSet::new();
+
+        for base_dir in self.base_dirs {
+            let mount_point = active_mount_points
+                .iter()
+                .find(|mount| base_dir.starts_with(mount))
+                .cloned();
+
+            used_mount_points.extend(mount_point);
+        }
+
+        let compat_mounts = used_mount_points
+            .into_iter()
+            .map(|path| path.into_os_string())
+            .fold(OsString::new(), |mut lhs, rhs| {
+                lhs.push(rhs);
+                lhs.push(":");
+                lhs
+            });
+
+        debug!("mounting additional filesystems for SLR: {compat_mounts:?}");
+
+        command.env("STEAM_COMPAT_MOUNTS", compat_mounts);
         command.env("STEAM_COMPAT_DATA_PATH", prefix_path);
 
         // TODO(gtierney): unsure if this works for every scenario, but it shouldn't break anything
@@ -449,8 +479,14 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
             "unable to find installation of Proton runtime {compat_tool_name}"
         ))?;
 
+        let mut base_dirs: Vec<PathBuf> = attach_config.base_dirs().collect();
+        base_dirs.push(compat_tool.install_path.to_path_buf());
+        base_dirs.push(game_exe_path.parent().unwrap().to_path_buf());
+        base_dirs.push(dll_path.parent().unwrap().to_path_buf());
+
         let launcher = CompatToolLauncher {
             app_id,
+            base_dirs,
             library: steam_library,
             steam: steam_dir,
             tool: compat_tool,
