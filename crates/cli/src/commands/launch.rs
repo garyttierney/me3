@@ -1,5 +1,6 @@
 mod named_pipe;
 pub mod proton;
+mod steam;
 
 use std::{
     fmt::Debug,
@@ -29,7 +30,11 @@ use tracing::{error, info};
 
 use crate::{
     commands::{
-        launch::{named_pipe::NamedPipe, proton::CompatTools},
+        launch::{
+            named_pipe::NamedPipe,
+            proton::CompatTools,
+            steam::{SteamInputConfig, SteamUserConfig, SteamUsers},
+        },
         profile::ProfileOptions,
     },
     config::Config,
@@ -228,6 +233,24 @@ impl Launcher for CompatToolLauncher {
                     .path()
                     .join(format!("steamapps/compatdata/{}", self.app_id))
             });
+
+        let steam_user_config = SteamUsers::open(self.steam.path()).ok().and_then(|users| {
+            let user = users.active()?;
+            SteamUserConfig::open(self.steam.path(), user).ok()
+        });
+
+        let steam_input_status = steam_user_config
+            .as_ref()
+            .and_then(|config| config.apps.get(&self.app_id)?.use_steam_controller_config)
+            .unwrap_or(SteamInputConfig::Default);
+
+        if steam_input_status != SteamInputConfig::ForceOff {
+            const STEAM_INPUT_VIRTUAL_DEV_ID: &str = "0x28DE/0x0000";
+            command.env(
+                "SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT",
+                STEAM_INPUT_VIRTUAL_DEV_ID,
+            );
+        }
 
         command.env("STEAM_COMPAT_DATA_PATH", prefix_path);
 
