@@ -4,6 +4,13 @@ use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 use steamlocate::SteamDir;
 
+pub fn steamdir() -> Option<SteamDir> {
+    SteamDir::locate_multiple()
+        .ok()?
+        .into_iter()
+        .find(|dir| dir.library_paths().is_ok())
+}
+
 #[derive(Deserialize, Debug)]
 pub struct SteamUsers(HashMap<u64, SteamUserData>);
 
@@ -93,11 +100,7 @@ pub struct SteamUserData {
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
-
-    use crate::commands::launch::steam::{
-        SteamInputConfig, SteamUserConfig, SteamUserData, SteamUsers,
-    };
+    use crate::commands::launch::steam::{SteamInputConfig, SteamUserConfig, SteamUsers};
 
     #[test]
     fn deserialize_config() {

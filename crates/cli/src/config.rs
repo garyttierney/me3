@@ -4,14 +4,17 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use color_eyre::Result;
+use color_eyre::{eyre::eyre, Result};
 use me3_mod_protocol::Game;
 use serde::{Deserialize, Serialize};
 use steamlocate::SteamDir;
 use tracing::error;
 
 use crate::{
-    commands::{launch::GameOptions, profile::no_profile_dir},
+    commands::{
+        launch::{steam::steamdir, GameOptions},
+        profile::no_profile_dir,
+    },
     config::known_paths::OptionalPathExt,
 };
 
@@ -78,8 +81,13 @@ impl Config {
             .options
             .steam_dir
             .as_ref()
-            .map(|steam_path| SteamDir::from_dir(steam_path))
-            .unwrap_or_else(SteamDir::locate)?)
+            .map(|steam_path| {
+                SteamDir::from_dir(steam_path)
+                    .map_err(|err| eyre!("Invalid Steam directory {err:?}"))
+            })
+            .unwrap_or_else(|| {
+                steamdir().ok_or(eyre!("Couldn't find a valid steam installation"))
+            })?)
     }
 
     pub fn resolve_profile(&self, profile_name: &str) -> Result<PathBuf> {
