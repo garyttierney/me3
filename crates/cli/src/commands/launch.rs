@@ -1,6 +1,6 @@
 mod named_pipe;
 pub mod proton;
-mod steam;
+pub mod steam;
 
 use std::{
     fmt::Debug,
