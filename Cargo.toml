@@ -55,7 +55,7 @@ pelite = "0.10"
 rayon = "1"
 regex = "1"
 rdvec = "0.2.1"
-rkyv = "0.8.12"
+rkyv = "0.8.14"
 schemars = "1.2"
 sentry = { version = "0.46", default-features = false }
 serde = "1"
@@ -66,7 +66,7 @@ strum = "0.27"
 strum_macros = "0.27"
 tempfile = "3"
 thiserror = "2"
-toml = { version = "0.9.10", features = ["preserve_order"] }
+toml = { version = "0.9.11", features = ["preserve_order"] }
 tracing = { version = "0.1", features = ["release_max_level_info"] }
 tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", default-features = false }
