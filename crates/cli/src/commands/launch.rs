@@ -1,24 +1,25 @@
 mod named_pipe;
-pub mod proton;
 pub mod steam;
+pub mod strategy;
 
 use std::{
     fmt::Debug,
     fs::File,
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::Stdio,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
 };
 
+use crate::commands::launch::strategy::{compat_tool::CompatTools, LaunchStrategy};
 use clap::{
     builder::{BoolValueParser, MapValueParser, TypedValueParser},
     ArgAction, Args,
 };
-use color_eyre::eyre::{eyre, OptionExt};
+use color_eyre::eyre::{bail, eyre, OptionExt};
 use me3_env::{CommandExt, LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{native::Native, package::Package};
@@ -29,14 +30,7 @@ use tempfile::NamedTempFile;
 use tracing::{error, info};
 
 use crate::{
-    commands::{
-        launch::{
-            named_pipe::NamedPipe,
-            proton::CompatTools,
-            steam::{SteamInputConfig, SteamUserConfig, SteamUsers},
-        },
-        profile::ProfileOptions,
-    },
+    commands::{launch::named_pipe::NamedPipe, profile::ProfileOptions},
     config::Config,
     db::{profile::Profile, DbContext},
     Game,
@@ -177,102 +171,6 @@ pub struct LaunchArgs {
     savefile: Option<String>,
 }
 
-pub trait Launcher: Debug {
-    fn into_command(self, launcher: PathBuf) -> color_eyre::Result<Command>;
-}
-
-#[derive(Debug)]
-pub struct DirectLauncher;
-
-impl Launcher for DirectLauncher {
-    fn into_command(self, launcher: PathBuf) -> color_eyre::Result<Command> {
-        Ok(Command::new(launcher))
-    }
-}
-
-#[derive(Debug)]
-pub struct CompatToolLauncher {
-    tool: proton::CompatTool,
-    steam: SteamDir,
-    library: Library,
-    app_id: u32,
-}
-
-impl Launcher for CompatToolLauncher {
-    fn into_command(self, launcher: PathBuf) -> color_eyre::Result<Command> {
-        // TODO: parse this from appcache/appinfo.vcf
-        let sniper_id = 1628350;
-        let (sniper_app, sniper_library) = self
-            .steam
-            .find_app(sniper_id)?
-            .ok_or_eyre("unable to find Steam Linux Runtime")?;
-
-        let sniper_path = sniper_library.resolve_app_dir(&sniper_app);
-        let mut command = Command::new(sniper_path.join("run"));
-
-        command.args([
-            "--batch",
-            "--",
-            &*self.tool.install_path.join("proton").to_string_lossy(),
-            "waitforexitandrun",
-            &*launcher.to_string_lossy(),
-        ]);
-
-        // <https://gitlab.steamos.cloud/steamrt/steam-runtime-tools/-/blob/main/docs/steam-compat-tool-interface.md>
-        command.env("STEAM_COMPAT_CLIENT_INSTALL_PATH", self.steam.path());
-
-        let prefix_path = self
-            .steam
-            .library_paths()?
-            .into_iter()
-            .map(|path| path.join(format!("steamapps/compatdata/{}", self.app_id)))
-            .filter(|path| path.exists())
-            .next()
-            .unwrap_or_else(|| {
-                self.library
-                    .path()
-                    .join(format!("steamapps/compatdata/{}", self.app_id))
-            });
-
-        let steam_user_config = SteamUsers::open(self.steam.path()).ok().and_then(|users| {
-            let user = users.active()?;
-            SteamUserConfig::open(self.steam.path(), user).ok()
-        });
-
-        let steam_input_status = steam_user_config
-            .as_ref()
-            .and_then(|config| config.apps.get(&self.app_id)?.use_steam_controller_config)
-            .unwrap_or(SteamInputConfig::Default);
-
-        if steam_input_status != SteamInputConfig::ForceOff {
-            const STEAM_INPUT_VIRTUAL_DEV_ID: &str = "0x28DE/0x0000";
-            command.env(
-                "SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT",
-                STEAM_INPUT_VIRTUAL_DEV_ID,
-            );
-        }
-
-        command.env("STEAM_COMPAT_DATA_PATH", prefix_path);
-
-        // TODO(gtierney): unsure if this works for every scenario, but it shouldn't break anything
-        // where it doesn't
-        let mut ld_preload = self
-            .steam
-            .path()
-            .join("ubuntu12_64/gameoverlayrenderer.so")
-            .into_os_string();
-
-        if let Some(existing_ld_preload) = std::env::var_os("LD_PRELOAD") {
-            ld_preload.push(" ");
-            ld_preload.push(&existing_ld_preload);
-        }
-
-        command.env("LD_PRELOAD", ld_preload);
-
-        Ok(command)
-    }
-}
-
 struct LaunchContext {
     game: Game,
     profile: Profile,
@@ -409,6 +307,82 @@ impl LaunchArgs {
     }
 }
 
+#[cfg(target_os = "linux")]
+fn create_launch_strategy(
+    game: &Game,
+    exe: &GameExecutable,
+) -> color_eyre::Result<impl LaunchStrategy> {
+    let GameExecutable::Steam {
+        steam,
+        library,
+        app_id,
+        install_dir,
+        ..
+    } = exe
+    else {
+        bail!("Only Steam installations are supported on Linux")
+    };
+
+    let compat_tool_mapping = steam.compat_tool_mapping()?;
+    let compat_tools = CompatTools::new(steam.clone());
+
+    let app_compat_tool = compat_tool_mapping
+        .get(&app_id)
+        .or_else(|| compat_tool_mapping.get(&0));
+
+    let compat_tool_name = app_compat_tool
+        .and_then(|tool| tool.name.clone())
+        .or_else(|| game.0.verified_on_deck_runtime().map(|rt| rt.to_string()))
+        .ok_or_eyre("unable to determine Proton runtime to run game with")?;
+
+    let compat_tool = compat_tools.find(&compat_tool_name).ok_or_eyre(format!(
+        "unable to find installation of Proton runtime {compat_tool_name}"
+    ))?;
+
+    Ok(strategy::compat_tool::CompatToolLaunchStrategy {
+        library: library.clone(),
+        app_id: *app_id,
+        install_dir: install_dir.clone(),
+        steam: steam.clone(),
+        all_tools: compat_tools,
+        launch_tool: compat_tool,
+    })
+}
+
+#[cfg(target_os = "windows")]
+fn create_launch_strategy(
+    _game: &Game,
+    _exe: &GameExecutable,
+) -> color_eyre::Result<impl LaunchStrategy> {
+    Ok(strategy::direct::DirectLaunchStrategy)
+}
+
+pub enum GameExecutable {
+    Custom(PathBuf),
+    Steam {
+        /// Steam installation this game was found in.
+        steam: SteamDir,
+
+        /// Absolute path to the game executable.
+        exe: PathBuf,
+
+        /// The root path of the Steam library this executable was found in.
+        library: Library,
+
+        app_id: u32,
+        install_dir: PathBuf,
+    },
+}
+
+impl AsRef<Path> for GameExecutable {
+    fn as_ref(&self) -> &Path {
+        match self {
+            Self::Custom(path) => path,
+            Self::Steam { exe, .. } => exe,
+        }
+    }
+}
+
 #[tracing::instrument(err, skip_all)]
 pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
     let LaunchContext {
@@ -436,53 +410,29 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
         bins_dir.join("me3_mod_host.dll")
     };
 
-    let game_exe_path = game_options
+    let game_executable = game_options
         .exe
-        .map(color_eyre::eyre::Ok)
+        .map(|path| Ok::<_, color_eyre::Report>(GameExecutable::Custom(path)))
         .unwrap_or_else(|| {
             let steam_dir = config.steam_dir()?;
             let (app, library) = steam_dir.find_app(app_id)?.ok_or_eyre(
                 "Steam was used to locate the game executable and no game installation was found",
             )?;
 
-            let game_exe = library.resolve_app_dir(&app).join(game.launcher());
+            let install_dir = library.resolve_app_dir(&app);
+            let exe = install_dir.join(game.launcher());
 
-            Ok(game_exe)
+            Ok(GameExecutable::Steam {
+                app_id: app.app_id,
+                install_dir,
+                library,
+                exe,
+                steam: steam_dir.clone(),
+            })
         })?;
 
-    let mut injector_command = if cfg!(target_os = "linux") {
-        let steam_dir = config.steam_dir()?;
-        let (_, steam_library) = steam_dir.find_app(app_id)?.ok_or_eyre(
-            "Steam was used to locate the WINE configuration and no game installation was found",
-        )?;
-
-        let compat_tool_mapping = steam_dir.compat_tool_mapping()?;
-        let compat_tools = CompatTools::new(&steam_dir);
-
-        let app_compat_tool = compat_tool_mapping
-            .get(&app_id)
-            .or_else(|| compat_tool_mapping.get(&0));
-
-        let compat_tool_name = app_compat_tool
-            .and_then(|tool| tool.name.clone())
-            .or_else(|| game.0.verified_on_deck_runtime().map(|rt| rt.to_string()))
-            .ok_or_eyre("unable to determine Proton runtime to run game with")?;
-
-        let compat_tool = compat_tools.find(&compat_tool_name).ok_or_eyre(format!(
-            "unable to find installation of Proton runtime {compat_tool_name}"
-        ))?;
-
-        let launcher = CompatToolLauncher {
-            app_id,
-            library: steam_library,
-            steam: steam_dir,
-            tool: compat_tool,
-        };
-
-        launcher.into_command(launcher_path)
-    } else {
-        DirectLauncher.into_command(launcher_path)
-    }?;
+    let launch_strategy = create_launch_strategy(&game, &game_executable)?;
+    let mut injector_command = launch_strategy.build_command(&launcher_path, vec![])?;
 
     let attach_config_dir = config.cache_dir().unwrap_or(Box::from(Path::new(".")));
     std::fs::create_dir_all(&attach_config_dir)?;
@@ -500,7 +450,7 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     drop(log_file);
 
     let launcher_vars = LauncherVars {
-        exe: game_exe_path,
+        exe: game_executable.as_ref().to_path_buf(),
         host_dll: dll_path,
         host_config_path: attach_config_file.path().to_path_buf(),
     };

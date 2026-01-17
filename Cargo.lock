@@ -1646,6 +1646,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
+ "shlex",
  "steamlocate",
  "strum",
  "tempfile",

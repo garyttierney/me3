@@ -53,15 +53,15 @@ memmap = "0.7"
 normpath = "1"
 pelite = "0.10"
 rayon = "1"
-regex = "1"
 rdvec = "0.2.1"
+regex = "1"
 rkyv = "0.8.12"
 schemars = "1.2"
 sentry = { version = "0.46", default-features = false }
 serde = "1"
 serde_derive = "1"
 serde_json = "1"
-steamlocate = "2"
+steamlocate = { git = "https://github.com/WilliamVenner/steamlocate-rs", rev = "926175b1ffbe06ccdd2449fb74927bd173db25ec" }
 strum = "0.27"
 strum_macros = "0.27"
 tempfile = "3"
@@ -70,9 +70,7 @@ toml = { version = "0.9.10", features = ["preserve_order"] }
 tracing = { version = "0.1", features = ["release_max_level_info"] }
 tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", default-features = false }
-ureq = { version = "3", default-features = false, features = [
-    "native-tls"
-]}
+ureq = { version = "3", default-features = false, features = ["native-tls"] }
 windows = "0.62"
 
 [profile.dev.package."*"]
