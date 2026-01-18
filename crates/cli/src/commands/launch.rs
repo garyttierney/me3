@@ -14,7 +14,6 @@ use std::{
     },
 };
 
-use crate::commands::launch::strategy::{compat_tool::CompatTools, LaunchStrategy};
 use clap::{
     builder::{BoolValueParser, MapValueParser, TypedValueParser},
     ArgAction, Args,
@@ -30,7 +29,13 @@ use tempfile::NamedTempFile;
 use tracing::{error, info};
 
 use crate::{
-    commands::{launch::named_pipe::NamedPipe, profile::ProfileOptions},
+    commands::{
+        launch::{
+            named_pipe::NamedPipe,
+            strategy::{compat_tool::CompatTools, LaunchStrategy},
+        },
+        profile::ProfileOptions,
+    },
     config::Config,
     db::{profile::Profile, DbContext},
     Game,
@@ -384,7 +389,12 @@ impl AsRef<Path> for GameExecutable {
 }
 
 #[tracing::instrument(err, skip_all)]
-pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Result<()> {
+pub fn launch(
+    db: DbContext,
+    config: Config,
+    args: LaunchArgs,
+    tmp_log_file_path: PathBuf,
+) -> color_eyre::Result<()> {
     let LaunchContext {
         game,
         profile,
@@ -445,10 +455,10 @@ pub fn launch(db: DbContext, config: Config, args: LaunchArgs) -> color_eyre::Re
     info!(path = ?monitor_pipe.path(), "monitor pipe created");
 
     let log_file_path = db.logs.create_log_file(profile.name())?;
-    // Ensure log file exists so `normalize()` succeeds on Unix
-    let log_file = File::create(&log_file_path)?;
-    drop(log_file);
 
+    info!(?log_file_path, "created log file");
+
+    let _ = std::fs::copy(tmp_log_file_path, &log_file_path);
     let launcher_vars = LauncherVars {
         exe: game_executable.as_ref().to_path_buf(),
         host_dll: dll_path,

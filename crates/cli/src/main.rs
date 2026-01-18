@@ -118,12 +118,13 @@ fn main() {
         options,
     };
 
-    let log_file = tempfile::tempfile().unwrap();
+    let tmp_log_file = tempfile::NamedTempFile::new().unwrap();
+    let (tmp_log_file, tmp_log_file_path) = tmp_log_file.keep().unwrap();
 
     let telemetry_config = TelemetryConfig::default()
         .enabled(config.options.crash_reporting.unwrap_or(false))
         .with_console_writer(stderr)
-        .with_file_writer(log_file);
+        .with_file_writer(tmp_log_file);
 
     let _telemetry_guard = me3_telemetry::install(telemetry_config);
 
@@ -136,7 +137,9 @@ fn main() {
 
     let result = me3_telemetry::with_root_span("me3", "run command", || match cli.command {
         Commands::Info => commands::info::info(config),
-        Commands::Launch(args) => commands::launch::launch(db, config, args),
+        Commands::Launch(args) => {
+            commands::launch::launch(db, config, args, tmp_log_file_path.clone())
+        }
         Commands::Profile(ProfileCommands::Create(args)) => commands::profile::create(config, args),
         Commands::Profile(ProfileCommands::List) => commands::profile::list(db),
         Commands::Profile(ProfileCommands::Show(name)) => commands::profile::show(db, config, name),
@@ -147,6 +150,8 @@ fn main() {
         #[cfg(target_os = "windows")]
         Commands::Update => commands::windows::update(),
     });
+
+    let _ = std::fs::remove_file(tmp_log_file_path);
 
     if result.is_err() {
         std::process::exit(1);
