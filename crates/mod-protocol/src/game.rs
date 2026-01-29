@@ -27,6 +27,7 @@ use strum_macros::VariantArray;
     rkyv::Deserialize,
 )]
 pub enum Game {
+    DarkSoulsRemastered,
     DarkSouls3,
     Sekiro,
     EldenRing,
@@ -41,6 +42,7 @@ impl Game {
         // TODO: we need a better way to deal with this.
         const PROTON_STABLE: &str = "proton_10";
         match self {
+            DarkSoulsRemastered => Some("proton_8"),
             DarkSouls3 => Some("proton_8"),
             Sekiro => Some(PROTON_STABLE),
             EldenRing => Some("proton_8"),
@@ -53,6 +55,7 @@ impl Game {
     pub const fn name(self) -> &'static str {
         use Game::*;
         match self {
+            DarkSoulsRemastered => "darksoulsremastered",
             DarkSouls3 => "darksouls3",
             Sekiro => "sekiro",
             EldenRing => "eldenring",
@@ -65,6 +68,7 @@ impl Game {
     pub const fn title(self) -> &'static str {
         use Game::*;
         match self {
+            DarkSoulsRemastered => "Dark Souls: Remastered",
             DarkSouls3 => "Dark Souls III",
             Sekiro => "Sekiro: Shadows Die Twice",
             EldenRing => "Elden Ring",
@@ -77,6 +81,7 @@ impl Game {
     pub fn possible_names(self) -> &'static [&'static str] {
         use Game::*;
         match self {
+            DarkSoulsRemastered => &[const { Game::DarkSoulsRemastered.name() }, "dsr"],
             DarkSouls3 => &[const { DarkSouls3.name() }, "ds3"],
             Sekiro => &[const { Sekiro.name() }, "sdt"],
             EldenRing => &[const { EldenRing.name() }, "er", "elden-ring"],
@@ -99,9 +104,13 @@ impl Game {
             DarkSouls3 | Sekiro | EldenRing | ArmoredCore6 | Nightreign => {
                 std::env::var_os("APPDATA").map(PathBuf::from)
             }
+            DarkSoulsRemastered => {
+                std::env::var_os("CSIDL_MYDOCUMENTS").map(|home| PathBuf::from(home))
+            }
         };
 
         Some(match self {
+            DarkSoulsRemastered => base_dir?.join("nbgi\\DarkSoulsRemastered"),
             DarkSouls3 => base_dir?.join("DarkSoulsIII"),
             Sekiro => base_dir?.join("Sekiro"),
             EldenRing => base_dir?.join("EldenRing"),
@@ -144,6 +153,7 @@ impl Game {
     pub fn app_id(self) -> u32 {
         use Game::*;
         match self {
+            DarkSoulsRemastered => 570940,
             DarkSouls3 => 374320,
             Sekiro => 814380,
             EldenRing => 1245620,
@@ -164,6 +174,7 @@ impl Game {
     pub fn executable(self) -> &'static Path {
         use Game::*;
         Path::new(match self {
+            DarkSoulsRemastered => "DarkSoulsRemastered.exe",
             DarkSouls3 => "Game/DarkSoulsIII.exe",
             Sekiro => "sekiro.exe",
             EldenRing => "Game/eldenring.exe",
