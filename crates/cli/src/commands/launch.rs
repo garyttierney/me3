@@ -316,6 +316,7 @@ impl LaunchArgs {
 fn create_launch_strategy(
     game: &Game,
     exe: &GameExecutable,
+    attach_config: &AttachConfig,
 ) -> color_eyre::Result<impl LaunchStrategy> {
     let GameExecutable::Steam {
         steam,
@@ -344,6 +345,8 @@ fn create_launch_strategy(
         "unable to find installation of Proton runtime {compat_tool_name}"
     ))?;
 
+    let base_dirs: Vec<PathBuf> = attach_config.base_dirs().collect();
+
     Ok(strategy::compat_tool::CompatToolLaunchStrategy {
         library: library.clone(),
         app_id: *app_id,
@@ -351,6 +354,7 @@ fn create_launch_strategy(
         steam: steam.clone(),
         all_tools: compat_tools,
         launch_tool: compat_tool,
+        base_dirs,
     })
 }
 
@@ -358,6 +362,7 @@ fn create_launch_strategy(
 fn create_launch_strategy(
     _game: &Game,
     _exe: &GameExecutable,
+    _config: &AttachConfig,
 ) -> color_eyre::Result<impl LaunchStrategy> {
     Ok(strategy::direct::DirectLaunchStrategy)
 }
@@ -441,7 +446,7 @@ pub fn launch(
             })
         })?;
 
-    let launch_strategy = create_launch_strategy(&game, &game_executable)?;
+    let launch_strategy = create_launch_strategy(&game, &game_executable, &attach_config)?;
     let mut injector_command = launch_strategy.build_command(&launcher_path, vec![])?;
 
     let attach_config_dir = config.cache_dir().unwrap_or(Box::from(Path::new(".")));
