@@ -1,7 +1,9 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    cmp::Reverse,
+    collections::{HashMap, HashSet, VecDeque},
     ffi::OsString,
     fs::File,
+    io::{BufRead as _, BufReader},
     path::{Path, PathBuf},
     process::Command,
 };
@@ -16,6 +18,25 @@ use crate::commands::launch::{
     steam::{SteamInputConfig, SteamUserConfig, SteamUsers},
     strategy::LaunchStrategy,
 };
+
+pub fn active_mounts() -> std::io::Result<Vec<PathBuf>> {
+    let file = File::open("/proc/mounts")?;
+    let reader = BufReader::new(file);
+    let mut mounts = Vec::new();
+
+    for line in reader.lines() {
+        let line = line?;
+        let parts: Vec<&str> = line.split_whitespace().collect();
+
+        if parts.len() >= 2 {
+            mounts.push(PathBuf::from(parts[1]));
+        }
+    }
+
+    mounts.sort_by_key(|a| Reverse(a.as_os_str().len()));
+
+    Ok(mounts)
+}
 
 pub struct CompatTools {
     steam: SteamDir,
@@ -117,6 +138,7 @@ pub struct CompatToolLaunchStrategy {
     pub install_dir: PathBuf,
     pub all_tools: CompatTools,
     pub launch_tool: CompatTool,
+    pub base_dirs: Vec<PathBuf>,
 }
 
 impl CompatToolLaunchStrategy {
@@ -127,6 +149,7 @@ impl CompatToolLaunchStrategy {
         library: Library,
         tool_paths: Vec<String>,
         app_id: u32,
+        base_dirs: Vec<PathBuf>,
     ) -> color_eyre::Result<()> {
         // <https://gitlab.steamos.cloud/steamrt/steam-runtime-tools/-/blob/main/docs/steam-compat-tool-interface.md>
         command.env("STEAM_COMPAT_CLIENT_INSTALL_PATH", steam.path());
@@ -162,6 +185,30 @@ impl CompatToolLaunchStrategy {
             );
         }
 
+        let active_mount_points = active_mounts()?;
+        let mut used_mount_points = HashSet::new();
+
+        for base_dir in base_dirs {
+            let mount_point = active_mount_points
+                .iter()
+                .find(|mount| base_dir.starts_with(mount))
+                .cloned();
+
+            used_mount_points.extend(mount_point);
+        }
+
+        let compat_mounts = used_mount_points
+            .into_iter()
+            .map(|path| path.into_os_string())
+            .fold(OsString::new(), |mut lhs, rhs| {
+                lhs.push(rhs);
+                lhs.push(":");
+                lhs
+            });
+
+        debug!("mounting additional filesystems for SLR: {compat_mounts:?}");
+
+        command.env("STEAM_COMPAT_MOUNTS", compat_mounts);
         command.env("STEAM_COMPAT_DATA_PATH", prefix_path);
         command.env("STEAM_COMPAT_APP_ID", app_id.to_string());
 
@@ -188,6 +235,7 @@ impl LaunchStrategy for CompatToolLaunchStrategy {
             steam,
             app_id,
             install_dir,
+            mut base_dirs,
             ..
         } = self;
 
@@ -239,6 +287,8 @@ impl LaunchStrategy for CompatToolLaunchStrategy {
         command.arg("--");
         command.args(exe_args);
 
+        base_dirs.push(exe.parent().unwrap().to_path_buf());
+
         Self::setup_steam_linux_runtime_env(
             &mut command,
             steam,
@@ -246,6 +296,7 @@ impl LaunchStrategy for CompatToolLaunchStrategy {
             library,
             tool_paths,
             app_id,
+            base_dirs,
         )?;
         Ok(command)
     }
