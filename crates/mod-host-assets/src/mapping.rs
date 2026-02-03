@@ -1,12 +1,12 @@
 use std::{
-    borrow::Borrow,
+    borrow::{Borrow, Cow},
     collections::HashMap,
     env,
-    ffi::OsStr,
+    ffi::{OsStr, OsString},
     fmt,
     fs::read_dir,
     io, iter,
-    os::windows::{ffi::OsStrExt as WinOsStrExt, fs::FileTypeExt},
+    os::windows::{ffi::OsStrExt as WinOsStrExt, fs::FileTypeExt, prelude::OsStringExt},
     path::{Path, PathBuf, StripPrefixError},
 };
 
@@ -15,7 +15,18 @@ use normpath::PathExt;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use smallvec::{smallvec_inline, SmallVec};
 use thiserror::Error;
-use windows::core::{PCSTR, PCWSTR};
+use tracing::info;
+use windows::{
+    core::{s, PCSTR, PCWSTR},
+    Win32::{
+        Foundation::MAX_PATH,
+        Globalization::WideCharToMultiByte,
+        System::{
+            LibraryLoader::{GetModuleHandleA, GetProcAddress},
+            Memory::{GetProcessHeap, HeapFree, HEAP_FLAGS},
+        },
+    },
+};
 
 mod savefile;
 
@@ -33,6 +44,9 @@ pub struct VfsOverride {
 
 #[derive(Debug, Error)]
 pub enum VfsOverrideMappingError {
+    #[error("An error occurred while converting Linux paths for WINE")]
+    Compatibility,
+
     #[error("Package source specified is not a directory {0}.")]
     InvalidDirectory(PathBuf),
 
@@ -92,12 +106,75 @@ impl VfsOverrideMapping {
             SmallVec::from_vec(result)
         }
 
+        type WineGetDosFileName = unsafe extern "C" fn(path: *const u8) -> *mut u16;
+
+        let kernel32 = unsafe { GetModuleHandleA(s!("kernel32.dll")).ok() };
+        let unix_to_dos_path_ptr =
+            kernel32.and_then(|k32| unsafe { GetProcAddress(k32, s!("wine_get_dos_file_name")) });
+
         for source in sources {
             let source_path = source.asset_path();
-            let root_key =
-                VfsKey::for_disk_path(source_path).map_err(VfsOverrideMappingError::ReadDir)?;
+            let normalized_path = match unix_to_dos_path_ptr {
+                Some(wine_get_dos_file_name_ptr) => {
+                    let wine_get_dos_file_name: WineGetDosFileName =
+                        unsafe { std::mem::transmute(wine_get_dos_file_name_ptr) };
 
-            let scanned_directories = scan_directories_inner(source_path, &root_key);
+                    const CP_UNIXCP: u32 = 65010; // WINE extension
+                    let os_path: Vec<u16> = source_path.as_os_str().encode_wide().collect();
+
+                    // SAFETY: os_path is a buffer of a known size.
+                    let unix_encoded_path_len =
+                        unsafe { WideCharToMultiByte(CP_UNIXCP, 0, &os_path, None, None, None) };
+
+                    if unix_encoded_path_len <= 0 {
+                        return Err(VfsOverrideMappingError::Compatibility);
+                    }
+
+                    let mut unix_encoded_path = vec![0u8; unix_encoded_path_len as usize];
+                    unsafe {
+                        WideCharToMultiByte(
+                            CP_UNIXCP,
+                            0,
+                            &os_path,
+                            Some(&mut unix_encoded_path),
+                            None,
+                            None,
+                        )
+                    };
+
+                    let dos_path_ptr =
+                        unsafe { wine_get_dos_file_name(unix_encoded_path.as_ptr() as *const _) };
+
+                    if dos_path_ptr.is_null() {
+                        return Err(VfsOverrideMappingError::Compatibility);
+                    }
+
+                    // SAFETY: dos_path_ptr is non-null
+                    let normalized = unsafe {
+                        let dos_path_len =
+                            libc::wcsnlen(dos_path_ptr as *const _, MAX_PATH as usize);
+                        let dos_path = std::slice::from_raw_parts(dos_path_ptr, dos_path_len);
+                        let normalized = PathBuf::from(OsString::from_wide(dos_path));
+
+                        let _ = HeapFree(
+                            GetProcessHeap().expect("must exist"),
+                            HEAP_FLAGS::default(),
+                            Some(dos_path_ptr as *const _),
+                        );
+
+                        normalized
+                    };
+
+                    info!(?source_path, ?normalized, "normalized WINE path");
+
+                    Cow::Owned(normalized)
+                }
+                None => Cow::Borrowed(source_path),
+            };
+            let root_key = VfsKey::for_disk_path(&normalized_path)
+                .map_err(VfsOverrideMappingError::ReadDir)?;
+
+            let scanned_directories = scan_directories_inner(&normalized_path, &root_key);
             self.map.reserve(scanned_directories.len());
 
             for result in scanned_directories {

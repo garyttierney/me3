@@ -1,6 +1,10 @@
 use std::{fmt::Debug, path::PathBuf};
 
-use me3_mod_protocol::{native::Native, package::{Package, WithPackageSource as _}, Game};
+use me3_mod_protocol::{
+    native::Native,
+    package::{Package, WithPackageSource as _},
+    Game,
+};
 use rkyv::{
     option::ArchivedOption,
     rancor::{Fallible, Source},

@@ -113,7 +113,6 @@ fn on_attach(request: AttachRequest) -> AttachResult {
         }
 
         let mut override_mapping = VfsOverrideMapping::new()?;
-
         override_mapping.scan_directories(attach_config.packages.iter())?;
         savefile::attach_override(&attach_config, &mut override_mapping)?;
 

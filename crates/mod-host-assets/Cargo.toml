@@ -10,27 +10,23 @@ publish = false
 
 [dependencies]
 from-singleton.workspace = true
-undname = "2.1"
-pelite = "0.10"
-rayon.workspace = true
-regex = "1"
-smallvec = { version = "1.15.1", features = ["const_generics", "const_new", "union"] }
-rdvec.workspace = true
-normpath.workspace = true
-thiserror.workspace = true
+libc = "0.2"
 me3-binary-analysis.workspace = true
 me3-mod-host-types.workspace = true
 me3-mod-protocol.workspace = true
+normpath.workspace = true
+pelite = "0.10"
+rayon.workspace = true
+rdvec.workspace = true
+regex = "1"
+smallvec = { version = "1.15.1", features = ["const_generics", "const_new", "union"] }
+thiserror.workspace = true
 tracing.workspace = true
+undname = "2.1"
 
 [dependencies.windows]
+features = ["Win32_Media", "Win32_System_Memory", "Win32_System_Kernel", "Win32_System_Threading"]
 version = "0.62"
-features = [
-    "Win32_Media",
-    "Win32_System_Memory",
-    "Win32_System_Kernel",
-    "Win32_System_Threading",
-]
 
 [lints]
 workspace = true
