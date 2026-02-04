@@ -17,6 +17,8 @@ use smallvec::{smallvec_inline, SmallVec};
 use thiserror::Error;
 use windows::core::{PCSTR, PCWSTR};
 
+use crate::platform::normalize_dos_path;
+
 mod savefile;
 
 pub struct VfsOverrideMapping {
@@ -33,6 +35,9 @@ pub struct VfsOverride {
 
 #[derive(Debug, Error)]
 pub enum VfsOverrideMappingError {
+    #[error("An error occurred while converting Linux paths for WINE")]
+    Compatibility,
+
     #[error("Package source specified is not a directory {0}.")]
     InvalidDirectory(PathBuf),
 
@@ -94,10 +99,11 @@ impl VfsOverrideMapping {
 
         for source in sources {
             let source_path = source.asset_path();
-            let root_key =
-                VfsKey::for_disk_path(source_path).map_err(VfsOverrideMappingError::ReadDir)?;
+            let normalized_path = normalize_dos_path(source_path)?;
+            let root_key = VfsKey::for_disk_path(&normalized_path)
+                .map_err(VfsOverrideMappingError::ReadDir)?;
 
-            let scanned_directories = scan_directories_inner(source_path, &root_key);
+            let scanned_directories = scan_directories_inner(&normalized_path, &root_key);
             self.map.reserve(scanned_directories.len());
 
             for result in scanned_directories {

@@ -1759,6 +1759,7 @@ name = "me3-mod-host-assets"
 version = "0.10.1"
 dependencies = [
  "from-singleton",
+ "libc",
  "me3-binary-analysis",
  "me3-mod-host-types",
  "me3-mod-protocol",
