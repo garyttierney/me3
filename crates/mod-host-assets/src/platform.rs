@@ -80,6 +80,7 @@ pub fn normalize_dos_path(path: &Path) -> Result<Cow<'_, Path>, VfsOverrideMappi
         let dos_path = std::slice::from_raw_parts(dos_path_ptr, dos_path_len);
         let normalized = PathBuf::from(OsString::from_wide(dos_path));
 
+        // wineserver will allocate the result into the process heap and return us the pointer.
         let _ = HeapFree(
             GetProcessHeap().expect("must exist"),
             HEAP_FLAGS::default(),
