@@ -59,7 +59,7 @@ windows = { workspace = true, features = [
 xxhash-rust = { version = "0.8", features = ["std", "xxh3"] }
 pkcs1 = { version = "0.7.5", features = ["std"] }
 base64 = "0.22.1"
-miniz_oxide = { version = "0.8.9", features = ["std"] }
+miniz_oxide = { version = "0.9.0", features = ["std"] }
 
 [build-dependencies]
 winresource = "0.1"
