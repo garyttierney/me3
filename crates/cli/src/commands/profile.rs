@@ -59,6 +59,14 @@ pub struct ProfileCreateArgs {
     /// Overwrite the profile if it already exists.
     #[clap(long, action = ArgAction::SetTrue)]
     overwrite: bool,
+
+    /// Scan a directory of mods to populate packages and natives automatically.
+    #[clap(long("from-mods-dir"), short('d'), value_hint = clap::ValueHint::DirPath)]
+    from_mods_dir: Option<PathBuf>,
+
+    /// Optional positional path to scan (same as --from-mods-dir PATH)
+    #[clap(value_hint = clap::ValueHint::DirPath)]
+    mods_dir: Option<PathBuf>,
 }
 
 #[derive(Args, Clone, Debug, Default, PartialEq)]
@@ -162,24 +170,181 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
         });
     }
 
-    let packages = profile.packages_mut();
+    // Accumulate additions, then apply to avoid overlapping mutable borrows
+    let mut add_packages: Vec<Package> = Vec::new();
+    let mut add_natives: Vec<Native> = Vec::new();
+
+    // Add from explicit args first
     for pkg in args.packages {
-        packages.push(Package::new(pkg));
+        add_packages.push(Package::new(pkg));
+    }
+    for dll in args.natives {
+        add_natives.push(Native::new(dll));
     }
 
-    let natives = profile.natives_mut();
-    for pkg in args.natives {
-        natives.push(Native::new(pkg));
+    // Optionally scan a mods directory
+    let scan_dir = args.from_mods_dir.or(args.mods_dir).or_else(|| {
+        // Default to current directory if accessible
+        std::env::current_dir().ok()
+    });
+
+    if let Some(dir) = scan_dir {
+        let (scanned_packages, scanned_natives) = scan_mods_dir(&dir)?;
+        add_packages.extend(scanned_packages);
+        add_natives.extend(scanned_natives);
+    }
+
+    {
+        let packages = profile.packages_mut();
+        packages.extend(add_packages);
+    }
+    {
+        let natives = profile.natives_mut();
+        natives.extend(add_natives);
     }
 
     let start_online = profile.start_online_mut();
     *start_online = args.options.start_online;
 
-    let contents = toml::to_string_pretty(&profile)?;
+    // Serialize to TOML, then remove empty top-level arrays to avoid clutter
+    let mut contents = toml::to_string_pretty(&profile)?;
+    {
+        // Drop lines like `supports = []`, `packages = []`, and `natives = []` at the top level.
+        const EMPTY_TOP_LEVEL_ARRAYS: [&str; 3] =
+            ["supports = []", "packages = []", "natives = []"];
 
-    std::fs::write(profile_path, contents)?;
+        let mut changed = false;
+        let filtered: Vec<&str> = contents
+            .lines()
+            .filter(|line| {
+                let trimmed = line.trim_start();
+                let drop = EMPTY_TOP_LEVEL_ARRAYS
+                    .iter()
+                    .any(|pat| trimmed.starts_with(pat));
+                if drop {
+                    changed = true;
+                }
+                !drop
+            })
+            .collect();
+
+        if changed {
+            contents = filtered.join("\n");
+            // Ensure trailing newline for POSIX friendliness
+            if !contents.ends_with('\n') {
+                contents.push('\n');
+            }
+        }
+    }
+
+    std::fs::write(&profile_path, contents)?;
+
+    // Simple output
+    println!("Created profile: {}", profile_path.display());
 
     Ok(())
+}
+
+fn scan_mods_dir(dir: &PathBuf) -> color_eyre::Result<(Vec<Package>, Vec<Native>)> {
+    use std::path::Path;
+
+    if !dir.exists() {
+        return Err(eyre!("mods directory does not exist: {}", dir.display()));
+    }
+
+    // Full list of known FromSoftware mod content directories
+    const KNOWN_DIR_MARKERS: &[&str] = &[
+        "_backup", "_unknown", "action", "asset", "chr", "cutscene", "event", "font", "map",
+        "material", "menu", "movie", "msg", "other", "param", "parts", "script", "sd", "sfx",
+        "shader", "sound",
+    ];
+
+    const KNOWN_FILE_MARKERS: &[&str] = &["regulation.bin"];
+
+    let mut packages: Vec<Package> = Vec::new();
+    let mut natives: Vec<Native> = Vec::new();
+
+    // 1) Any DLL anywhere under the root becomes a native
+    fn walk_collect_dlls(root: &Path, out: &mut Vec<Native>) -> std::io::Result<()> {
+        for entry in std::fs::read_dir(root)? {
+            let entry = match entry {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+            let path = entry.path();
+            if path.is_dir() {
+                let _ = walk_collect_dlls(&path, out);
+            } else if path.is_file()
+                && path
+                    .extension()
+                    .is_some_and(|e| e.eq_ignore_ascii_case("dll"))
+            {
+                out.push(Native::new(path));
+            }
+        }
+        Ok(())
+    }
+    let _ = walk_collect_dlls(dir, &mut natives);
+
+    // Build a set of DLL stems to avoid adding configuration folders with the same name
+    let dll_stems: std::collections::HashSet<String> = natives
+        .iter()
+        .filter_map(|n| n.source().file_stem().and_then(|s| s.to_str()))
+        .map(|s| s.to_ascii_lowercase())
+        .collect();
+
+    // 2) Immediate subdirectories: include if they contain known markers or are non-empty
+    fn dir_contains_known_markers(path: &Path) -> bool {
+        for marker in KNOWN_FILE_MARKERS {
+            if path.join(marker).exists() {
+                return true;
+            }
+        }
+        for marker in KNOWN_DIR_MARKERS {
+            if path.join(marker).is_dir() {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn dir_is_non_empty(path: &Path) -> bool {
+        std::fs::read_dir(path)
+            .ok()
+            .and_then(|mut it| it.next().transpose().ok())
+            .flatten()
+            .is_some()
+    }
+
+    for entry in std::fs::read_dir(dir)? {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+
+        // Skip a package dir if its name matches any DLL stem (common pattern for native config folders)
+        let dir_name = path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_ascii_lowercase());
+        let matches_dll = dir_name
+            .as_ref()
+            .is_some_and(|name| dll_stems.contains(name));
+
+        if !matches_dll && (dir_contains_known_markers(&path) || dir_is_non_empty(&path)) {
+            packages.push(Package::new(path));
+        }
+    }
+
+    // Stable order for deterministic output
+    packages.sort_by(|a, b| a.source().cmp(&b.source()));
+    natives.sort_by(|a, b| a.source().cmp(&b.source()));
+
+    Ok((packages, natives))
 }
 
 #[tracing::instrument(err, skip_all)]
