@@ -84,6 +84,9 @@ fn bool_property_getter(
     // and their values loaded in RCX, the queried property name in RDX and true/false in R8B
     // as the default value in the case of the property missing from the map.
     let function_call_re_str = match attach_config.game {
+        Game::DarkSoulsRemastered => {
+            r"(?s-u)(?:\x41\xb0\x01)\x48\x8d\x54\x24\x30\x48\x8b\x0d.{4}\xe8(.{4})"
+        }
         Game::DarkSouls3 => {
             r"(?s-u)(?:\x48\x8d\x54\x24\x30\x48\x8b\x0d.{4}\xe8(.{4})\x88\x05.{4}\x48\x83\x7c\x24\x48\x08\x72.)|(?:\x48\x8d\x54\x24\x30\x48\x8b\x0d.{4}\xe8(.{4})\x0f\xb6\xd8\x48\x83\x7c\x24\x48\x08\x72.)"
         }
