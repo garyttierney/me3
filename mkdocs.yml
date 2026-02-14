@@ -126,7 +126,7 @@ plugins:
           - optimize
   - meta
   - search
-  
+  - autorefs
   - meta-descriptions
   - git-committers:
       repository: garyttierney/me3
@@ -156,8 +156,8 @@ plugins:
             - 下载: https://github.com/garyttierney/me3/releases/latest
             - 更新日志: changelog.md
             - 博客:
-              - Reversing Arxan (GuardIT): blog/posts/arxan-reversing-1.md
-              - me3 已发布: blog/posts/me3-release.md
+              - 逆向 Arxan (GuardIT): blog/posts/arxan-reversing-1.md
+              - 发布 0.2.0: blog/posts/me3-release.md
           extra:
             analytics:
               provider: google
@@ -239,6 +239,7 @@ markdown_extensions:
   - def_list
   - footnotes
   - md_in_html
+  - attr_list
   - toc:
       toc_depth: "1-3"
       permalink: true
