@@ -314,19 +314,28 @@ impl LaunchArgs {
 
 #[cfg(target_os = "linux")]
 fn create_launch_strategy(
+    me3_config: &Config,
     game: &Game,
     exe: &GameExecutable,
     attach_config: &AttachConfig,
 ) -> color_eyre::Result<impl LaunchStrategy> {
-    let GameExecutable::Steam {
-        steam,
-        library,
-        app_id,
-        install_dir,
-        ..
-    } = exe
-    else {
-        bail!("Only Steam installations are supported on Linux")
+    let (steam, library, app_id, install_dir) = match exe {
+        GameExecutable::Steam {
+            steam,
+            exe,
+            library,
+            app_id,
+            install_dir,
+        } => (steam.clone(), library.clone(), *app_id, install_dir.clone()),
+        GameExecutable::Custom(_) => {
+            let steam: SteamDir = me3_config.steam_dir()?;
+            let (app, library) = steam.find_app(game.app_id())?.ok_or_eyre(
+                "Steam was used to locate the game executable and no game installation was found",
+            )?;
+            let install_dir = library.resolve_app_dir(&app);
+
+            (steam, library, game.app_id(), install_dir)
+        }
     };
 
     let compat_tool_mapping = steam.compat_tool_mapping()?;
@@ -349,7 +358,7 @@ fn create_launch_strategy(
 
     Ok(strategy::compat_tool::CompatToolLaunchStrategy {
         library: library.clone(),
-        app_id: *app_id,
+        app_id,
         install_dir: install_dir.clone(),
         steam: steam.clone(),
         all_tools: compat_tools,
@@ -360,6 +369,7 @@ fn create_launch_strategy(
 
 #[cfg(target_os = "windows")]
 fn create_launch_strategy(
+    _me3_config: &Config,
     _game: &Game,
     _exe: &GameExecutable,
     _config: &AttachConfig,
@@ -446,7 +456,7 @@ pub fn launch(
             })
         })?;
 
-    let launch_strategy = create_launch_strategy(&game, &game_executable, &attach_config)?;
+    let launch_strategy = create_launch_strategy(&config, &game, &game_executable, &attach_config)?;
     let mut injector_command = launch_strategy.build_command(&launcher_path, vec![])?;
 
     let attach_config_dir = config.cache_dir().unwrap_or(Box::from(Path::new(".")));

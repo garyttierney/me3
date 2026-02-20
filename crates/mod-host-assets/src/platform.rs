@@ -46,7 +46,8 @@ pub fn normalize_dos_path(path: &Path) -> Result<Cow<'_, Path>, VfsOverrideMappi
     // <https://github.com/wine-mirror/wine/blob/master/programs/winepath/winepath.c>
 
     const CP_UNIXCP: u32 = 65010; // WINE extension <https://github.com/wine-mirror/wine/blob/e53db200ca08f0aeb196617fa0238a776be2b7f8/include/winnls.h#L369>
-    let os_path: Vec<u16> = path.as_os_str().encode_wide().collect();
+    let mut os_path: Vec<u16> = path.as_os_str().encode_wide().collect();
+    os_path.push(0);
 
     // SAFETY: os_path is a buffer of a known size.
     let unix_encoded_path_len =
