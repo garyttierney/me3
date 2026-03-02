@@ -1,0 +1,33 @@
+name: Publish dependencies to OBS
+
+on:
+  push:
+    branches:
+      - obs-publishing
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish-obs:
+    runs-on: ubuntu-latest
+    container: opensuse/tumbleweed:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install OSC and dependencies
+        env:
+          OBS_CONFIG: ${{ secrets.OBS_CONFIG }}
+        run: |
+          zypper install -y osc obs-service-obs_scm obs-service-cargo_vendor python3-zstandard gzip bash cpio
+          mkdir -p ~/.config/osc
+          echo "$OBS_CONFIG" > ~/.config/osc/oscrc
+      - name: Checkout Open Build Service repository
+        run: |
+          osc co home:gtierney/me3
+      - name: Run cargo-vendor service
+        run: |
+          cd home\:gtierney/me3
+          osc service run
+          osc service mr
+          osc ar
+          osc commit -f -m "git-rev ${{ github.sha }}"
