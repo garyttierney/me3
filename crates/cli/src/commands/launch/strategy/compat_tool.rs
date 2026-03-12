@@ -204,6 +204,7 @@ impl CompatToolLaunchStrategy {
             ld_preload.push(&existing_ld_preload);
         }
 
+        command.env("LD_PRELOAD", ld_preload);
         Ok(())
     }
 }
