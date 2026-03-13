@@ -354,7 +354,10 @@ fn create_launch_strategy(
         "unable to find installation of Proton runtime {compat_tool_name}"
     ))?;
 
-    let base_dirs: Vec<PathBuf> = attach_config.base_dirs().collect();
+    let mut base_dirs: Vec<PathBuf> = attach_config.base_dirs().collect();
+    if let Some(cache_dir) = me3_config.cache_dir() {
+        base_dirs.push(cache_dir.to_path_buf());
+    }
 
     Ok(strategy::compat_tool::CompatToolLaunchStrategy {
         library: library.clone(),
