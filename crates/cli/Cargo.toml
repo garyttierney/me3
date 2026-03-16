@@ -50,7 +50,7 @@ windows = { workspace = true, features = [
     "Win32_System_IO",
     "Win32_System_Pipes",
 ] }
-winreg = "0.55.0"
+winreg = "0.56.0"
 ureq.workspace = true
 semver = "1.0.26"
 
