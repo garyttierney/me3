@@ -480,6 +480,10 @@ pub fn launch(
         host_config_path: attach_config_file.path().to_path_buf(),
     };
 
+    #[cfg(target_os = "windows")]
+    let monitor_pipe_path = monitor_pipe.path().normalize_virtually()?.into_path_buf();
+
+    #[cfg(not(target_os = "windows"))]
     let monitor_pipe_path = monitor_pipe.path().normalize()?.into_path_buf();
 
     let telemetry_vars = TelemetryVars {
