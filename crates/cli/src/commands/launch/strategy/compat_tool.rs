@@ -109,6 +109,7 @@ impl CompatTools {
             "proton_8" => 2348590,
             "proton_9" => 2805730,
             "proton_10" => 3658110,
+            "proton_11" => 4628710,
             name => {
                 let tools = CompatTools::new(self.steam.clone());
                 let installations = tools.all();
