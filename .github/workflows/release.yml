@@ -22,7 +22,7 @@ jobs:
       next_version: ${{ steps.get-versions.outputs.next_version }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
         with:
           egress-policy: audit
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -52,7 +52,7 @@ jobs:
     if: ${{ needs.plan.outputs.current_version != needs.plan.outputs.next_version }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
         with:
           egress-policy: audit      
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -123,7 +123,7 @@ jobs:
           cloudflare_client_secret: ${{ secrets.CLOUDFLARE_ZEROTRUST_CLIENT_SECRET }}
           signing_pin: ${{ secrets.ME3_SIGNING_PIN }}
 
-      - uses: actions/attest-build-provenance@v3
+      - uses: actions/attest-build-provenance@v4
         id: attestation
         with:
           subject-path: |
@@ -133,7 +133,7 @@ jobs:
             out/me3-linux-amd64.tar.gz
 
       - name: Delete old release drafts
-        uses: hugo19941994/delete-draft-releases@v2.0.0
+        uses: hugo19941994/delete-draft-releases@v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.PUSH_TOKEN }}            
         with:
