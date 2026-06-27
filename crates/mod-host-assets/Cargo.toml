@@ -19,10 +19,12 @@ pelite = "0.10"
 rayon.workspace = true
 rdvec.workspace = true
 regex = "1"
+slab = "0.4.12"
 smallvec = { version = "1.15.1", features = ["const_generics", "const_new", "union"] }
 thiserror.workspace = true
 tracing.workspace = true
 undname = "2.1"
+xxhash-rust.workspace = true
 
 [dependencies.windows]
 features = ["Win32_Media", "Win32_System_Memory", "Win32_System_Kernel", "Win32_System_Threading"]

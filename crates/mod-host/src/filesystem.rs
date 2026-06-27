@@ -97,7 +97,8 @@ fn hook_create_file(kb: HMODULE, mapping: Arc<VfsOverrideMapping>) -> Result<(),
                 {
                     info!("override" = %mapped_override);
 
-                    return trampoline(mapped_override.into(), p2, p3, p4, p5, p6, p7);
+                    let c_string = mapped_override.to_c_string();
+                    return trampoline(PCSTR(c_string.as_ptr()), p2, p3, p4, p5, p6, p7);
                 }
 
                 trampoline(p1, p2, p3, p4, p5, p6, p7)
@@ -202,7 +203,8 @@ fn hook_create_directory(kb: HMODULE, mapping: Arc<VfsOverrideMapping>) -> Resul
                 } else if let Ok(path) = p1.to_string()
                     && let Some(mapped_override) = mapping.disk_override(path)
                 {
-                    trampoline(mapped_override.into(), p2)
+                    let c_string = mapped_override.to_c_string();
+                    trampoline(PCSTR(c_string.as_ptr()), p2)
                 } else {
                     trampoline(p1, p2)
                 }
@@ -281,7 +283,8 @@ fn hook_delete_file(kb: HMODULE, mapping: Arc<VfsOverrideMapping>) -> Result<(),
                 } else if let Ok(path) = p1.to_string()
                     && let Some(mapped_override) = mapping.disk_override(path)
                 {
-                    trampoline(mapped_override.into())
+                    let c_string = mapped_override.to_c_string();
+                    trampoline(PCSTR(c_string.as_ptr()))
                 } else {
                     trampoline(p1)
                 }

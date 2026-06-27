@@ -1,36 +1,43 @@
 use std::{
-    borrow::Borrow,
+    borrow::{Borrow, Cow},
     collections::HashMap,
     env,
-    ffi::OsStr,
+    ffi::{OsStr, OsString},
     fmt,
     fs::read_dir,
     io, iter,
-    os::windows::{ffi::OsStrExt as WinOsStrExt, fs::FileTypeExt},
+    os::windows::{
+        ffi::{OsStrExt, OsStringExt},
+        fs::FileTypeExt,
+    },
     path::{Path, PathBuf, StripPrefixError},
 };
 
 use me3_mod_protocol::package::{AssetOverrideSource, Package};
 use normpath::PathExt;
 use rayon::iter::{ParallelBridge, ParallelIterator};
+use slab::Slab;
 use smallvec::{smallvec_inline, SmallVec};
 use thiserror::Error;
-use windows::core::{PCSTR, PCWSTR};
+use windows::core::PCWSTR;
+use xxhash_rust::xxh3::Xxh3DefaultBuilder;
 
-use crate::platform::normalize_dos_path;
+use crate::{mapping::savefile::SavefileOverrideMapping, platform::normalize_dos_path};
 
 mod savefile;
 
 pub struct VfsOverrideMapping {
-    map: HashMap<VfsKey, VfsOverride>,
     current_dir: VfsKey,
-    savefile_override: Option<savefile::SavefileOverrideMapping>,
+    vfs_map: HashMap<VfsKey, usize, Xxh3DefaultBuilder>,
+    overrides: Slab<VfsOverride<'static>>,
+    savefile_override: Option<SavefileOverrideMapping>,
 }
 
-pub struct VfsOverride {
-    display: Box<str>,
-    path_c_str: Box<Path>,
+#[derive(Clone)]
+pub struct VfsOverride<'a> {
+    generation: Generation,
     wide_c_str: Box<[u16]>,
+    display: Cow<'a, str>,
 }
 
 #[derive(Debug, Error)]
@@ -55,8 +62,9 @@ impl VfsOverrideMapping {
             .map_err(VfsOverrideMappingError::ReadDir)?;
 
         Ok(Self {
-            map: HashMap::new(),
             current_dir,
+            vfs_map: HashMap::default(),
+            overrides: Slab::new(),
             savefile_override: None,
         })
     }
@@ -69,7 +77,7 @@ impl VfsOverrideMapping {
         fn scan_directories_inner(
             base_dir: &Path,
             root_key: &VfsKey,
-        ) -> SmallVec<[Result<(VfsKey, VfsOverride), io::Error>; 1]> {
+        ) -> SmallVec<[Result<(VfsKey, VfsOverride<'static>), io::Error>; 1]> {
             let entries = match read_dir(base_dir) {
                 Ok(entries) => entries,
                 Err(e) => return smallvec_inline![Err(e)],
@@ -85,8 +93,10 @@ impl VfsOverrideMapping {
                     Ok(_) => {
                         let path = dir_entry.path();
 
-                        let result = VfsKey::for_asset_path(&path, root_key)
-                            .map(|vfs_key| (vfs_key, VfsOverride::new(&path)));
+                        let result = VfsKey::for_asset_path(&path, root_key).map(|vfs_key| {
+                            let display = path.to_string_lossy().into_owned();
+                            (vfs_key, VfsOverride::new(path, Generation, display.into()))
+                        });
 
                         smallvec_inline![result]
                     }
@@ -104,11 +114,15 @@ impl VfsOverrideMapping {
                 .map_err(VfsOverrideMappingError::ReadDir)?;
 
             let scanned_directories = scan_directories_inner(&normalized_path, &root_key);
-            self.map.reserve(scanned_directories.len());
+
+            self.overrides.reserve(scanned_directories.len());
+            self.vfs_map.reserve(scanned_directories.len());
 
             for result in scanned_directories {
                 let (vfs_key, vfs_override) = result.map_err(VfsOverrideMappingError::ReadDir)?;
-                self.map.insert(vfs_key, vfs_override);
+
+                let index = self.overrides.insert(vfs_override);
+                self.vfs_map.insert(vfs_key, index);
             }
         }
 
@@ -128,122 +142,160 @@ impl VfsOverrideMapping {
         P: AsRef<Path>,
         F: Fn(&Path) -> PathBuf + Send + Sync + 'static,
     {
-        let savefile_override = savefile::SavefileOverrideMapping::new(savefile_dir, f)?;
+        let savefile_override = SavefileOverrideMapping::new(savefile_dir, f)?;
         self.savefile_override = Some(savefile_override);
         Ok(())
     }
 
-    pub fn vfs_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<&VfsOverride> {
+    pub fn vfs_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<VfsOverride<'_>> {
         let path = Path::new(&path_str);
 
         if let Some(savefile_override) = &self.savefile_override
             && let Ok(key) = VfsKey::for_disk_path(path)
             && let Some(savefile_override_path) = savefile_override.try_override(path, &key)
         {
-            return Some(savefile_override_path);
+            return Some(savefile_override_path.clone());
         }
 
         let key = VfsKey::for_vfs_path(path);
-        self.map.get(&key)
+        let index = *self.vfs_map.get(&key)?;
+
+        let vfs_override = self.overrides.get(index)?;
+        let vfs_uid = VfsUid::new(index, vfs_override.generation);
+
+        let uid_path = vfs_uid.to_uid_string();
+
+        Some(VfsOverride::new(
+            uid_path,
+            vfs_override.generation,
+            Cow::Borrowed(&vfs_override.display),
+        ))
     }
 
-    pub fn disk_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<&VfsOverride> {
+    pub fn disk_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<&VfsOverride<'static>> {
+        if let Some(from_uid) = self.disk_uid_override(path_str.as_ref()) {
+            return Some(from_uid);
+        }
+
         let key = VfsKey::for_asset_path(Path::new(&path_str), &self.current_dir).ok()?;
-        self.map.get(&key)
+        let index = self.vfs_map.get(&key)?;
+
+        self.overrides.get(*index)
+    }
+
+    fn disk_uid_override<S: AsRef<OsStr>>(&self, uid_str: S) -> Option<&VfsOverride<'static>> {
+        let VfsUid { generation, index } = VfsUid::try_parse(uid_str.as_ref())?;
+        let vfs_override = self.overrides.get(index)?;
+
+        (generation == vfs_override.generation).then_some(vfs_override)
     }
 }
 
-impl VfsOverride {
-    pub fn new<P: AsRef<Path>>(path: P) -> Self {
-        let display = path.as_ref().display().to_string().into_boxed_str();
-
-        let (wide_c_str, path_c_str) = {
-            let mut os_str = path.as_ref().as_os_str().to_os_string();
-            os_str.push("\0");
-
-            (
-                Vec::into_boxed_slice(os_str.encode_wide().collect()),
-                PathBuf::into_boxed_path(os_str.into()),
-            )
-        };
-
+impl<'a> VfsOverride<'a> {
+    fn new<P: AsRef<OsStr>>(path: P, generation: Generation, display: Cow<'a, str>) -> Self {
         Self {
+            generation,
+            wide_c_str: path.as_ref().encode_wide().chain([0]).collect(),
             display,
-            path_c_str,
-            wide_c_str,
         }
     }
 
-    pub fn as_str_lossy(&self) -> &str {
-        &self.display
+    pub fn to_path_buf(&self) -> PathBuf {
+        PathBuf::from(OsString::from_wide(self.as_wide()))
     }
 
-    pub fn as_path(&self) -> &Path {
-        let bytes_with_nul = self.path_c_str.as_os_str().as_encoded_bytes();
-        let bytes_without_nul = &bytes_with_nul[..bytes_with_nul.len() - 1];
-
-        // SAFETY: Source OsStr bytes split before valid substring ("\0"),
-        // which is always inserted by `VfsOverride::new`
-        unsafe { Path::new(OsStr::from_encoded_bytes_unchecked(bytes_without_nul)) }
+    pub fn to_c_string(&self) -> Vec<u8> {
+        OsString::from_wide(self.as_wide_c_string()).into_encoded_bytes()
     }
 
     pub fn as_wide(&self) -> &[u16] {
         &self.wide_c_str[..self.wide_c_str.len() - 1]
     }
 
-    pub fn as_c_str(&self) -> *const u8 {
-        self.path_c_str.as_os_str().as_encoded_bytes().as_ptr()
-    }
-
-    pub fn as_wide_c_str(&self) -> *const u16 {
-        self.wide_c_str.as_ptr()
-    }
-
-    pub fn as_pcstr(&self) -> PCSTR {
-        PCSTR::from_raw(self.as_c_str())
+    pub fn as_wide_c_string(&self) -> &[u16] {
+        &self.wide_c_str
     }
 
     pub fn as_pcwstr(&self) -> PCWSTR {
-        PCWSTR::from_raw(self.as_wide_c_str())
+        PCWSTR(self.as_wide_c_string().as_ptr())
+    }
+
+    pub fn as_display_str(&self) -> &str {
+        &self.display
     }
 }
 
-impl fmt::Debug for VfsOverride {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("VfsOverride")
-            .field("display", &self.display)
-            .field("path", &self.as_path())
-            .finish()
-    }
-}
-
-impl fmt::Display for VfsOverride {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.display.fmt(f)
-    }
-}
-
-impl AsRef<Path> for VfsOverride {
-    fn as_ref(&self) -> &Path {
-        self.as_path()
-    }
-}
-
-impl AsRef<[u16]> for VfsOverride {
+impl AsRef<[u16]> for VfsOverride<'_> {
     fn as_ref(&self) -> &[u16] {
         self.as_wide()
     }
 }
 
-impl From<&VfsOverride> for PCSTR {
-    fn from(value: &VfsOverride) -> Self {
-        value.as_pcstr()
+impl From<&VfsOverride<'_>> for PCWSTR {
+    fn from(vfs_override: &VfsOverride<'_>) -> Self {
+        vfs_override.as_pcwstr()
     }
 }
 
-impl From<&VfsOverride> for PCWSTR {
-    fn from(value: &VfsOverride) -> Self {
-        value.as_pcwstr()
+impl fmt::Debug for VfsOverride<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("VfsOverride")
+            .field("generation", &self.generation)
+            .field("path", &self.to_path_buf())
+            .field("display", &self.as_display_str())
+            .finish()
+    }
+}
+
+impl fmt::Display for VfsOverride<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_display_str())
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct VfsUid {
+    generation: Generation,
+    index: usize,
+}
+
+// May become a `usize` in the future to implement asset reloading.
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct Generation;
+
+impl VfsUid {
+    const ROOT: &str = r"\\me3";
+
+    fn new(index: usize, generation: Generation) -> Self {
+        Self { generation, index }
+    }
+
+    pub fn to_uid_string(&self) -> String {
+        self.with_fmt_args(|fmt| format!("{fmt}"))
+    }
+
+    pub fn try_parse(str: &OsStr) -> Option<Self> {
+        let str = str.to_str()?;
+
+        let index_str = str.strip_prefix(Self::ROOT)?.strip_prefix("??")?;
+        let index = usize::from_str_radix(index_str, 16).ok()?;
+
+        Some(Self::new(index, Generation))
+    }
+
+    #[inline(always)]
+    fn with_fmt_args<T>(&self, f: impl FnOnce(fmt::Arguments<'_>) -> T) -> T {
+        let root = Self::ROOT;
+        let generation = "";
+        let index = self.index;
+
+        f(format_args!("{root}?{generation}?{index:x}"))
+    }
+}
+
+impl fmt::Display for VfsUid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.with_fmt_args(|fmt| f.write_fmt(fmt))
     }
 }
 

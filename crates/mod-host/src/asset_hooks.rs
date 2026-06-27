@@ -538,7 +538,7 @@ fn try_hook_wwise(
                 unsafe {
                     trampoline(
                         p1,
-                        mapped_override.into(),
+                        mapped_override.as_pcwstr(),
                         AkOpenMode::Read as _,
                         p4,
                         p5,
