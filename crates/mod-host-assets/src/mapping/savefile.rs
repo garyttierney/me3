@@ -28,7 +28,7 @@ impl SavefileOverrideMapping {
     }
 
     #[inline]
-    pub fn try_override(&self, path: &Path, key: &VfsKey) -> Option<&VfsOverride<'_>> {
+    pub fn try_override(&self, path: &Path, key: &VfsKey) -> Option<&VfsOverride<'static>> {
         if path.extension() != Some(OsStr::new("bak")) {
             self.try_override_inner(path, key).map(|(sl2, _)| sl2)
         } else {
@@ -42,7 +42,7 @@ impl SavefileOverrideMapping {
         &self,
         path: &Path,
         key: &VfsKey,
-    ) -> Option<&(VfsOverride<'_>, VfsOverride<'_>)> {
+    ) -> Option<&(VfsOverride<'static>, VfsOverride<'static>)> {
         if path.extension() != Some(OsStr::new("sl2")) || !key.0.starts_with(&self.savefile_dir) {
             return None;
         }

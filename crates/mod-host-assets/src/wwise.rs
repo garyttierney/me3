@@ -49,7 +49,10 @@ pub enum AkOpenMode {
 }
 
 /// Tries to find an override for a sound archive entry.
-pub fn find_override<'a>(mapping: &'a VfsOverrideMapping, input: &str) -> Option<VfsOverride<'a>> {
+pub fn find_override<'a>(
+    mapping: &'a VfsOverrideMapping,
+    input: &str,
+) -> Option<&'a VfsOverride<'a>> {
     let input = strip_prefix(input);
     if input.ends_with(".wem") {
         let wem_path = format!("wem/{input}");
@@ -71,10 +74,10 @@ pub fn find_override<'a>(mapping: &'a VfsOverrideMapping, input: &str) -> Option
     None
 }
 
-fn get_override<'a>(mapping: &'a VfsOverrideMapping, input: &str) -> Option<VfsOverride<'a>> {
+fn get_override<'a>(mapping: &'a VfsOverrideMapping, input: &str) -> Option<&'a VfsOverride<'a>> {
     for prefix in PREFIXES {
         let prefixed = format!("{prefix}/{input}");
-        if let Some(replacement) = mapping.vfs_override(&prefixed) {
+        if let Some(replacement) = mapping.virtual_to_disk(&prefixed) {
             return Some(replacement);
         }
     }

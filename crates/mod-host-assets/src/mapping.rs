@@ -147,14 +147,24 @@ impl VfsOverrideMapping {
         Ok(())
     }
 
-    pub fn vfs_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<VfsOverride<'_>> {
+    pub fn virtual_to_disk<S: AsRef<OsStr>>(&self, path_str: S) -> Option<&VfsOverride<'static>> {
         let path = Path::new(&path_str);
 
-        if let Some(savefile_override) = &self.savefile_override
-            && let Ok(key) = VfsKey::for_disk_path(path)
-            && let Some(savefile_override_path) = savefile_override.try_override(path, &key)
-        {
-            return Some(savefile_override_path.clone());
+        if let Some(savefile_override) = self.virtual_to_savefile(path) {
+            return Some(savefile_override);
+        }
+
+        let key = VfsKey::for_vfs_path(path);
+        let index = *self.vfs_map.get(&key)?;
+
+        self.overrides.get(index)
+    }
+
+    pub fn virtual_to_uid<S: AsRef<OsStr>>(&self, path_str: S) -> Option<VfsOverride<'_>> {
+        let path = Path::new(&path_str);
+
+        if let Some(savefile_override) = self.virtual_to_savefile(path) {
+            return Some(savefile_override.clone());
         }
 
         let key = VfsKey::for_vfs_path(path);
@@ -172,8 +182,11 @@ impl VfsOverrideMapping {
         ))
     }
 
-    pub fn disk_override<S: AsRef<OsStr>>(&self, path_str: S) -> Option<&VfsOverride<'static>> {
-        if let Some(from_uid) = self.disk_uid_override(path_str.as_ref()) {
+    pub fn disk_or_uid_to_disk<S: AsRef<OsStr>>(
+        &self,
+        path_str: S,
+    ) -> Option<&VfsOverride<'static>> {
+        if let Some(from_uid) = self.uid_to_disk(path_str.as_ref()) {
             return Some(from_uid);
         }
 
@@ -183,8 +196,14 @@ impl VfsOverrideMapping {
         self.overrides.get(*index)
     }
 
-    fn disk_uid_override<S: AsRef<OsStr>>(&self, uid_str: S) -> Option<&VfsOverride<'static>> {
-        let VfsUid { generation, index } = VfsUid::try_parse(uid_str.as_ref())?;
+    fn virtual_to_savefile(&self, path: &Path) -> Option<&VfsOverride<'static>> {
+        let savefile_override = self.savefile_override.as_ref()?;
+        let key = VfsKey::for_disk_path(path).ok()?;
+        savefile_override.try_override(path, &key)
+    }
+
+    fn uid_to_disk(&self, uid_str: &OsStr) -> Option<&VfsOverride<'static>> {
+        let VfsUid { generation, index } = VfsUid::try_parse(uid_str)?;
         let vfs_override = self.overrides.get(index)?;
 
         (generation == vfs_override.generation).then_some(vfs_override)
@@ -270,7 +289,7 @@ impl VfsUid {
         Self { generation, index }
     }
 
-    pub fn to_uid_string(&self) -> String {
+    pub fn to_uid_string(self) -> String {
         self.with_fmt_args(|fmt| format!("{fmt}"))
     }
 
@@ -410,19 +429,19 @@ mod test {
 
         assert!(
             asset_mapping
-                .vfs_override("data0:/regulation.bin")
+                .virtual_to_uid("data0:/regulation.bin")
                 .is_some(),
             "override for regulation.bin was not found"
         );
         assert!(
             asset_mapping
-                .vfs_override("data0:/event/common.emevd.dcx")
+                .virtual_to_uid("data0:/event/common.emevd.dcx")
                 .is_some(),
             "override for event/common.emevd.dcx not found"
         );
         assert!(
             asset_mapping
-                .vfs_override("data0:/common.emevd.dcx")
+                .virtual_to_uid("data0:/common.emevd.dcx")
                 .is_none(),
             "event/common.emevd.dcx was found incorrectly under the regulation root"
         );
