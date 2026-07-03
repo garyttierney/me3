@@ -79,7 +79,7 @@ fn enable_loose_params(attach_config: &AttachConfig, mapping: &VfsOverrideMappin
 
     if LOOSE_PARAM_FILES
         .iter()
-        .any(|file| mapping.vfs_override(file).is_some())
+        .any(|file| mapping.virtual_to_disk(file).is_some())
     {
         ModHost::get_attached().override_game_property("Game.Debug.EnableRegulationFile", false);
     }
@@ -144,7 +144,7 @@ fn hook_ebl_utility(
             let expanded = unsafe { device_manager.expand_path(path.as_wide()) };
 
             if mapping
-                .vfs_override(OsString::from_wide(&expanded))
+                .virtual_to_disk(OsString::from_wide(&expanded))
                 .is_some()
             {
                 return None;
@@ -177,7 +177,7 @@ fn hook_device_manager(
             let path = path.get().ok()?;
             let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_slice());
 
-            let mapped_override = mapping.vfs_override(OsString::from_wide(&expanded))?;
+            let mapped_override = mapping.virtual_to_uid(OsString::from_wide(&expanded))?;
 
             info!("override" = %mapped_override);
 
@@ -250,7 +250,7 @@ fn hook_set_path(
 
         let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_slice());
 
-        let mapped_override = mapping.vfs_override(OsString::from_wide(&expanded))?;
+        let mapped_override = mapping.virtual_to_uid(OsString::from_wide(&expanded))?;
 
         let mut path = path.clone();
 
@@ -538,7 +538,7 @@ fn try_hook_wwise(
                 unsafe {
                     trampoline(
                         p1,
-                        mapped_override.into(),
+                        mapped_override.as_pcwstr(),
                         AkOpenMode::Read as _,
                         p4,
                         p5,

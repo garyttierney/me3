@@ -72,6 +72,7 @@ tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", default-features = false }
 ureq = { version = "3", default-features = false, features = ["native-tls"] }
 windows = "0.62"
+xxhash-rust = { version = "0.8", features = ["std", "xxh3"] }
 
 [profile.dev.package."*"]
 opt-level = 3

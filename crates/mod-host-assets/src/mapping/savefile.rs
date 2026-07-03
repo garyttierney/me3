@@ -5,11 +5,11 @@ use std::{
     sync::OnceLock,
 };
 
-use crate::mapping::{VfsKey, VfsOverride};
+use crate::mapping::{Generation, VfsKey, VfsOverride};
 
 pub struct SavefileOverrideMapping {
     savefile_dir: VfsKey,
-    override_path: OnceLock<(VfsOverride, VfsOverride)>,
+    override_path: OnceLock<(VfsOverride<'static>, VfsOverride<'static>)>,
     on_override: Box<dyn Fn(&Path) -> PathBuf + Send + Sync>,
 }
 
@@ -28,7 +28,7 @@ impl SavefileOverrideMapping {
     }
 
     #[inline]
-    pub fn try_override(&self, path: &Path, key: &VfsKey) -> Option<&VfsOverride> {
+    pub fn try_override(&self, path: &Path, key: &VfsKey) -> Option<&VfsOverride<'static>> {
         if path.extension() != Some(OsStr::new("bak")) {
             self.try_override_inner(path, key).map(|(sl2, _)| sl2)
         } else {
@@ -38,7 +38,11 @@ impl SavefileOverrideMapping {
     }
 
     #[inline]
-    fn try_override_inner(&self, path: &Path, key: &VfsKey) -> Option<&(VfsOverride, VfsOverride)> {
+    fn try_override_inner(
+        &self,
+        path: &Path,
+        key: &VfsKey,
+    ) -> Option<&(VfsOverride<'static>, VfsOverride<'static>)> {
         if path.extension() != Some(OsStr::new("sl2")) || !key.0.starts_with(&self.savefile_dir) {
             return None;
         }
@@ -52,9 +56,12 @@ impl SavefileOverrideMapping {
                 override_path
             };
 
+            let display = override_path.to_string_lossy().into_owned();
+            let display_bak = override_path_bak.to_string_lossy().into_owned();
+
             (
-                VfsOverride::new(override_path),
-                VfsOverride::new(override_path_bak),
+                VfsOverride::new(&override_path, Generation, display.into()),
+                VfsOverride::new(&override_path_bak, Generation, display_bak.into()),
             )
         }))
     }
