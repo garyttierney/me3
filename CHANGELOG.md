@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
+## me3 - [v0.11.1](https://github.com/garyttierney/me3/releases/v0.11.1) - 2026-07-06
+
+### 🐛 Bug Fixes
+
+- [c998b06](https://github.com/garyttierney/me3/commit/c998b06cc53c35794aa9808480ecfb2ac6a2fb60)  *(linux)* Restore LD_PRELOAD injection for Steam overlay in compat tool launcher in [#735](https://github.com/garyttierney/me3/pull/735)
+
+
+  > In `compat_tool.rs`, `setup_steam_linux_runtime_env` builds `LD_PRELOAD`
+  > with `gameoverlayrenderer.so` but never sets it on the command, restore it
+  > to fix Steam Input compatibility and the Steam overlay.
+
 ## me3 - [v0.11.0](https://github.com/garyttierney/me3/releases/v0.11.0) - 2026-02-28
 
 ### 🚀 Features
@@ -2756,6 +2767,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
+[0.11.1]: https://github.com/garyttierney/me3/compare/v0.11.0..v0.11.1
 [0.11.0]: https://github.com/garyttierney/me3/compare/v0.9.0..v0.11.0
 [0.9.0]: https://github.com/garyttierney/me3/compare/v0.8.1..v0.9.0
 [0.8.1]: https://github.com/garyttierney/me3/compare/v0.7.0..v0.8.1
