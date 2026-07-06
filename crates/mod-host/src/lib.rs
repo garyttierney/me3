@@ -6,7 +6,7 @@
 use std::sync::{Arc, Mutex, OnceLock};
 
 use eyre::OptionExt;
-use me3_binary_analysis::{fd4_step::Fd4StepTables, rtti};
+use me3_binary_analysis::{dlrf, fd4_step::Fd4StepTables, rtti};
 use me3_env::TelemetryVars;
 use me3_ipc::{
     bridge::BridgeToParent,
@@ -15,6 +15,7 @@ use me3_ipc::{
 };
 use me3_launcher_attach_protocol::{AttachConfig, AttachRequest, AttachResult, Attachment};
 use me3_mod_host_assets::mapping::VfsOverrideMapping;
+use me3_mod_host_types::dlrf::RuntimeClassEntry;
 use me3_telemetry::TelemetryConfig;
 use tracing::{error, info, instrument, warn, Span};
 use windows::Win32::{
@@ -106,12 +107,6 @@ fn on_attach(request: AttachRequest) -> AttachResult {
 
         skip_logos::attach_override(attach_config.clone(), exe)?;
 
-        game_properties::attach_override(attach_config.clone(), exe)?;
-
-        if !attach_config.start_online {
-            game_properties::start_offline();
-        }
-
         let mut override_mapping = VfsOverrideMapping::new()?;
         override_mapping.scan_directories(attach_config.packages.iter())?;
         savefile::attach_override(&attach_config, &mut override_mapping)?;
@@ -174,6 +169,12 @@ fn after_game_main<R: FnOnce() -> Result<(), eyre::Error>>(
 
     let class_map = Arc::new(rtti::classes(exe)?);
     let step_tables = Fd4StepTables::from_initialized_data(exe)?;
+    let runtime_classes = unsafe { RuntimeClassEntry::from_analysis(dlrf::runtime_classes(exe)?) };
+
+    game_properties::attach_override(attach_config.game, runtime_classes)?;
+    if !attach_config.start_online {
+        game_properties::start_offline();
+    }
 
     if attach_config.mem_patch {
         alloc_hooks::hook_heap_allocators(&attach_config, exe, &class_map)?;

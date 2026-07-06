@@ -10,6 +10,7 @@ use std::{
 };
 
 use closure_ffi::traits::FnPtr;
+use eyre::Context;
 use libloading::{Library, Symbol};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{native::NativeInitializerCondition, Game, ModProfile};
@@ -33,7 +34,7 @@ pub struct ModHost {
     hooks: Mutex<Vec<Arc<UntypedDetour>>>,
     native_modules: Mutex<Vec<Library>>,
     profiles: Vec<ModProfile>,
-    property_overrides: Mutex<HashMap<Vec<u16>, bool>>,
+    property_overrides: Mutex<HashMap<CString, CString>>,
     pub disable_arxan: bool,
 }
 
@@ -127,10 +128,19 @@ impl ModHost {
         HookInstaller::new(target).on_install(|hook| self.hooks.lock().unwrap().push(hook))
     }
 
-    pub fn override_game_property<S: AsRef<str>>(&self, property: S, state: bool) {
+    pub fn override_game_property(
+        &self,
+        property: impl AsRef<str>,
+        value: impl AsRef<str>,
+    ) -> eyre::Result<()> {
+        let property = CString::new(property.as_ref()).wrap_err("Nul byte in property key")?;
+        let value = CString::new(value.as_ref()).wrap_err("Nul byte in property value")?;
+
         self.property_overrides
             .lock()
-            .unwrap()
-            .insert(property.as_ref().encode_utf16().collect(), state);
+            .expect("poisoned")
+            .insert(property, value);
+
+        Ok(())
     }
 }
