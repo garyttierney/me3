@@ -12,6 +12,7 @@ pelite.workspace = true
 rayon.workspace = true
 regex.workspace = true
 thiserror.workspace = true
+memchr.workspace = true
 undname = "2.1"
 
 [lints]
