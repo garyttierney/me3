@@ -223,7 +223,13 @@ impl LaunchStrategy for CompatToolLaunchStrategy {
             ..
         } = self;
 
-        const LAUNCH_VERB: &str = "waitforexitandrun";
+        let launch_verb = std::env::var("ME3_PROTON_LAUNCH_VERB")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| "waitforexitandrun".to_string());
+
+        info!(%launch_verb, "using Proton launch verb");
         let mut tool_paths = vec![];
 
         loop {
@@ -231,7 +237,7 @@ impl LaunchStrategy for CompatToolLaunchStrategy {
             let tool_manifest = tool.manifest()?;
             let tool_command = match tool_manifest.version {
                 1 => tool_manifest.commandline.clone(),
-                2 | _ => tool_manifest.commandline.replace("%verb%", LAUNCH_VERB),
+                2 | _ => tool_manifest.commandline.replace("%verb%", &launch_verb),
             };
 
             let Some(mut tool_args) = shlex::split(&tool_command) else {
