@@ -103,13 +103,13 @@ fn hook_file_init(
     ModHost::get_attached()
         .hook(init_fn)
         .with_span(info_span!("hook"))
-        .with_closure(move |p1, trampoline| {
+        .with_closure(move |p1, p2, trampoline| {
             let result = hook_device_manager(exe, mapping.clone())
                 .and_then(|_| hook_mount_ebl(attach_config.clone(), exe))
                 .inspect_err(|e| error!("error" = &**e, "failed apply pre-hooks"));
 
             unsafe {
-                trampoline(p1);
+                trampoline(p1, p2);
             }
 
             if result.is_ok()

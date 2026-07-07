@@ -99,8 +99,8 @@ fn oversized_regulation_fix_after_er(
     // Intercept and free the raw regulation to prevent writing it to the savefile.
     ModHost::get_attached()
         .hook(apply_fn)
-        .with_closure(move |p1, trampoline| unsafe {
-            trampoline(p1);
+        .with_closure(move |p1, p2, trampoline| unsafe {
+            trampoline(p1, p2);
 
             let regulation_manager = from_singleton::address_of::<CSRegulationManager>()
                 .unwrap()

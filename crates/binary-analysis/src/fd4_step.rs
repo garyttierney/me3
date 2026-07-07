@@ -15,7 +15,14 @@ use thiserror::Error;
 
 use crate::pe::sections;
 
-pub type Fd4StepFunction = unsafe extern "C" fn(this: NonNull<()>);
+pub type Fd4StepFunction = unsafe extern "C" fn(this: NonNull<()>, time: NonNull<FD4Time>);
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct FD4Time {
+    pub vtable: usize,
+    pub time: f32,
+}
 
 #[derive(Debug, Error)]
 pub enum Fd4StepError {
