@@ -16,6 +16,9 @@ use std::{
 #[derive(Clone, Copy)]
 pub struct ThinCStr<'a>(NonNull<c_char>, PhantomData<&'a ()>);
 
+unsafe impl Send for ThinCStr<'_> {}
+unsafe impl Sync for ThinCStr<'_> {}
+
 impl<'a> ThinCStr<'a> {
     /// Construct a [`ThinCStr`] from a [`CStr`] ref.
     pub fn from_cstr(cstr: &'a CStr) -> Self {
@@ -92,6 +95,9 @@ impl Eq for ThinCStr<'_> {}
 #[repr(transparent)]
 #[derive(Clone, Copy)]
 pub struct ThinWCStr<'a>(NonNull<u16>, PhantomData<&'a ()>);
+
+unsafe impl Send for ThinWCStr<'_> {}
+unsafe impl Sync for ThinWCStr<'_> {}
 
 impl ThinWCStr<'_> {
     /// Construct a [`ThinWStr`] from a pointer to a nul-terminated wide C string.
@@ -172,37 +178,7 @@ impl AsRef<[u16]> for ThinWCStr<'_> {
 
 impl fmt::Debug for ThinWCStr<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use fmt::Write;
-
-        let mut char_iter = char::decode_utf16(self.to_wchars().iter().copied())
-            .map(|c| c.unwrap_or(char::REPLACEMENT_CHARACTER));
-
-        // A Debug representation for a string should be escaped. Instead of
-        // reimplementing the escaping logic, we convert to utf-8 first so the
-        // Debug impl of str can be used.
-        let mut stack_str = [0u8; 128];
-        let mut stack_str_len = 0;
-        let mut heap_str;
-        let lossy_str = loop {
-            if let Some(c) = char_iter.next() {
-                // Possibly not enough space to encode the next character,
-                // fall back to a heap-allocated string.
-                if stack_str_len > stack_str.len() - 4 {
-                    heap_str =
-                        unsafe { String::from_utf8_unchecked(stack_str[..stack_str_len].into()) };
-                    heap_str.write_char(c)?;
-                    for c in char_iter {
-                        heap_str.write_char(c)?;
-                    }
-                    break heap_str.as_str();
-                }
-                stack_str_len += c.encode_utf8(&mut stack_str[stack_str_len..]).len();
-            } else {
-                break unsafe { str::from_utf8_unchecked(&stack_str[..stack_str_len]) };
-            }
-        };
-
-        std::fmt::Debug::fmt(lossy_str, f)
+        std::fmt::Debug::fmt(&self.to_string_lossy(), f)
     }
 }
 

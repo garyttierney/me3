@@ -30,6 +30,7 @@ impl DLTypeId {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct DLRuntimeClassVtable<T> {
     pub dtor: unsafe extern "C" fn(*mut T),
     pub name: extern "C" fn(&T) -> ThinCStr,
@@ -248,7 +249,8 @@ impl<'a> RuntimeClassEntry<'a> {
     pub unsafe fn from_analysis(
         registry: &'a [me3_binary_analysis::dlrf::RuntimeClassEntry],
     ) -> &'a [Self] {
-        unsafe { std::mem::transmute(registry) }
+        // SAFETY: RuntimeClassEntry of both modules is ABI compatible.
+        unsafe { std::slice::from_raw_parts(registry.as_ptr() as *const _, registry.len()) }
     }
 }
 

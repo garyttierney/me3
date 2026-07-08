@@ -19,13 +19,15 @@ pub fn lea_refs<'a, P: Pe<'a>>(program: P, target: Rva) -> pelite::Result<Vec<Rv
         let target_rel = target.wrapping_sub(section_rva);
 
         let section_slice = program.get_section_bytes(section)?;
+        // We scan for the LEA opcode, which is after the REX prefix, so start at 1.
+        // The entire instruction is 7 bytes, so ignore the last 6 byte positions.
         let scan_slice = &section_slice[1..section_slice.len() - 6];
-
+        // We can't use `chunks(PAR_CHUNK_USIZE)` here, since we need the index too.
         let par_split = (0..scan_slice.len()).step_by(PAR_CHUNK_SIZE).par_bridge();
-
         let section_results = par_split
             .flat_map_iter(|start| {
-                let end = scan_slice.len().min(start + PAR_CHUNK_SIZE + 6);
+                let end = scan_slice.len().min(start + PAR_CHUNK_SIZE);
+                // Use memchr to search for the LEA opcode (0x8d).
                 memchr::memchr_iter(0x8d, &scan_slice[start..end]).filter_map(move |i| {
                     let lea_candidate = start + i;
                     let instr_start = lea_candidate;

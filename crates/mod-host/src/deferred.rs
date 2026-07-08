@@ -172,6 +172,8 @@ fn find_prop_hook_addr<'a, P: Pe<'a>>(program: P) -> eyre::Result<Va> {
     Ok(program.rva_to_va(lea_rva)?)
 }
 
+// Use win64 so because it has the most callee-saved registers, which means we don't
+// have to save as much using inline assembly.
 unsafe extern "win64" fn prop_init_hook() {
     if let Some(deferred) = DEFERRED_AFTER_PROP_INIT.lock().unwrap().take() {
         deferred.into_iter().for_each(|f| f());
@@ -184,7 +186,6 @@ unsafe extern "win64" fn prop_init_hook() {
 #[unsafe(naked)]
 unsafe extern "C" fn prop_init_hook_raw() {
     // Simple x64 context save/restore for win64 volatile registers.
-    // We chose win64 as it has a lot of non-volatile registers.
     std::arch::naked_asm!(
         // Move below the sysv64 stack red zone, in case we eventually want to
         // support non-Windows targets (e.g. emulated Bloodborne).
@@ -197,7 +198,7 @@ unsafe extern "C" fn prop_init_hook_raw() {
         "mov rax, rsp",
         "and rsp, -16",
         "push rax",
-        // Push other volatile GRPs.
+        // Push other volatile GPRs.
         "push rcx",
         "push rdx",
         "push r8",
@@ -205,24 +206,25 @@ unsafe extern "C" fn prop_init_hook_raw() {
         "push r10",
         "push r11",
         // Push volatile XMM registers.
+        // Sub an extra 8 bytes to re-align the stack to 16 bytes after the GPR save.
         "sub rsp, 0x68",
-        "movdqa [rsp + 0x00], xmm0",
-        "movdqa [rsp + 0x10], xmm1",
-        "movdqa [rsp + 0x20], xmm2",
-        "movdqa [rsp + 0x30], xmm3",
-        "movdqa [rsp + 0x40], xmm4",
-        "movdqa [rsp + 0x50], xmm5",
+        "movaps [rsp + 0x00], xmm0",
+        "movaps [rsp + 0x10], xmm1",
+        "movaps [rsp + 0x20], xmm2",
+        "movaps [rsp + 0x30], xmm3",
+        "movaps [rsp + 0x40], xmm4",
+        "movaps [rsp + 0x50], xmm5",
         // Allocate shadow stack space and call the hook routine.
         "sub rsp, 0x20",
         "call {hook}",
         "add rsp, 0x20",
         // Restore volatile XMM registers.
-        "movdqa xmm0, [rsp + 0x00]",
-        "movdqa xmm1, [rsp + 0x10]",
-        "movdqa xmm2, [rsp + 0x20]",
-        "movdqa xmm3, [rsp + 0x30]",
-        "movdqa xmm4, [rsp + 0x40]",
-        "movdqa xmm5, [rsp + 0x50]",
+        "movaps xmm0, [rsp + 0x00]",
+        "movaps xmm1, [rsp + 0x10]",
+        "movaps xmm2, [rsp + 0x20]",
+        "movaps xmm3, [rsp + 0x30]",
+        "movaps xmm4, [rsp + 0x40]",
+        "movaps xmm5, [rsp + 0x50]",
         "add rsp, 0x68",
         // Restore volatile GPRs.
         "pop r11",

@@ -7,6 +7,7 @@ use thiserror::Error;
 use crate::pe::sections;
 
 #[derive(Debug, Clone, Copy)]
+#[repr(C)]
 pub struct RuntimeClassEntry {
     pub type_id: Va,
     pub class: Ptr<()>,
