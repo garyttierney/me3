@@ -81,7 +81,9 @@ fn enable_loose_params(attach_config: &AttachConfig, mapping: &VfsOverrideMappin
         .iter()
         .any(|file| mapping.virtual_to_disk(file).is_some())
     {
-        ModHost::get_attached().override_game_property("Game.Debug.EnableRegulationFile", false);
+        ModHost::get_attached()
+            .override_game_property("Game.Debug.EnableRegulationFile", "false")
+            .unwrap();
     }
 }
 

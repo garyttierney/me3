@@ -41,6 +41,7 @@ serde_json.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+memchr.workspace = true
 windows = { workspace = true, features = [
     "Wdk_System_Threading",
     "Win32_Graphics_Gdi",

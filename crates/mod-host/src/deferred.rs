@@ -3,24 +3,28 @@ use std::{
     sync::{LazyLock, Mutex, Once},
 };
 
-use eyre::{eyre, OptionExt};
+use eyre::{eyre, Context, ContextCompat, OptionExt};
+use pelite::pe::{Pe, Rva, Va};
+use retour::RawDetour;
 use tracing::{info, instrument, Level, Span};
 use windows::{
     core::{s, w},
     Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW},
 };
 
-use crate::host::ModHost;
+use crate::{executable::Executable, host::ModHost};
 
 pub enum Deferred {
     BeforeMain,
     AfterMain,
+    AfterPropsInit,
 }
 
 type DeferredOnce = Option<Vec<Box<dyn FnOnce() + Send>>>;
 
 static DEFERRED_BEFORE_MAIN: Mutex<DeferredOnce> = Mutex::new(Some(Vec::new()));
 static DEFERRED_AFTER_MAIN: Mutex<DeferredOnce> = Mutex::new(Some(Vec::new()));
+static DEFERRED_AFTER_PROP_INIT: Mutex<DeferredOnce> = Mutex::new(Some(Vec::new()));
 
 /// Defers execution of a closure.
 ///
@@ -44,6 +48,14 @@ where
             HOOKED_STEAM_INIT.as_ref().map_err(|e| eyre!(e))?;
 
             &DEFERRED_AFTER_MAIN
+        }
+        Deferred::AfterPropsInit => {
+            static HOOKED_PROP_INIT: LazyLock<Result<(), eyre::Error>> =
+                LazyLock::new(hook_prop_init);
+
+            HOOKED_PROP_INIT.as_ref().map_err(|e| eyre!(e))?;
+
+            &DEFERRED_AFTER_PROP_INIT
         }
     };
 
@@ -106,4 +118,130 @@ fn schedule_after_arxan() {
             dearxan::disabler::schedule_after_arxan(move |_, _| deferred());
         }
     }
+}
+
+static PROP_INIT_HOOK: Mutex<Option<RawDetour>> = Mutex::new(None);
+static mut PROP_INIT_TRAMPOLINE: *const () = std::ptr::null();
+
+#[instrument]
+fn hook_prop_init() -> eyre::Result<()> {
+    let exe = unsafe { Executable::new() };
+    let hook_addr = find_prop_hook_addr(exe)?;
+
+    let hook = unsafe {
+        RawDetour::new(hook_addr as *const (), prop_init_hook_raw as *const ())
+            .wrap_err("prop init hook creation failed")?
+    };
+
+    unsafe {
+        hook.enable().wrap_err("prop init hook enable failed")?;
+        PROP_INIT_TRAMPOLINE = hook.trampoline();
+    }
+    tracing::debug!("Game property map init hook installed");
+
+    let _ = PROP_INIT_HOOK.lock().unwrap().insert(hook);
+    Ok(())
+}
+
+#[instrument(skip_all)]
+fn find_prop_hook_addr<'a, P: Pe<'a>>(program: P) -> eyre::Result<Va> {
+    const FIRST_PROPERTY: &str = "Game.Debug.NearOnlyDraw";
+
+    let rdata = program
+        .section_headers()
+        .by_name(".rdata")
+        .wrap_err(".rdata section not found")?;
+    let rdata_bytes = program.get_section_bytes(rdata)?;
+
+    let property_wcstr: Vec<_> = FIRST_PROPERTY
+        .encode_utf16()
+        .chain([0])
+        .flat_map(u16::to_le_bytes)
+        .collect();
+
+    let property_string_rva = rdata.VirtualAddress
+        + memchr::memmem::find(rdata_bytes, &property_wcstr)
+            .wrap_err_with(|| format!("Failed to find {FIRST_PROPERTY} in game executable"))?
+            as Rva;
+
+    let lea_rva = *me3_binary_analysis::util::lea_refs(program, property_string_rva)?
+        .first()
+        .wrap_err_with(|| format!("Failed to find LEA referencing {FIRST_PROPERTY}"))?;
+
+    tracing::debug!("{FIRST_PROPERTY} lea RVA: {lea_rva:x}");
+    Ok(program.rva_to_va(lea_rva)?)
+}
+
+// Use win64 so because it has the most callee-saved registers, which means we don't
+// have to save as much using inline assembly.
+unsafe extern "win64" fn prop_init_hook() {
+    if let Some(deferred) = DEFERRED_AFTER_PROP_INIT.lock().unwrap().take() {
+        deferred.into_iter().for_each(|f| f());
+    }
+    if let Some(hook) = PROP_INIT_HOOK.lock().unwrap().as_ref() {
+        let _ = unsafe { hook.disable() };
+    }
+}
+
+#[unsafe(naked)]
+unsafe extern "C" fn prop_init_hook_raw() {
+    // Simple x64 context save/restore for win64 volatile registers.
+    std::arch::naked_asm!(
+        // Move below the sysv64 stack red zone, in case we eventually want to
+        // support non-Windows targets (e.g. emulated Bloodborne).
+        // Do this with a LEA instead of ADD/SUB so EFLAGS is unchanged.
+        "lea rsp, [rsp - 0x80]",
+        // First save EFLAGS, RSP and align the stack.
+        // To branchlessly align the stack, we need a scratch register. Use RAX.
+        "pushfq",
+        "push rax",
+        "mov rax, rsp",
+        "and rsp, -16",
+        "push rax",
+        // Push other volatile GPRs.
+        "push rcx",
+        "push rdx",
+        "push r8",
+        "push r9",
+        "push r10",
+        "push r11",
+        // Push volatile XMM registers.
+        // Sub an extra 8 bytes to re-align the stack to 16 bytes after the GPR save.
+        "sub rsp, 0x68",
+        "movaps [rsp + 0x00], xmm0",
+        "movaps [rsp + 0x10], xmm1",
+        "movaps [rsp + 0x20], xmm2",
+        "movaps [rsp + 0x30], xmm3",
+        "movaps [rsp + 0x40], xmm4",
+        "movaps [rsp + 0x50], xmm5",
+        // Allocate shadow stack space and call the hook routine.
+        "sub rsp, 0x20",
+        "call {hook}",
+        "add rsp, 0x20",
+        // Restore volatile XMM registers.
+        "movaps xmm0, [rsp + 0x00]",
+        "movaps xmm1, [rsp + 0x10]",
+        "movaps xmm2, [rsp + 0x20]",
+        "movaps xmm3, [rsp + 0x30]",
+        "movaps xmm4, [rsp + 0x40]",
+        "movaps xmm5, [rsp + 0x50]",
+        "add rsp, 0x68",
+        // Restore volatile GPRs.
+        "pop r11",
+        "pop r10",
+        "pop r9",
+        "pop r8",
+        "pop rdx",
+        "pop rcx",
+        // Restore original RSP, RAX and EFLAGS.
+        "pop rsp",
+        "pop rax",
+        "popfq",
+        // Move RSP back to the top of the sysv64 stack red zone.
+        "lea rsp, [rsp + 0x80]",
+        // Jump back to the original address
+        "jmp qword ptr [rip+{trampoline}]",
+        hook = sym prop_init_hook,
+        trampoline = sym PROP_INIT_TRAMPOLINE
+    );
 }
