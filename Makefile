@@ -11,7 +11,7 @@ CARGOFLAGS ?= --features=sentry --release
 DESTDIR ?= out
 SOURCE_DATE_EPOCH ?= $(shell git log -1 --format=%ct)
 COMMIT ?= $(shell git rev-parse --verify HEAD)
-RUSTFLAGS ?= 
+RUSTFLAGS ?=
 
 linux_target_triple = x86_64-unknown-linux-gnu
 linux_tarball_path := $(abspath $(DESTDIR)/me3-linux-amd64.tar.gz)
@@ -36,7 +36,7 @@ cargo_build = SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
 		-v \
         --target $(1) \
         -Z unstable-options --artifact-dir=$(DESTDIR)/ \
-        -p $(2)
+        $(addprefix -p ,$(2))
 
 
 $(DESTDIR)/CHANGELOG.pdf: CHANGELOG.md
@@ -48,14 +48,8 @@ $(DESTDIR)/me3 $(DESTDIR)/me3.debug:
 	objcopy --strip-debug out/me3
 	objcopy --add-gnu-debuglink=out/me3.debug out/me3
 
-$(DESTDIR)/me3.exe:
-	$(call cargo_build,$(windows_target_triple),me3-cli)
-
-$(DESTDIR)/me3-launcher.exe:
-	$(call cargo_build,$(windows_target_triple),me3-launcher)
-
-$(DESTDIR)/me3_mod_host.dll:
-	$(call cargo_build,$(windows_target_triple),me3-mod-host)
+$(windows_binaries) &:
+	$(call cargo_build,$(windows_target_triple),me3-cli me3-launcher me3-mod-host)
 
 $(DESTDIR)/me3_installer.exe: $(windows_binaries) $(DESTDIR)/CHANGELOG.pdf
 	makensis -DTARGET_DIR=$(shell dirname $<)/ installer.nsi -X"OutFile $@"
@@ -103,5 +97,3 @@ dist-linux: $(windows_binaries) $(DESTDIR)/me3 $(DESTDIR)/CHANGELOG.pdf
 		distribution/cross-platform/dist/me3.ico
 
 	install -d "$(DESTDIR)/dist-linux/eldenring-mods" "$(DESTDIR)/dist-linux/nightreign-mods"
-
-.NOTPARALLEL: $(windows_binaries)
