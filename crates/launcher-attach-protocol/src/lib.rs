@@ -1,5 +1,6 @@
 use std::{fmt::Debug, path::PathBuf};
 
+use indexmap::IndexMap;
 use me3_mod_protocol::{
     native::Native,
     package::{Package, WithPackageSource as _},
@@ -64,6 +65,9 @@ pub struct AttachConfig {
 
     /// Should we avoid checking if Steam is running as part of pre-launch checks?
     pub skip_steam_init: bool,
+
+    /// Game properties to override.
+    pub property_overrides: IndexMap<String, String>,
 }
 
 impl AttachConfig {

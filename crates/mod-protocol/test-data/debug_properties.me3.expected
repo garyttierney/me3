@@ -20,7 +20,23 @@ V1(
         disable_arxan: None,
         patch_mem: None,
         debug_properties: DebugProperties {
-            props: {},
+            props: {
+                "prop1.foo": Uint(
+                    18446744073709551615,
+                ),
+                "prop2.bar": Int(
+                    -123,
+                ),
+                "prop3.baz": Float(
+                    890.11,
+                ),
+                "prop4": Bool(
+                    false,
+                ),
+                "prop5": String(
+                    "some string",
+                ),
+            },
         },
     },
 )

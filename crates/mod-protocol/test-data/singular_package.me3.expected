@@ -19,5 +19,8 @@ V1(
         start_online: None,
         disable_arxan: None,
         patch_mem: None,
+        debug_properties: DebugProperties {
+            props: {},
+        },
     },
 )

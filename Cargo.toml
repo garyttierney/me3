@@ -56,7 +56,7 @@ pelite = "0.10"
 rayon = "1"
 rdvec = "0.2.1"
 regex = "1"
-rkyv = "0.8.14"
+rkyv = { version = "0.8.14", features = ["indexmap-2"] }
 schemars = "1.2"
 sentry = { version = "0.48", default-features = false }
 serde = "1"
@@ -74,6 +74,7 @@ tracing-subscriber = { version = "0.3", default-features = false }
 ureq = { version = "3", default-features = false, features = ["native-tls"] }
 windows = "0.62"
 xxhash-rust = { version = "0.8", features = ["std", "xxh3"] }
+indexmap = { version = "2.14.0", features = ["serde"] }
 
 [profile.dev.package."*"]
 opt-level = 3
