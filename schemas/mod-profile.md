@@ -10,50 +10,47 @@
 ## Definitions
 
 
-### <a id="Dependent"></a>**`Dependent`** *(object)*
+### <a id="Supports"></a>**`Supports`** *(object)*
 
 
-  - **`id`** *(string, required)*
-  - **`optional`** *(boolean, required)*
+  - **`game`**: Refer to *[Game](#Game)*.
+  - **`since`** *(['string', 'null'])*
 
 ### <a id="Game"></a>**`Game`** *(string)*
  List of games supported by me3.
 
   - **One of**
-    - : DARK SOULS III (Steam App ID: 374320). Must be one of: `["darksouls3", "ds3"]`.
+    - : Dark Souls III (Steam App ID: 374320). Must be one of: `["darksouls3", "ds3"]`.
     - : Sekiro: Shadows Die Twice (Steam App ID: 814380). Must be one of: `["sekiro", "sdt"]`.
     - : Elden Ring (Steam App ID: 1245620). Must be one of: `["eldenring", "er", "elden-ring"]`.
     - : Armored Core VI: Fires of Rubicon (Steam App ID: 1888160). Must be one of: `["armoredcore6", "ac6"]`.
     - : Elden Ring Nightreign (Steam App ID: 2622380). Must be one of: `["nightreign", "nr", "nightrein"]`.
+
+### <a id="Native"></a>**`Native`** *(object)*
+
+
+  - **`path`**: Path to the DLL. Can be relative to the mod profile. Refer to *[ModFile](#ModFile)*.
+  - **`optional`** *(boolean)*: If this native fails to load and this value is false, treat it as a critical error. Default: `false`.
+  - **`enabled`** *(boolean)*: Should this native be loaded? Default: `true`.
+  - **`load_before`** *(array)*: Default: `[]`.
+  - **`load_after`** *(array)*: Default: `[]`.
+  - **`initializer`**: An optional symbol to be called after this native successfully loads.
+    - **Any of**
+      - : Refer to *[NativeInitializerCondition](#NativeInitializerCondition)*.
+      - *null*
+  - **`finalizer`** *(['string', 'null'])*: An optional symbol to be called when this native successfully is queued for unload.
+  - **`load_early`** *(boolean)*: Default: `false`.
 
 ### <a id="ModFile"></a>**`ModFile`** *(string)*
  A filesystem path to the contents of a package. May be relative to the [ModProfile] containing
 it.
 
 
-### <a id="ModProfileV1"></a>**`ModProfileV1`** *(object)*
-
-  - **`savefile`** *(['string', 'null'])*: This optional field specifies the file name of the savefile the game will use instead of the default one (e.g. `ER0000.sl2` in Elden Ring).
-  - **`start_online`** *(boolean)*: By default, me3 prevents the game from connecting to the official multiplayer matchmaking servers. This functionality can be reenabled. Default: `false`.
-  - **`natives`** *(array)*: Native modules (DLLs) that will be loaded. Default: `[]`.
-  - **`packages`** *(array)*: A collection of packages containing assets that should be considered for loading
-before the DVDBND. Default: `[]`.
-  - **`supports`** *(array)*: The games that this profile supports. Default: `[]`.
-
-### <a id="Native"></a>**`Native`** *(object)*
+### <a id="Dependent"></a>**`Dependent`** *(object)*
 
 
-  - **`enabled`** *(boolean)*: Should this native be loaded? Default: `true`.
-  - **`load_early`** *(boolean)*: Should this native be loaded before the game has initialized? Default: `false`.
-  - **`finalizer`** *(['string', 'null'])*: An optional symbol to be called when this native successfully is queued for unload.
-  - **`initializer`**: An optional symbol to be called after this native successfully loads.
-    - **Any of**
-      - : Refer to *[NativeInitializerCondition](#NativeInitializerCondition)*.
-      - *null*
-  - **`load_after`** *(array)*: Default: `[]`.
-  - **`load_before`** *(array)*: Default: `[]`.
-  - **`optional`** *(boolean)*: If this native fails to load and this value is false, treat it as a critical error. Default: `false`.
-  - **`path`**: Path to the DLL. Can be relative to the mod profile. Refer to *[ModFile](#ModFile)*.
+  - **`id`** *(string, required)*
+  - **`optional`** *(boolean, required)*
 
 ### <a id="NativeInitializerCondition"></a>**`NativeInitializerCondition`**
 
@@ -70,14 +67,36 @@ before the DVDBND. Default: `[]`.
 It points to a local path containing assets matching the hierarchy they would be served under in
 the DVDBND.
 
-  - **`enabled`** *(boolean)*: Enable this package? Default: `true`.
   - **`id`** *(['string', 'null'])*: The unique identifier for this package.
+  - **`enabled`** *(boolean)*: Enable this package? Default: `true`.
+  - **`path`**: A path to the source of this package. Refer to *[ModFile](#ModFile)*.
   - **`load_after`** *(array)*: A list of package IDs that this package should load after. Default: `[]`.
   - **`load_before`** *(array)*: A list of packages that this package should load before. Default: `[]`.
-  - **`path`**: A path to the source of this package. Refer to *[ModFile](#ModFile)*.
 
-### <a id="Supports"></a>**`Supports`** *(object)*
+### <a id="DebugProperties"></a>**`DebugProperties`** *(object)*
+ Arbitrary debug game property overrides.<br>  Do not use this unless you know what that means and what the properties you are setting do! Can contain additional properties.
+
+  - **Additional properties**: Refer to *[Property](#Property)*.
+
+### <a id="Property"></a>**`Property`**
+ The value of a game property.
+
+  - **Any of**
+    - *string*
+    - *boolean*
+    - *number*
+    - *object*: Can contain additional properties.
+      - **Additional properties**: Refer to *[Property](#Property)*.
+
+### <a id="ModProfileV1"></a>**`ModProfileV1`** *(object)*
 
 
-  - **`game`**: Refer to *[Game](#Game)*.
-  - **`since`** *(['string', 'null'])*
+  - **`supports`** *(array)*: The games that this profile supports. Default: `[]`.
+  - **`natives`** *(array)*: Native modules (DLLs) that will be loaded. Default: `[]`.
+  - **`packages`** *(array)*: A collection of packages containing assets that should be considered for loading
+before the DVDBND. Default: `[]`.
+  - **`savefile`** *(['string', 'null'])*: Name of an alternative savefile to use (in the default savefile directory). Default: `null`.
+  - **`start_online`** *(['boolean', 'null'])*: Starts the game with multiplayer server connectivity enabled. Default: `null`.
+  - **`disable_arxan`** *(['boolean', 'null'])*: Try to neutralize Arxan GuardIT code protection to improve mod stability. Default: `null`.
+  - **`patch_mem`** *(['boolean', 'null'])*: Patch memory limits for supported games to improve mod stability. Default: `null`.
+  - **`debug_properties`**: Debug game property overrides. Refer to *[DebugProperties](#DebugProperties)*. Default: `{}`.

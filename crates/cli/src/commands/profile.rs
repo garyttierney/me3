@@ -2,6 +2,7 @@ use std::{fs, path::PathBuf};
 
 use clap::{ArgAction, Args, Subcommand};
 use color_eyre::eyre::{eyre, OptionExt};
+use indexmap::IndexMap;
 use me3_mod_protocol::{
     dependency::Dependency,
     native::Native,
@@ -87,6 +88,27 @@ pub struct ProfileOptions {
     /// improving game performance.
     #[clap(long("no-mem-patch"), default_missing_value = "true", num_args=0..=1)]
     pub no_mem_patch: Option<bool>,
+
+    /// Debug game property override [repeatable option]
+    ///
+    /// Override a debug game property, e.g. `--debug-prop Game.Debug.NearOnlyDraw=true`. Do not
+    /// use this unless you know what you're doing!
+    ///
+    /// CLI overrides have priority over those defined in profiles, which themselves
+    /// have priority over properties set internally by me3.
+    #[arg(
+        long("debug-property"),
+        value_name = "NAME=VALUE",
+        value_parser = key_value_parser,
+    )]
+    pub debug_properties: Vec<(String, String)>,
+}
+
+fn key_value_parser(arg: &str) -> Result<(String, String), String> {
+    let (key, value) = arg
+        .split_once('=')
+        .ok_or("invalid NAME=VALUE: no = found")?;
+    Ok((key.to_owned(), value.to_owned()))
 }
 
 impl ProfileOptions {
@@ -99,6 +121,13 @@ impl ProfileOptions {
                 (a, b) => a.or(b),
             },
             no_mem_patch: other.no_mem_patch.or(self.no_mem_patch),
+            debug_properties: self
+                .debug_properties
+                .into_iter()
+                .chain(other.debug_properties)
+                .collect::<IndexMap<_, _>>()
+                .into_iter()
+                .collect(),
         }
     }
 }
@@ -238,6 +267,14 @@ pub fn show(db: DbContext, config: Config, name: ProfileNameArgs) -> color_eyre:
         let options = profile.options();
         builder.property("Start Online", opt_to_str(options.start_online));
         builder.property("Neutralize Arxan", opt_to_str(options.disable_arxan));
+
+        if !options.debug_properties.is_empty() {
+            builder.section("Debug Game Properties", |builder| {
+                for (key, val) in &options.debug_properties {
+                    builder.property(key, val);
+                }
+            });
+        }
     });
 
     println!("{}", output.build());

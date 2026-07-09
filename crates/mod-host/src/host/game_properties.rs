@@ -58,8 +58,8 @@ pub fn attach_override(
             .lock()
             .expect("poisoned");
 
-        tracing::debug!("applying game property overrides: {overrides:#?}");
-        for (property, value) in overrides.iter() {
+        tracing::debug!("applying game property overrides (user has priority): {overrides:#?}");
+        for (property, value) in overrides.internal.iter().chain(overrides.user.iter()) {
             unsafe { set_game_prop(property.as_ptr(), value.as_ptr()) }
         }
     })

@@ -1,0 +1,12 @@
+profileVersion = "v1"
+
+[[package]]
+id = "test-pkg"
+path = "."
+
+[debug_properties]
+prop1.foo = 0xFFFF_FFFF_FFFF_FFFF
+prop2.bar = -123
+"prop3.baz" = 890.11
+prop4 = false
+prop5 = "some string"

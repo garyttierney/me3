@@ -294,6 +294,12 @@ impl LaunchArgs {
             }
         }
 
+        let property_overrides = profile_options
+            .debug_properties
+            .clone()
+            .into_iter()
+            .collect();
+
         Ok(AttachConfig {
             game: game.into(),
             packages,
@@ -308,6 +314,7 @@ impl LaunchArgs {
             disable_arxan: profile_options.disable_arxan.unwrap_or(false),
             mem_patch: !profile_options.no_mem_patch.unwrap_or(false),
             skip_steam_init: opts.skip_steam_init.unwrap_or(false),
+            property_overrides,
         })
     }
 }
@@ -596,6 +603,7 @@ mod tests {
                 start_online: None,
                 disable_arxan: None,
                 no_mem_patch: None,
+                debug_properties: Default::default()
             },
         );
     }
@@ -635,6 +643,7 @@ mod tests {
                 start_online: Some(true),
                 disable_arxan: Some(true),
                 no_mem_patch: Some(true),
+                debug_properties: Default::default()
             },
         );
     }
@@ -674,6 +683,7 @@ mod tests {
                 start_online: Some(false),
                 disable_arxan: Some(false),
                 no_mem_patch: Some(false),
+                debug_properties: Default::default()
             },
         );
     }
@@ -713,6 +723,7 @@ mod tests {
                 start_online: Some(true),
                 disable_arxan: Some(true),
                 no_mem_patch: Some(true),
+                debug_properties: Default::default()
             },
         );
     }

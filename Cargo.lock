@@ -1449,6 +1449,8 @@ checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
 dependencies = [
  "equivalent",
  "hashbrown",
+ "serde",
+ "serde_core",
 ]
 
 [[package]]
@@ -1691,6 +1693,7 @@ dependencies = [
  "ctrlc",
  "directories",
  "getrandom 0.4.3",
+ "indexmap",
  "is-terminal",
  "keyvalues-serde",
  "libc",
@@ -1762,6 +1765,7 @@ name = "me3-launcher-attach-protocol"
 version = "0.11.0"
 dependencies = [
  "eyre",
+ "indexmap",
  "me3-mod-protocol",
  "rkyv",
  "serde",
@@ -1778,6 +1782,7 @@ dependencies = [
  "dearxan",
  "eyre",
  "from-singleton",
+ "indexmap",
  "libloading",
  "libmimalloc-sys",
  "me3-binary-analysis",

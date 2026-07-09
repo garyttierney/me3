@@ -90,6 +90,7 @@ impl Profile {
             start_online: self.profile.start_online(),
             disable_arxan: self.profile.disable_arxan(),
             no_mem_patch: self.profile.patch_mem().map(|b| !b),
+            debug_properties: self.profile.debug_properties(),
         }
     }
 

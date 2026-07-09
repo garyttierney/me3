@@ -18,6 +18,7 @@ me3-mod-protocol.workspace = true
 rkyv.workspace = true
 serde.workspace = true
 serde_derive.workspace = true
+indexmap.workspace = true
 
 [lints]
 workspace = true

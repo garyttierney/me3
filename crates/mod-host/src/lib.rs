@@ -101,7 +101,7 @@ fn on_attach(request: AttachRequest) -> AttachResult {
             Err(e) => warn!("error" = %e, "could not detect game version"),
         }
 
-        ModHost::new(&attach_config).attach();
+        ModHost::new(&attach_config)?.attach();
 
         dearxan(&attach_config)?;
 

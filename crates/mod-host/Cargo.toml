@@ -16,6 +16,7 @@ sentry = ["me3-telemetry/sentry"]
 crate-type = ["cdylib"]
 
 [dependencies]
+indexmap.workspace = true
 closure-ffi = { version = "5.0", features = ["coverage", "std", "tuple_trait"] }
 color-eyre.workspace = true
 dearxan = "0.5.2"

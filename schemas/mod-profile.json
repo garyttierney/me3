@@ -238,6 +238,33 @@
         "path"
       ]
     },
+    "DebugProperties": {
+      "description": "Arbitrary debug game property overrides.\n\nDo not use this unless you know what that means and what the properties you are setting do!",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/Property"
+      }
+    },
+    "Property": {
+      "description": "The value of a game property.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Property"
+          }
+        }
+      ]
+    },
     "ModProfileV1": {
       "type": "object",
       "properties": {
@@ -296,6 +323,11 @@
             "null"
           ],
           "default": null
+        },
+        "debug_properties": {
+          "description": "Debug game property overrides.",
+          "$ref": "#/$defs/DebugProperties",
+          "default": {}
         }
       }
     }
