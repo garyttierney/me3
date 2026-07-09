@@ -4,7 +4,6 @@ pub mod strategy;
 
 use std::{
     fmt::Debug,
-    fs::File,
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
     process::Stdio,
@@ -18,7 +17,7 @@ use clap::{
     builder::{BoolValueParser, MapValueParser, TypedValueParser},
     ArgAction, Args,
 };
-use color_eyre::eyre::{bail, eyre, OptionExt};
+use color_eyre::eyre::{eyre, OptionExt};
 use me3_env::{CommandExt, LauncherVars, TelemetryVars};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{native::Native, package::Package};
@@ -31,8 +30,7 @@ use tracing::{error, info};
 use crate::{
     commands::{
         launch::{
-            named_pipe::NamedPipe,
-            strategy::{compat_tool::CompatTools, LaunchStrategy},
+            named_pipe::NamedPipe, strategy::compat_tool::CompatTools, strategy::LaunchStrategy,
         },
         profile::ProfileOptions,
     },

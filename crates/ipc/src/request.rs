@@ -4,9 +4,7 @@ use std::{
     collections::HashMap,
     hash::{BuildHasher, Hash, Hasher, RandomState},
     hint,
-    marker::PhantomPinned,
     panic::{self, UnwindSafe},
-    pin::{pin, Pin},
     sync::{
         atomic::{AtomicBool, Ordering},
         Condvar, Mutex,
@@ -87,8 +85,7 @@ impl Request {
         F: FnOnce((RequestId, Self)) -> Result<(), SendError>,
         Res: ConvertResponse,
     {
-        // Pin on the stack - we'll block until the response is ready or an error occurs.
-        let res: Pin<&AwaitedResponse> = pin!(AwaitedResponse::new(id));
+        let res = AwaitedResponse::new(id);
 
         // Register (the id should be unique).
         res.register();
@@ -118,7 +115,6 @@ struct AwaitedResponse {
     payload: (Mutex<Option<Result<Response, RequestError>>>, Condvar),
     is_registered: AtomicBool,
     is_fulfilled: AtomicBool,
-    _marker: PhantomPinned,
 }
 
 struct AwaitedResponsePtr(*const AwaitedResponse);
@@ -136,15 +132,14 @@ impl AwaitedResponse {
             payload: (Mutex::new(None), Condvar::new()),
             is_registered: AtomicBool::new(false),
             is_fulfilled: AtomicBool::new(false),
-            _marker: PhantomPinned,
         }
     }
 
-    fn register(self: Pin<&Self>) {
+    fn register(&self) {
         let with_this_id = AWAITED_RESPONSES
             .lock()
             .unwrap()
-            .insert(self.id, AwaitedResponsePtr(self.get_ref()));
+            .insert(self.id, AwaitedResponsePtr(self));
 
         assert!(
             with_this_id.is_none(),
@@ -154,7 +149,7 @@ impl AwaitedResponse {
         self.is_registered.store(true, Ordering::Relaxed);
     }
 
-    fn await_response<Res>(self: Pin<&Self>) -> Result<Res, RequestError>
+    fn await_response<Res>(&self) -> Result<Res, RequestError>
     where
         Res: ConvertResponse,
     {

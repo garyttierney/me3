@@ -1,3 +1,4 @@
+#![allow(unused)]
 use std::{collections::HashMap, fs::File, io, ops::Deref, path::Path};
 
 use serde::Deserialize;
@@ -127,7 +128,7 @@ mod test {
 			"SteamControllerRumbleIntensity"		"320"
 		}
 	}
-	
+
 	"ControllerTypesUsed"		"controller_ps4,controller_generic,"
 	"GameRecording"
 	{
