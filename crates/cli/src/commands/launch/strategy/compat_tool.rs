@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use std::{
     cmp::Reverse,
     collections::{HashMap, HashSet, VecDeque},

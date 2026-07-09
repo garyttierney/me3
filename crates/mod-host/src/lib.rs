@@ -1,5 +1,4 @@
 #![feature(fn_traits)]
-#![feature(fn_ptr_trait)]
 #![feature(tuple_trait)]
 #![feature(unboxed_closures)]
 
