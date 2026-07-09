@@ -80,9 +80,10 @@ impl CompatTools {
             std::fs::read_dir(path)
                 .into_iter()
                 .flatten()
-                .filter_map(|entry| {
-                    let dir = entry.ok()?;
-                    let manifest_path = dir.path().join("compatibilitytool.vdf");
+                .filter_map(|entry| Some(entry.ok()?.path()))
+                .chain([path.to_path_buf()])
+                .filter_map(|path| {
+                    let manifest_path = path.join("compatibilitytool.vdf");
 
                     manifest_path.exists().then_some(manifest_path)
                 })
