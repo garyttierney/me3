@@ -7,7 +7,7 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt install --install-recommends lld clang-tools llvm wkhtmltopdf nsis
+        sudo apt install --install-recommends lld clang-tools llvm nsis
 
     - name: Cache MSVC SDK
       id: cache-xwin
