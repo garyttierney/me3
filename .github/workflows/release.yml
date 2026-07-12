@@ -14,7 +14,7 @@ env:
 jobs:
   plan:
     name: Build plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     outputs:
@@ -48,7 +48,7 @@ jobs:
       pull-requests: write
       id-token: write
       attestations: write
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     if: ${{ needs.plan.outputs.current_version != needs.plan.outputs.next_version }}
     steps:
       - name: Harden the runner (Audit all outbound calls)

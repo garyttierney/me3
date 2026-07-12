@@ -8,7 +8,7 @@ on:
 
 jobs:
   virustotal:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: VirusTotal Scan
         uses: crazy-max/ghaction-virustotal@d34968c958ae283fe976efed637081b9f9dcf74f # v4.2.0
@@ -18,7 +18,7 @@ jobs:
             .exe$
             .zip$
   sentry:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Download release asset (.zip)
         env:

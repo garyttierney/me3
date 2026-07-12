@@ -32,8 +32,8 @@ runs:
             echo "AR_x86_64_pc_windows_msvc=llvm-lib"
             echo "CFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS"
             echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS /EHsc"
-            echo "CC_x86_64_pc_windows_msvc=clang-cl-18"
-            echo "CXX_x86_64_pc_windows_msvc=clang-cl-18"
+            echo "CC_x86_64_pc_windows_msvc=clang-cl-21"
+            echo "CXX_x86_64_pc_windows_msvc=clang-cl-21"
         } >>"$GITHUB_ENV"
 
         cat >~/.cargo/config.toml <<EOF
