@@ -23,7 +23,7 @@ dearxan = "0.5.2"
 eyre = { workspace = true, default-features = false, features = ["track-caller"] }
 from-singleton.workspace = true
 libloading = "0.9.0"
-libmimalloc-sys = { version = "0.1.44", features = ["v3", "extended"] }
+libmimalloc-sys = { version = "0.1.49", features = ["extended", "arena"] }
 me3-binary-analysis.workspace = true
 me3-env.workspace = true
 me3-ipc.workspace = true
