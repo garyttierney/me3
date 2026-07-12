@@ -3,11 +3,22 @@ description: "Install and set up the x86_64-pc-windows-msvc Rust toolchain"
 runs:
   using: 'composite'
   steps:
+    - name: Run apt-get update
+      shell: bash
+      run: sudo apt-get update
+
+    - name: Install NSIS and wkhtmltopdf
+      shell: bash
+      run: sudo apt install --install-recommends nsis wkhtmltopdf
+
     - name: Install LLVM
       shell: bash
       run: |
-        sudo apt-get update
-        sudo apt install --install-recommends lld clang-tools llvm wkhtmltopdf nsis
+        sudo apt install --install-recommends llvm-20 clang-20 lld-20
+
+        for tool in llvm-ar llvm-config llvm-cov llvm-lib llvm-link llvm-rc clang-cl lld lld-link; do
+            sudo update-alternatives --install /usr/bin/$tool $tool /usr/bin/$tool-20 200
+        done
 
     - name: Cache MSVC SDK
       id: cache-xwin
@@ -26,14 +37,18 @@ runs:
     - name: Generate x86_64-pc-windows-msvc configuration
       shell: bash
       run: |
+        for tool in llvm-ar llvm-config llvm-cov llvm-lib llvm-link llvm-rc clang-cl lld lld-link; do
+            sudo update-alternatives --auto $tool
+        done
+
         {
             CL_FLAGS="-Wno-unused-command-line-argument -fuse-ld=lld-link  /imsvc${{ github.workspace }}/xwin/crt/include  /imsvc${{ github.workspace }}/xwin/sdk/include/ucrt  /imsvc${{ github.workspace }}/xwin/sdk/include/um /imsvc${{ github.workspace }}/xwin/sdk/include/shared"
 
             echo "AR_x86_64_pc_windows_msvc=llvm-lib"
             echo "CFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS"
             echo "CXXFLAGS_x86_64_pc_windows_msvc=$CL_FLAGS /EHsc"
-            echo "CC_x86_64_pc_windows_msvc=clang-cl-18"
-            echo "CXX_x86_64_pc_windows_msvc=clang-cl-18"
+            echo "CC_x86_64_pc_windows_msvc=clang-cl"
+            echo "CXX_x86_64_pc_windows_msvc=clang-cl"
         } >>"$GITHUB_ENV"
 
         cat >~/.cargo/config.toml <<EOF
