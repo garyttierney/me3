@@ -316,12 +316,22 @@
           ],
           "default": null
         },
-        "patch_mem": {
+        "mem_patch": {
           "description": "Patch memory limits for supported games to improve mod stability.",
           "type": [
             "boolean",
             "null"
           ],
+          "default": null
+        },
+        "mem_patch_heap_size": {
+          "description": "Override how many megabytes of memory the supported game should allocate\n(with `mem_patch = true`).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0,
           "default": null
         },
         "debug_properties": {

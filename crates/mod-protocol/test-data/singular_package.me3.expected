@@ -18,7 +18,8 @@ V1(
         savefile: None,
         start_online: None,
         disable_arxan: None,
-        patch_mem: None,
+        mem_patch: None,
+        mem_patch_heap_size: None,
         debug_properties: DebugProperties {
             props: {},
         },

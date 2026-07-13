@@ -74,6 +74,10 @@ pub fn hook_system_allocator(
         return Ok(());
     }
 
+    if let Some(size) = attach_config.mem_patch_heap_size {
+        mimalloc::set_heap_size(size);
+    }
+
     let mut result = None;
 
     SYSTEM_ALLOC_IS_HOOKED.get_or_init(|| {
