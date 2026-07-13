@@ -89,6 +89,13 @@ pub struct ProfileOptions {
     #[clap(long("no-mem-patch"), default_missing_value = "true", num_args=0..=1)]
     pub no_mem_patch: Option<bool>,
 
+    /// Override the default heap allocation size (in MB).
+    ///
+    /// A sensible default between 6144 and 12288 is already used for games that support
+    /// `mem_patch`. Does nothing in combination with `--no-mem-patch`.
+    #[clap(long("heap-size"))]
+    pub heap_size: Option<u32>,
+
     /// Debug game property override [repeatable option]
     ///
     /// Override a debug game property, e.g. `--debug-prop Game.Debug.NearOnlyDraw=true`. Do not
@@ -121,6 +128,7 @@ impl ProfileOptions {
                 (a, b) => a.or(b),
             },
             no_mem_patch: other.no_mem_patch.or(self.no_mem_patch),
+            heap_size: self.heap_size.max(other.heap_size),
             debug_properties: self
                 .debug_properties
                 .into_iter()

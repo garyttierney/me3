@@ -30,7 +30,8 @@ use tracing::{error, info};
 use crate::{
     commands::{
         launch::{
-            named_pipe::NamedPipe, strategy::compat_tool::CompatTools, strategy::LaunchStrategy,
+            named_pipe::NamedPipe,
+            strategy::{compat_tool::CompatTools, LaunchStrategy},
         },
         profile::ProfileOptions,
     },
@@ -311,6 +312,7 @@ impl LaunchArgs {
             start_online: profile_options.start_online.unwrap_or(false),
             disable_arxan: profile_options.disable_arxan.unwrap_or(false),
             mem_patch: !profile_options.no_mem_patch.unwrap_or(false),
+            mem_patch_heap_size: profile_options.heap_size,
             skip_steam_init: opts.skip_steam_init.unwrap_or(false),
             property_overrides,
         })
@@ -601,6 +603,7 @@ mod tests {
                 start_online: None,
                 disable_arxan: None,
                 no_mem_patch: None,
+                heap_size: None,
                 debug_properties: Default::default()
             },
         );
@@ -641,6 +644,7 @@ mod tests {
                 start_online: Some(true),
                 disable_arxan: Some(true),
                 no_mem_patch: Some(true),
+                heap_size: None,
                 debug_properties: Default::default()
             },
         );
@@ -681,6 +685,7 @@ mod tests {
                 start_online: Some(false),
                 disable_arxan: Some(false),
                 no_mem_patch: Some(false),
+                heap_size: None,
                 debug_properties: Default::default()
             },
         );
@@ -721,6 +726,7 @@ mod tests {
                 start_online: Some(true),
                 disable_arxan: Some(true),
                 no_mem_patch: Some(true),
+                heap_size: None,
                 debug_properties: Default::default()
             },
         );

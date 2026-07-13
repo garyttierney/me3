@@ -1,4 +1,11 @@
-use std::{mem::ManuallyDrop, ptr::NonNull, sync::LazyLock};
+use std::{
+    mem::ManuallyDrop,
+    ptr::NonNull,
+    sync::{
+        atomic::{AtomicU32, Ordering},
+        LazyLock,
+    },
+};
 
 use libmimalloc_sys::{
     mi_arena_id_t, mi_free, mi_heap_malloc_aligned, mi_heap_new_in_arena, mi_heap_realloc_aligned,
@@ -13,6 +20,12 @@ use me3_mod_protocol::Game;
 pub static MIMALLOC_DLALLOC: DlAllocator = DlAllocator {
     vtable: NonNull::from_ref(&MIMALLOC_DLALLOC_VTABLE),
 };
+
+static HEAP_SIZE_MB: AtomicU32 = AtomicU32::new(0);
+
+pub fn set_heap_size(new_size_mb: u32) {
+    HEAP_SIZE_MB.store(new_size_mb, Ordering::Release);
+}
 
 const MIMALLOC_DLALLOC_VTABLE: DlAllocatorVtable = DlAllocatorVtable {
     dtor,
@@ -56,14 +69,17 @@ static mut MI_HEAP: LazyLock<*mut mi_heap_t> = LazyLock::new(|| unsafe {
     // commit, manual testing and expectations for upper bounds on memory usage.
     // Since `mi_option_disallow_os_alloc` is not set mimalloc may reserve even more memory
     // outside of this arena as it needs.
-    let size_mb = match *GAME {
-        Game::DarkSouls3 => 6 * 1024,
-        Game::Sekiro => 6 * 1024,
-        Game::EldenRing => 12 * 1024,
-        _ => unimplemented!("this game does not support mem_patch?"),
-    };
+    let mut size_mb = HEAP_SIZE_MB.load(Ordering::Acquire);
+    if size_mb == 0 {
+        size_mb = match *GAME {
+            Game::DarkSouls3 => 6 * 1024,
+            Game::Sekiro => 6 * 1024,
+            Game::EldenRing => 12 * 1024,
+            _ => unimplemented!("this game does not support mem_patch?"),
+        };
+    }
 
-    let size_bytes = size_mb * 1024 * 1024;
+    let size_bytes = size_mb as usize * 1024 * 1024;
     let mut arena_id = mi_arena_id_t::default();
 
     let res = mi_reserve_os_memory_ex(size_bytes, true, true, true, &mut arena_id);

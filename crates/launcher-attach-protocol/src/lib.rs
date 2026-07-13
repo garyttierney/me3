@@ -63,6 +63,10 @@ pub struct AttachConfig {
     /// Patch memory limits for supported games.
     pub mem_patch: bool,
 
+    /// Override how many megabytes of memory the supported game should allocate
+    /// (with `mem_patch = true`).
+    pub mem_patch_heap_size: Option<u32>,
+
     /// Should we avoid checking if Steam is running as part of pre-launch checks?
     pub skip_steam_init: bool,
 

@@ -98,5 +98,7 @@ before the DVDBND. Default: `[]`.
   - **`savefile`** *(['string', 'null'])*: Name of an alternative savefile to use (in the default savefile directory). Default: `null`.
   - **`start_online`** *(['boolean', 'null'])*: Starts the game with multiplayer server connectivity enabled. Default: `null`.
   - **`disable_arxan`** *(['boolean', 'null'])*: Try to neutralize Arxan GuardIT code protection to improve mod stability. Default: `null`.
-  - **`patch_mem`** *(['boolean', 'null'])*: Patch memory limits for supported games to improve mod stability. Default: `null`.
+  - **`mem_patch`** *(['boolean', 'null'])*: Patch memory limits for supported games to improve mod stability. Default: `null`.
+  - **`mem_patch_heap_size`** *(['integer', 'null'], format: uint32)*: Override how many megabytes of memory the supported game should allocate
+(with `mem_patch = true`). Minimum: `0`. Default: `null`.
   - **`debug_properties`**: Debug game property overrides. Refer to *[DebugProperties](#DebugProperties)*. Default: `{}`.
