@@ -76,19 +76,27 @@ impl CompatTools {
     }
 
     pub fn all(&self) -> impl Iterator<Item = CompatTool> {
-        self.search_paths.iter().flat_map(|path| {
-            std::fs::read_dir(path)
+        let mut tool_paths = vec![];
+
+        for root in &self.search_paths {
+            let root_manifest_path = root.join("compatibilitytool.vdf");
+
+            if root_manifest_path.exists() {
+                tool_paths.push(root_manifest_path);
+                continue;
+            }
+
+            let tool_candidates = std::fs::read_dir(root)
                 .into_iter()
                 .flatten()
-                .filter_map(|entry| Some(entry.ok()?.path()))
-                .chain([path.to_path_buf()])
-                .filter_map(|path| {
-                    let manifest_path = path.join("compatibilitytool.vdf");
+                .filter_map(|entry| Some(entry.ok()?.path().join("compatibilitytool.vdf")));
 
-                    manifest_path.exists().then_some(manifest_path)
-                })
-                .flat_map(CompatTool::load)
-        })
+            tool_paths.extend(tool_candidates);
+        }
+
+        tool_paths
+            .into_iter()
+            .filter_map(|path| CompatTool::load(path).ok())
     }
 
     pub fn find_by_id(&self, app_id: u32) -> Option<CompatTool> {
