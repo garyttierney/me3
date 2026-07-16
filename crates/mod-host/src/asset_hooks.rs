@@ -11,7 +11,7 @@ use std::{
 };
 
 use base64::{prelude::BASE64_STANDARD, Engine};
-use eyre::{eyre, OptionExt};
+use eyre::{eyre, Context, OptionExt};
 use me3_binary_analysis::{fd4_step::Fd4StepTables, rtti::ClassMap};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_host_assets::{
@@ -313,8 +313,7 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
         // Write a temporary file with the size of a single block and have the
         // game decrypt it, which creates an EblFileDevice and lets us read
         // the original file size.
-        let mut stub_file = NamedTempFile::new_in(cache_path.as_ref())?;
-
+        let mut stub_file = NamedTempFile::new().with_context(|| "creating stub file")?;
         stub_file.write_all(&original[..Ord::min(pub_key_size, original.len())])?;
 
         let snap = device_manager.snapshot()?;
