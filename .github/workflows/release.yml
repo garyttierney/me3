@@ -119,7 +119,7 @@ jobs:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: "2da12aff-ebaa-4418-af85-f0fc2df74452"
           project-slug: "me3"
-          signing-policy-slug: "test-signing"
+          signing-policy-slug: "release-signing"
           artifact-configuration-slug: "distributables"
           github-artifact-id: ${{ steps.upload-unsigned-binaries.outputs.artifact-id }}
           wait-for-completion: true
@@ -145,7 +145,7 @@ jobs:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: "2da12aff-ebaa-4418-af85-f0fc2df74452"
           project-slug: "me3"
-          signing-policy-slug: "test-signing"
+          signing-policy-slug: "release-signing"
           artifact-configuration-slug: "installer"
           github-artifact-id: ${{ steps.upload-unsigned-installer.outputs.artifact-id }}
           wait-for-completion: true
