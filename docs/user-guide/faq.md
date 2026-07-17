@@ -28,12 +28,11 @@ The `me3 launch` command can be used to point to a custom game executable. For e
 > $ me3 launch --skip-steam-init --exe-path="C:/game-archive/eldenring.exe"
 ```
 
+### How do I use me3 with Nucleus Co-op?
+
+There is an experimental handler maintained in the Nucleus Co-op Discord server. The thread can be found at [here](https://discord.com/channels/142649962839277568/1270201018763710504) and an invite to the Discord server is available on the [SplitScreen.me website](https://www.splitscreen.me/)
+
 ## Known Issues
-
-### (Steam Deck) Game won't launch when game is installed to an SD card
-
-!!! bug "me3 fails to find the compatprefix for games installed to an SD card"
-!!! success "Move the game installation to main storage or create a symlink to the compat folder in your Steam library"
 
 ### me3 is quarantined by anti-virus software
 
