@@ -4,6 +4,192 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
+## me3 - [v0.12.0](https://github.com/garyttierney/me3/releases/v0.12.0) - 2026-07-18
+
+### 🚀 Features
+
+- [6593712](https://github.com/garyttierney/me3/commit/659371208397101e40ebfec85c8802a7a448f8df)  *(host)* Allow for user provided heap sizes in MB in [#828](https://github.com/garyttierney/me3/pull/828)
+
+
+
+- [1c8d699](https://github.com/garyttierney/me3/commit/1c8d6996279d8de9878e740834aec3d9fdabaabd)  *(host)* Allow deferring after game props init
+
+
+
+- [294e7ce](https://github.com/garyttierney/me3/commit/294e7ce8a1b9daf59303a151637633b8691dbe27)  *(host-types)* Add DLRF types and analysis
+
+
+
+- [4facce8](https://github.com/garyttierney/me3/commit/4facce899391d46f388492a5c38bfcf3ccd86366)  *(linux)* Add Proton launch verb override via env variable in [#810](https://github.com/garyttierney/me3/pull/810)
+
+
+  > Allows overriding the Proton launch verb to allow the game
+  > to start alongside any existing tools that are already running
+  > in the games own Proton prefix.
+
+
+- [dc25769](https://github.com/garyttierney/me3/commit/dc2576905247dc815218581d00b2af273aa88d81)  *(linux)* Add support for Proton 11 in [#764](https://github.com/garyttierney/me3/pull/764)
+
+
+  > Fixes #763
+
+- [5bc7c66](https://github.com/garyttierney/me3/commit/5bc7c66adb4ef0ddc85286143401d3648652caa3) Forward extra arguments to game process in [#836](https://github.com/garyttierney/me3/pull/836)
+
+
+  > Any arguments specified in me3 launch after the trailing `--` will be
+  > passed to the game during launch.
+
+  > Fixes #769
+
+- [cfb4e35](https://github.com/garyttierney/me3/commit/cfb4e3525b3f3fac6c5f2ddae605380e1332dfa2) Allow disabling console output in [#837](https://github.com/garyttierney/me3/pull/837)
+
+
+  > Fixes #648
+
+- [50dd1f2](https://github.com/garyttierney/me3/commit/50dd1f24ee75bfedb58687851fff5f884aa7dbc0) Cli/profile prop overrides in [#822](https://github.com/garyttierney/me3/pull/822)
+
+
+  > Allows specifying debug game property overrides from the cli/profiles.
+
+
+- [73d83a4](https://github.com/garyttierney/me3/commit/73d83a490ec16f71a76b222ae6c934d8d18f12e6) Allow overriding properties via cli/profiles
+
+
+
+### 🐛 Bug Fixes
+
+- [e4be580](https://github.com/garyttierney/me3/commit/e4be58046da70d2119ad8eb9c32265330e54fdef)  *(cli)* Use normalize_virtually for pipe path on windows in [#761](https://github.com/garyttierney/me3/pull/761)
+
+
+  > Fixes reaching an unimplemented function in Wine when running the
+  > Windows binary of me3-cli under WINE.
+
+
+- [4365f37](https://github.com/garyttierney/me3/commit/4365f372e272e8b41a31af63bb47c57457abb144)  *(deps)* Don't eliminate debug tracing events
+
+
+
+- [2e39640](https://github.com/garyttierney/me3/commit/2e39640395127d2d47313e52494b7c775b88920d)  *(host)* Improve mem_patch stability
+
+
+
+- [f95d8c6](https://github.com/garyttierney/me3/commit/f95d8c634811d343f069f7cd1981a616704724db)  *(host)* Use correct signature for Fd4StepFunction in [#817](https://github.com/garyttierney/me3/pull/817)
+
+
+  > The incorrect signature led to the second parameter potentially being
+  > cloberred by an arbitrary value from a hook routine, leading to crashes
+  > or other undefined behavior.
+
+
+- [04765d0](https://github.com/garyttierney/me3/commit/04765d0a4f58966af74466323ee01f61c3f616b2)  *(host)* Don't expose fully qualified UTF-8 paths to the game in [#806](https://github.com/garyttierney/me3/pull/806)
+
+
+  > Fixes #804
+  > 
+  > Uses a fake UNC path prefix `\\me3` to indicate disk file paths
+  > internally managed by me3. This is a significant change to how file
+  > paths are handled and seen by the game and I would like this to be
+  > tested thoroughly before merging.
+  > 
+  > Elden Ring (and likely the other games) forward file paths converted
+  > from UTF-16 to Shift JIS to the Scaleform UI middleware (which expects
+  > UTF-8). This conversion can only be valid for the ASCII subset of UTF
+  > and SJIS, and user paths that contain other characters are silently
+  > truncated at the first character that failed to be converted. What's
+  > worse is that the failed conversion does not nul-terminate the string.
+  > 
+  > The conversion happens at `eldenring.exe+d7106d` (1.16.2) and the
+  > subsequent call consumes the string.
+  > 
+  > The implementation in this PR leaves room for a future file reloading
+  > feature (with generation based indexing).
+  > 
+  > ---------
+
+- [266adf1](https://github.com/garyttierney/me3/commit/266adf1207e55be117db091d0fdf6601fdf56c1b)  *(linux)* Create BHD stub in tmpdir, not cache dir in [#831](https://github.com/garyttierney/me3/pull/831)
+
+
+  > Fixes the "File not found" errors that occur when we try to create a
+  > temporary file under the host cache directory. Likely caused by the
+  > TEMPORARY attribute used in the tempfile Windows implementation:
+  > https://github.com/Stebalien/tempfile/blob/master/src/file/imp/windows.rs#L38
+
+
+- [7ff662d](https://github.com/garyttierney/me3/commit/7ff662d14c5b0b0adf2d626619d4a8f12c5f21fd)  *(linux)* Search compat tool roots for manifests in [#827](https://github.com/garyttierney/me3/pull/827)
+
+
+  > Fixes #802
+
+- [c998b06](https://github.com/garyttierney/me3/commit/c998b06cc53c35794aa9808480ecfb2ac6a2fb60)  *(linux)* Restore LD_PRELOAD injection for Steam overlay in compat tool launcher in [#735](https://github.com/garyttierney/me3/pull/735)
+
+
+  > In `compat_tool.rs`, `setup_steam_linux_runtime_env` builds `LD_PRELOAD`
+  > with `gameoverlayrenderer.so` but never sets it on the command, restore it
+  > to fix Steam Input compatibility and the Steam overlay.
+
+
+- [e153f4f](https://github.com/garyttierney/me3/commit/e153f4f87f6eb65b454b4deda14e371678ee95f6) Include me3 profiles in taplo config
+
+
+
+### 🚜 Refactor
+
+- [e57a48a](https://github.com/garyttierney/me3/commit/e57a48a4c5e9585171ba5f5c285c5ffe534a596e)  *(host)* Don't use hook to set game properties in [#816](https://github.com/garyttierney/me3/pull/816)
+
+
+  > Reworks the game property override logic to fetch
+  > `CSControlAPI::SetGameProperty` from DLRF data and use that instead of a
+  > getter hook. This allows supporting overrides for all property types, so
+  > that this functionality can be eventually exposed to users.
+
+  > As part of this, adds DLRF type definitions and a simple analysis for
+  > finding the `DLRuntimeClass` registry.
+
+  > Unfortunately, the game property map is not initialized during our
+  > `AfterMain` deferred execution step, so I had to add a third
+  > `AfterPropsInit` step that runs right after the map is constructed. This
+  > is done without AOBs or RTTI by:
+  > - Searching for LEA xrefs to `Game.Debug.NearOnlyDraw`. This is the
+  > first property queried after constructing the map by all supported
+  > games.
+  > - Inline hooking the LEA instruction using a `RawDetour` and a
+  > handrolled register context save/restore.
+
+  > The total analysis time for this new approach (finding runtime classes
+  > and hook point) for ER is just under 5ms on my machine.
+
+  > Tested successfully on all supported games.
+
+
+- [895f4ba](https://github.com/garyttierney/me3/commit/895f4ba34df2b35338800d26976971689f07eed8) Don't pin AwaitedRequest in [#825](https://github.com/garyttierney/me3/pull/825)
+
+
+  > https://github.com/rust-lang/rust/issues/153438
+
+### 📚 Documentation
+
+- [670e0e8](https://github.com/garyttierney/me3/commit/670e0e83a323271e23ba53f890e317d0c47bf1e4) Add code-signing policy in [#835](https://github.com/garyttierney/me3/pull/835)
+
+
+  > Satisfies the terms of our SignPath sponsorship:
+  > https://signpath.org/terms.html
+
+
+- [167a3f9](https://github.com/garyttierney/me3/commit/167a3f9dc5523e4b281effe780ce52ea9e056e31) Add FAQ on Nucleus Coop in [#833](https://github.com/garyttierney/me3/pull/833)
+
+
+
+- [dcc3bb9](https://github.com/garyttierney/me3/commit/dcc3bb966fc21cc4996334bd845b2c0b060af605) Disable Google Analytics in [#821](https://github.com/garyttierney/me3/pull/821)
+
+
+  > The only valuable information we get from here is the regions our users
+  > come from (for localization and internationalization) and the operating
+  > system versions for support, the rest is being siphoned to Google for no
+  > good reason.
+
+  > For the former we can rely on network metrics instead, and for the
+  > latter we can use the Steam survey.
+
 ## me3 - [v0.11.0](https://github.com/garyttierney/me3/releases/v0.11.0) - 2026-02-28
 
 ### 🚀 Features
@@ -2756,6 +2942,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
+[0.12.0]: https://github.com/garyttierney/me3/compare/v0.11.0..v0.12.0
 [0.11.0]: https://github.com/garyttierney/me3/compare/v0.9.0..v0.11.0
 [0.9.0]: https://github.com/garyttierney/me3/compare/v0.8.1..v0.9.0
 [0.8.1]: https://github.com/garyttierney/me3/compare/v0.7.0..v0.8.1
