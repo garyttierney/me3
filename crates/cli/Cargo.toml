@@ -50,6 +50,7 @@ windows = { workspace = true, features = [
     "Win32_System_Console",
     "Win32_System_IO",
     "Win32_System_Pipes",
+    "Win32_UI_WindowsAndMessaging",
 ] }
 winreg = "0.56.0"
 ureq.workspace = true

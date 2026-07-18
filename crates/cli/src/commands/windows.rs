@@ -4,12 +4,11 @@ use color_eyre::eyre::{Context, OptionExt};
 use semver::Version;
 use tracing::{error, info};
 use windows::Win32::{
-    Foundation::ERROR_INVALID_HANDLE,
     System::Console::{
-        AllocConsole, AttachConsole, GetConsoleMode, GetStdHandle, SetConsoleMode,
-        ATTACH_PARENT_PROCESS, ENABLE_PROCESSED_OUTPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING,
-        STD_OUTPUT_HANDLE,
+        GetConsoleMode, GetConsoleProcessList, GetConsoleWindow, GetStdHandle, SetConsoleMode,
+        ENABLE_PROCESSED_OUTPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING, STD_OUTPUT_HANDLE,
     },
+    UI::WindowsAndMessaging::{ShowWindow, SW_HIDE},
 };
 use winreg::{
     enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE},
@@ -153,18 +152,30 @@ pub fn update() -> color_eyre::Result<()> {
     Ok(())
 }
 
-pub fn attach_console() -> color_eyre::Result<()> {
+pub fn attach_console(quiet: bool) -> color_eyre::Result<()> {
+    if quiet && is_console_exclusive() {
+        // Started in `--quiet` mode and we own the console window.
+        hide_console();
+    } else {
+        // Some Windows terminals do not display ANSI escape codes by default.
+        enable_ansi()?;
+    }
+
+    Ok(())
+}
+
+fn hide_console() {
     unsafe {
-        let console_attachment = AttachConsole(ATTACH_PARENT_PROCESS);
+        let console_hwnd = GetConsoleWindow();
 
-        // No parent console, allocate our own.
-        if console_attachment.is_err_and(|error| error.code() == ERROR_INVALID_HANDLE.to_hresult())
-        {
-            AllocConsole()?;
+        if !console_hwnd.is_invalid() {
+            let _ = ShowWindow(console_hwnd, SW_HIDE);
         }
+    }
+}
 
-        // Some Windows terminals do not display ANSI escape codes by default,
-        // enable it after we have a console.
+fn enable_ansi() -> color_eyre::Result<()> {
+    unsafe {
         let console = GetStdHandle(STD_OUTPUT_HANDLE)?;
 
         let mut mode = ENABLE_PROCESSED_OUTPUT;
@@ -177,4 +188,10 @@ pub fn attach_console() -> color_eyre::Result<()> {
 
         Ok(())
     }
+}
+
+fn is_console_exclusive() -> bool {
+    // There will be at least one more process other than this one attached to this console
+    // if me3 was started attached to a terminal (e.g. from cmd or pwsh).
+    unsafe { GetConsoleProcessList(&mut [0; 2]) < 2 }
 }

@@ -1,5 +1,3 @@
-#![windows_subsystem = "windows"]
-
 use std::{
     io::stderr,
     iter,
@@ -102,11 +100,8 @@ fn main() {
 
     let cli = Cli::parse();
 
-    // Only attach a Windows console window if we're not in quiet mode.
     #[cfg(target_os = "windows")]
-    if !cli.quiet {
-        let _ = crate::commands::windows::attach_console();
-    }
+    let _ = crate::commands::windows::attach_console(cli.quiet);
 
     let known_dirs = KnownDirs::default();
     let config_sources = known_dirs.config_dirs().map(|dir| dir.join("me3.toml"));
@@ -115,7 +110,7 @@ fn main() {
         .inspect(|path| debug!(?path, "searching for me3.toml in"))
         .flat_map(Options::from_file)
         .chain(iter::once(cli.config))
-        .fold(Options::default(), |a, b| a.merge(b));
+        .fold(Options::default(), Options::merge);
 
     let config = Config {
         known_dirs,
