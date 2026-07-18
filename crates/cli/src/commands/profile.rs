@@ -98,8 +98,8 @@ pub struct ProfileOptions {
 
     /// Debug game property override [repeatable option]
     ///
-    /// Override a debug game property, e.g. `--debug-prop Game.Debug.NearOnlyDraw=true`. Do not
-    /// use this unless you know what you're doing!
+    /// Override a debug game property, e.g. `--debug-property Game.Debug.NearOnlyDraw=true`.
+    /// Do not use this unless you know what you're doing!
     ///
     /// CLI overrides have priority over those defined in profiles, which themselves
     /// have priority over properties set internally by me3.
