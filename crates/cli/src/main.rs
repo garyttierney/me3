@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use std::{
     io::stderr,
     iter,
@@ -98,11 +100,13 @@ impl From<Game> for me3_mod_protocol::Game {
 fn main() {
     me3_telemetry::install_error_handler();
 
-    // Some Windows terminals do not display ANSI escape codes by default.
-    #[cfg(target_os = "windows")]
-    let _ = crate::commands::windows::enable_ansi();
-
     let cli = Cli::parse();
+
+    // Only attach a Windows console window if we're not in quiet mode.
+    #[cfg(target_os = "windows")]
+    if !cli.quiet {
+        let _ = crate::commands::windows::attach_console();
+    }
 
     let known_dirs = KnownDirs::default();
     let config_sources = known_dirs.config_dirs().map(|dir| dir.join("me3.toml"));
@@ -121,10 +125,13 @@ fn main() {
     let tmp_log_file = tempfile::NamedTempFile::new().unwrap();
     let (tmp_log_file, tmp_log_file_path) = tmp_log_file.keep().unwrap();
 
-    let telemetry_config = TelemetryConfig::default()
+    let mut telemetry_config = TelemetryConfig::default()
         .enabled(config.options.crash_reporting.unwrap_or(false))
-        .with_console_writer(stderr)
         .with_file_writer(tmp_log_file);
+
+    if !cli.quiet {
+        telemetry_config = telemetry_config.with_console_writer(stderr);
+    }
 
     let _telemetry_guard = me3_telemetry::install(telemetry_config);
 
