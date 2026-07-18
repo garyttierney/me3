@@ -3,9 +3,13 @@ use std::{io::BufReader, str::FromStr};
 use color_eyre::eyre::{Context, OptionExt};
 use semver::Version;
 use tracing::{error, info};
-use windows::Win32::System::Console::{
-    GetConsoleMode, GetStdHandle, SetConsoleMode, ENABLE_PROCESSED_OUTPUT,
-    ENABLE_VIRTUAL_TERMINAL_PROCESSING, STD_OUTPUT_HANDLE,
+use windows::Win32::{
+    Foundation::ERROR_INVALID_HANDLE,
+    System::Console::{
+        AllocConsole, AttachConsole, GetConsoleMode, GetStdHandle, SetConsoleMode,
+        ATTACH_PARENT_PROCESS, ENABLE_PROCESSED_OUTPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING,
+        STD_OUTPUT_HANDLE,
+    },
 };
 use winreg::{
     enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE},
@@ -149,8 +153,18 @@ pub fn update() -> color_eyre::Result<()> {
     Ok(())
 }
 
-pub fn enable_ansi() -> color_eyre::Result<()> {
+pub fn attach_console() -> color_eyre::Result<()> {
     unsafe {
+        let console_attachment = AttachConsole(ATTACH_PARENT_PROCESS);
+
+        // No parent console, allocate our own.
+        if console_attachment.is_err_and(|error| error.code() == ERROR_INVALID_HANDLE.to_hresult())
+        {
+            AllocConsole()?;
+        }
+
+        // Some Windows terminals do not display ANSI escape codes by default,
+        // enable it after we have a console.
         let console = GetStdHandle(STD_OUTPUT_HANDLE)?;
 
         let mut mode = ENABLE_PROCESSED_OUTPUT;

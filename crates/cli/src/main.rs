@@ -102,28 +102,10 @@ fn main() {
 
     let cli = Cli::parse();
 
-    // Some Windows terminals do not display ANSI escape codes by default.
+    // Only attach a Windows console window if we're not in quiet mode.
     #[cfg(target_os = "windows")]
-    {
-        use windows::Win32::{
-            Foundation::ERROR_INVALID_HANDLE,
-            System::Console::{AllocConsole, AttachConsole, ATTACH_PARENT_PROCESS},
-        };
-
-        if !cli.quiet {
-            let console_attachment = unsafe { AttachConsole(ATTACH_PARENT_PROCESS) };
-
-            // No parent console, allocate our own.
-            if console_attachment
-                .is_err_and(|error| error.code() == ERROR_INVALID_HANDLE.to_hresult())
-            {
-                unsafe {
-                    AllocConsole();
-                }
-            }
-        }
-
-        let _ = crate::commands::windows::enable_ansi();
+    if !cli.quiet {
+        let _ = crate::commands::windows::attach_console();
     }
 
     let known_dirs = KnownDirs::default();
