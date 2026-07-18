@@ -1,8 +1,5 @@
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 name: Create release draft
 concurrency:
   group: ${{ github.workflow }}
