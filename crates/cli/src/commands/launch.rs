@@ -173,6 +173,10 @@ pub struct LaunchArgs {
     /// Name of an alternative savefile to use (in the default savefile directory).
     #[arg(long("savefile"), help_heading = "Mod configuration")]
     savefile: Option<String>,
+
+    /// Additional arguments to pass to the game process.
+    #[arg(last = true)]
+    game_args: Vec<String>,
 }
 
 struct LaunchContext {
@@ -482,6 +486,7 @@ pub fn launch(
 
     let _ = std::fs::copy(tmp_log_file_path, &log_file_path);
     let launcher_vars = LauncherVars {
+        argv: args.game_args.clone(),
         exe: game_executable.as_ref().to_path_buf(),
         host_dll: dll_path,
         host_config_path: attach_config_file.path().to_path_buf(),

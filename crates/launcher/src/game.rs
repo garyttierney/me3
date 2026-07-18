@@ -42,7 +42,11 @@ pub struct Game {
 
 impl Game {
     #[instrument(skip_all, err)]
-    pub fn launch(game_binary: &Path, game_directory: Option<&Path>) -> LauncherResult<Self> {
+    pub fn launch(
+        game_binary: &Path,
+        args: Vec<String>,
+        game_directory: Option<&Path>,
+    ) -> LauncherResult<Self> {
         let mut command = Command::new(game_binary);
         command.current_dir(
             game_directory
@@ -57,6 +61,7 @@ impl Game {
         info!(trace_id = ?telemetry_vars.trace_id);
         serialize_into_command(telemetry_vars, &mut command);
 
+        command.args(args);
         command.creation_flags(CREATE_SUSPENDED.0);
 
         command

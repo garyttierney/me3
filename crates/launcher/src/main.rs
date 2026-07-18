@@ -42,7 +42,7 @@ fn run(
     }
 
     let game_path = args.exe.parent();
-    let mut game = Game::launch(&args.exe, game_path)?;
+    let mut game = Game::launch(&args.exe, args.argv, game_path)?;
     let request = AttachRequest { config };
 
     match game.attach(&args.host_dll, console_log_writer, file_log_writer, request) {

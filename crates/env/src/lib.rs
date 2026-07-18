@@ -25,6 +25,8 @@ impl EnvVars for TelemetryVars {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LauncherVars {
+    pub argv: Vec<String>,
+
     /// Path to the game EXE that should be launched.
     pub exe: PathBuf,
 
