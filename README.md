@@ -175,6 +175,12 @@ Discussions Board: [https://github.com/garyttierney/me3/discussions](https://git
 
 We are grateful for the generous support of our sponsors.
 
+### SignPath.io
+
+For the Windows binary, free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+See our [code signing policy](./CODE_SIGNING_POLICY.md)
+
 ### Sentry
 
 <a href="https://sentry.io/" target="_blank"><img src="assets/sponsors/sentry-wordmark-dark-200x60.png" alt="Sentry" /></a>
