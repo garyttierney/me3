@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
-## me3 - [v0.12.0](https://github.com/garyttierney/me3/releases/v0.12.0) - 2026-07-18
+## me3 - [v0.12.1](https://github.com/garyttierney/me3/releases/v0.12.1) - 2026-07-19
 
 ### 🚀 Features
 
@@ -66,6 +66,10 @@ All notable changes to this project will be documented in this file.
 
 
 - [4365f37](https://github.com/garyttierney/me3/commit/4365f372e272e8b41a31af63bb47c57457abb144)  *(deps)* Don't eliminate debug tracing events
+
+
+
+- [cf1c228](https://github.com/garyttierney/me3/commit/cf1c2281678a0965affd05461488b71d1768dbce)  *(host)* Use mimalloc v3.4.1 in `libmimalloc-sys` which fixes a critical allocation race condition in [#842](https://github.com/garyttierney/me3/pull/842)
 
 
 
@@ -2942,7 +2946,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
-[0.12.0]: https://github.com/garyttierney/me3/compare/v0.11.0..v0.12.0
+[0.12.1]: https://github.com/garyttierney/me3/compare/v0.11.0..v0.12.1
 [0.11.0]: https://github.com/garyttierney/me3/compare/v0.9.0..v0.11.0
 [0.9.0]: https://github.com/garyttierney/me3/compare/v0.8.1..v0.9.0
 [0.8.1]: https://github.com/garyttierney/me3/compare/v0.7.0..v0.8.1

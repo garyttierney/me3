@@ -3,7 +3,7 @@
 # shellcheck disable=SC2039  # local is non-POSIX
 set -u
 
-INSTALLER_VERSION=v0.12.0
+INSTALLER_VERSION=v0.12.1
 
 need_cmd() {
     if ! check_cmd "$1"; then
