@@ -1599,9 +1599,8 @@ dependencies = [
 
 [[package]]
 name = "libmimalloc-sys"
-version = "0.1.49"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a45a52f43e1c16f667ccfe4dd8c85b7f7c204fd5e3bf46c5b0db9a5c3c0b8e9"
+version = "0.1.49-mimalloc-v3.4.1"
+source = "git+https://github.com/Dasaav-dsv/mimalloc_rust.git?tag=v0.1.49-mimalloc-v3.4.1#3a2bd7ca51d925c295c5a83c69e3f475ade94d7b"
 dependencies = [
  "cc",
  "cty",
