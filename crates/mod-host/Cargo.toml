@@ -23,7 +23,10 @@ dearxan = "0.5.2"
 eyre = { workspace = true, default-features = false, features = ["track-caller"] }
 from-singleton.workspace = true
 libloading = "0.9.0"
-libmimalloc-sys = { version = "0.1.49", features = ["extended", "arena"] }
+libmimalloc-sys = { git = "https://github.com/Dasaav-dsv/mimalloc_rust.git", tag = "v0.1.49-mimalloc-v3.4.1", features = [
+    "extended",
+    "arena",
+] }
 me3-binary-analysis.workspace = true
 me3-env.workspace = true
 me3-ipc.workspace = true
