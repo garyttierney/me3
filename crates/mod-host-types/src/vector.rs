@@ -327,7 +327,7 @@ impl<T> Drop for DlVector<T> {
             }
 
             elems.drop_in_place();
-            self.allocator().dealloc(buf).unwrap();
+            let _ = self.allocator().dealloc(buf);
         }
     }
 }
