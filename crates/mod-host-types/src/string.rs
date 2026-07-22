@@ -410,7 +410,7 @@ impl<T: 'static, const E: u8> Drop for DlString<T, E> {
             }
 
             elems.drop_in_place();
-            self.allocator().dealloc(buf).unwrap();
+            let _ = self.allocator().dealloc(buf);
         }
     }
 }

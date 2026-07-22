@@ -23,8 +23,12 @@ where
         self.raw.get(key)
     }
 
-    fn insert(&mut self, key: K, value: V) -> Option<V> {
-        self.raw.insert_in(key, value, &self.alloc)
+    fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+        self.raw.get_mut(key)
+    }
+
+    fn insert(&mut self, key: K, value: V) {
+        self.raw.insert_in(key, value, &self.alloc);
     }
 
     fn iter(&self) -> Iter<'_, K, V> {

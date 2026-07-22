@@ -61,6 +61,18 @@ impl DlCustomUtf16Str {
     }
 }
 
+impl Drop for DlCustomUtf16Str {
+    fn drop(&mut self) {
+        let Some(ptr) = NonNull::new(self.as_mut_ptr()) else {
+            return;
+        };
+
+        unsafe {
+            let _ = self.dealloc(NonNull::slice_from_raw_parts(ptr, self.capacity()));
+        }
+    }
+}
+
 unsafe impl RawVec<u16> for DlCustomUtf16Str {
     fn as_ptr(&self) -> *const u16 {
         if self.is_small_mode() {

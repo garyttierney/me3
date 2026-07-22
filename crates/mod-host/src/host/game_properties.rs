@@ -90,7 +90,7 @@ fn override_system_properties(game: Game) -> Result<(), eyre::Error> {
             .lock()
             .expect("poisoned");
 
-        let Some(mut system_properties) = (unsafe { PropertyMap::map_mut(game) }) else {
+        let Some(mut system_properties) = (unsafe { PropertyMap::from_singleton(game) }) else {
             tracing::error!("system property mapping is uninitialized or was not found");
             return;
         };
@@ -125,47 +125,24 @@ enum PropertyMap<'a> {
 }
 
 impl<'a> PropertyMap<'a> {
-    unsafe fn map_mut(game: Game) -> Option<PropertyMap<'a>> {
-        if game < Game::EldenRing {
-            unsafe {
-                Some(PropertyMap::String(
-                    from_singleton::address_of::<SprjSystemProperties>()?
-                        .as_mut()
-                        .0
-                        .properties
-                        .as_mut()
-                        .as_mut_dyn(),
-                ))
-            }
-        } else if game != Game::Nightreign {
-            unsafe {
-                Some(PropertyMap::String(
-                    from_singleton::address_of::<CSSystemProperties<DlUtf16String>>()?
-                        .as_mut()
-                        .0
-                        .properties
-                        .as_mut()
-                        .as_mut_dyn(),
-                ))
-            }
-        } else {
-            unsafe {
-                Some(PropertyMap::Custom(
-                    from_singleton::address_of::<CSSystemProperties<DlCustomUtf16Str>>()?
-                        .as_mut()
-                        .0
-                        .properties
-                        .as_mut()
-                        .as_mut_dyn(),
-                ))
-            }
+    unsafe fn from_singleton(game: Game) -> Option<PropertyMap<'a>> {
+        match game {
+            Game::DarkSouls3 | Game::Sekiro => unsafe {
+                SprjSystemProperties::get_mut_dyn_map().map(PropertyMap::String)
+            },
+            Game::EldenRing | Game::ArmoredCore6 => unsafe {
+                CSSystemProperties::get_mut_dyn_map().map(PropertyMap::String)
+            },
+            Game::Nightreign => unsafe {
+                CSSystemProperties::get_mut_dyn_map().map(PropertyMap::Custom)
+            },
         }
     }
 
     fn insert(&mut self, property: &str, value: &str) {
         match self {
-            Self::String(map) => _ = map.insert(property.into(), value.into()),
-            Self::Custom(map) => _ = map.insert(property.into(), value.into()),
+            Self::String(map) => map.insert(property.into(), value.into()),
+            Self::Custom(map) => map.insert(property.into(), value.into()),
         }
     }
 
@@ -174,6 +151,27 @@ impl<'a> PropertyMap<'a> {
             Self::String(tree) => (&raw const *tree).addr(),
             Self::Custom(tree) => (&raw const *tree).addr(),
         }
+    }
+}
+
+trait PropertySingleton<T>: FromSingleton + Sized + 'static {
+    fn as_mut_dyn_map(&mut self) -> &mut dyn Tree<T, T>;
+
+    unsafe fn get_mut_dyn_map<'a>() -> Option<&'a mut dyn Tree<T, T>> {
+        let instance = unsafe { from_singleton::address_of::<Self>()?.as_mut() };
+        Some(instance.as_mut_dyn_map())
+    }
+}
+
+impl PropertySingleton<DlUtf16String> for SprjSystemProperties {
+    fn as_mut_dyn_map(&mut self) -> &mut dyn Tree<DlUtf16String, DlUtf16String> {
+        unsafe { self.0.properties.as_mut().as_mut_dyn() }
+    }
+}
+
+impl<T: PartialOrd + 'static> PropertySingleton<T> for CSSystemProperties<T> {
+    fn as_mut_dyn_map(&mut self) -> &mut dyn Tree<T, T> {
+        unsafe { self.0.properties.as_mut().as_mut_dyn() }
     }
 }
 

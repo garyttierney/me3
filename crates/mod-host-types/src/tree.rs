@@ -1,6 +1,6 @@
 use std::{
     marker::PhantomData,
-    mem::{self, ManuallyDrop, MaybeUninit},
+    mem::{ManuallyDrop, MaybeUninit},
     ptr::NonNull,
 };
 
@@ -18,11 +18,13 @@ where
 {
     fn get(&self, key: &K) -> Option<&V>;
 
+    fn get_mut(&mut self, key: &K) -> Option<&mut V>;
+
+    fn insert(&mut self, key: K, value: V);
+
     fn contains(&self, key: &K) -> bool {
         self.get(key).is_some()
     }
-
-    fn insert(&mut self, key: K, value: V) -> Option<V>;
 
     fn iter(&self) -> Iter<'_, K, V>;
 
@@ -213,12 +215,21 @@ impl<K, V> RawTree<K, V> {
     where
         K: PartialOrd,
     {
-        let mut pos = self.lower_bound(key);
-        let node = unsafe { pos.bound.as_child_mut()? };
+        let pos = self.lower_bound(key);
+        let node = unsafe { pos.bound.as_child_ref()? };
         (*key >= node.key_value.0).then_some(&node.key_value.1)
     }
 
-    fn insert_in(&mut self, key: K, value: V, alloc: &impl Alloc<TreeNode<K, V>>) -> Option<V>
+    fn get_mut(&mut self, key: &K) -> Option<&mut V>
+    where
+        K: PartialOrd,
+    {
+        let mut pos = self.lower_bound(key);
+        let node = unsafe { pos.bound.as_child_mut()? };
+        (*key >= node.key_value.0).then_some(&mut node.key_value.1)
+    }
+
+    fn insert_in(&mut self, key: K, value: V, alloc: &impl Alloc<TreeNode<K, V>>)
     where
         K: PartialOrd,
     {
@@ -228,14 +239,12 @@ impl<K, V> RawTree<K, V> {
             && key >= node.key_value.0
         {
             // Exact key match (already inserted).
-            let (_, value) = mem::replace(&mut node.key_value, (key, value));
-            Some(value)
+            node.key_value = (key, value);
         } else {
             unsafe {
                 // We will be inserting a new node (attach to head for now).
                 let node = TreeNode::new_child_in(key, value, self.head, alloc);
                 self.insert_node(node, pos);
-                None
             }
         }
     }
@@ -462,7 +471,7 @@ impl<K, V> TreeNode<K, V> {
         Self::new_in(None, alloc)
     }
 
-    fn new_child_in(
+    unsafe fn new_child_in(
         key: K,
         value: V,
         head: NonNull<Self>,
