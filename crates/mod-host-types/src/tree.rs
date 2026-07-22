@@ -1,4 +1,5 @@
 use std::{
+    fmt,
     marker::PhantomData,
     mem::{ManuallyDrop, MaybeUninit},
     ptr::NonNull,
@@ -95,6 +96,18 @@ where
 impl<K, V> Default for XTree<K, V> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<K, V> fmt::Debug for XTree<K, V>
+where
+    K: fmt::Debug + PartialOrd,
+    V: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_map()
+            .entries(self.as_dyn().iter().map(|(k, v)| (k, v)))
+            .finish()
     }
 }
 
