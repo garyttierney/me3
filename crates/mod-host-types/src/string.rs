@@ -24,6 +24,7 @@ use thiserror::Error;
 
 use crate::{alloc::DlStdAllocator, game::GAME};
 
+pub mod custom;
 mod msvc2012;
 mod msvc2015;
 
@@ -243,8 +244,8 @@ unsafe impl<T> RawVec<T> for RawCxxString<T> {
 
     #[inline]
     unsafe fn set_buf(&mut self, new_buf: *mut [T]) {
-        let new_capacity = new_buf.len();
-        let small_capacity = RawCxxString::<T>::small_mode_capacity();
+        let new_capacity = new_buf.len() - 1;
+        let small_capacity = Self::small_mode_capacity();
 
         self.cap = new_capacity;
 
@@ -336,6 +337,53 @@ impl<T, const E: u8> Default for DlString<T, E> {
     #[inline]
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<T, const E: u8> PartialEq for DlString<T, E>
+where
+    [T]: PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.as_slice().eq(other.as_slice())
+    }
+}
+
+impl<T, const E: u8> PartialOrd for DlString<T, E>
+where
+    [T]: Ord,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<T, const E: u8> Eq for DlString<T, E> where [T]: Eq {}
+
+impl<T, const E: u8> Ord for DlString<T, E>
+where
+    [T]: Ord,
+{
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.as_slice().cmp(other.as_slice())
+    }
+}
+
+impl From<&str> for DlUtf8String {
+    fn from(str: &str) -> Self {
+        let mut encoded = DlUtf8String::new();
+        encoded.extend_from_slice(str.as_bytes());
+        encoded
+    }
+}
+
+impl From<&str> for DlUtf16String {
+    fn from(str: &str) -> Self {
+        let mut encoded = DlUtf16String::new();
+        for char in str.encode_utf16() {
+            encoded.push(char);
+        }
+        encoded
     }
 }
 
