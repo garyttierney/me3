@@ -22,6 +22,9 @@ rust-version = "1.89"
 repository = "https://github.com/garyttierney/me3"
 license = "MIT OR Apache-2.0"
 
+[workspace.metadata.vendor-filter]
+platforms = ["x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc", "x86_64-pc-windows-gnu"]
+
 [workspace.lints.rust]
 unused = "warn"
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
