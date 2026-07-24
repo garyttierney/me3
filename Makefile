@@ -38,6 +38,10 @@ cargo_build = SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
         -Z unstable-options --artifact-dir=$(DESTDIR)/ \
         $(addprefix -p ,$(2))
 
+$(DESTDIR)/vendor.tar.zstd: Cargo.lock
+	cargo vendor-filterer \
+	    --format=tar.zstd \
+	    $@
 
 $(DESTDIR)/CHANGELOG.pdf: CHANGELOG.md
 	pandoc -t html $< -o $@
