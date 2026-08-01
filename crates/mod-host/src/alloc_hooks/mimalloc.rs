@@ -1,5 +1,9 @@
 use std::{
+    env,
+    ffi::c_void,
+    fs,
     mem::ManuallyDrop,
+    os::windows::{ffi::OsStrExt, io::IntoRawHandle},
     ptr::NonNull,
     sync::{
         atomic::{AtomicU32, Ordering},
@@ -9,13 +13,26 @@ use std::{
 
 use libmimalloc_sys::{
     mi_arena_id_t, mi_free, mi_heap_malloc_aligned, mi_heap_new_in_arena, mi_heap_realloc_aligned,
-    mi_heap_t, mi_option_set, mi_reserve_os_memory_ex, mi_usable_size,
+    mi_heap_t, mi_manage_os_memory_ex, mi_option_set, mi_usable_size,
 };
 use me3_mod_host_types::{
     alloc::{DlAllocator, DlAllocatorVtable, DlHeapDirection},
     game::GAME,
 };
 use me3_mod_protocol::Game;
+use windows::{
+    core::PCWSTR,
+    Win32::{
+        Foundation::{HANDLE, INVALID_HANDLE_VALUE},
+        System::{
+            Memory::{
+                CreateFileMappingW, MapViewOfFile3, VirtualAlloc, MEM_COMMIT, MEM_RESERVE,
+                PAGE_READWRITE, VIRTUAL_ALLOCATION_TYPE,
+            },
+            SystemServices::MEM_TOP_DOWN,
+        },
+    },
+};
 
 pub static MIMALLOC_DLALLOC: DlAllocator = DlAllocator {
     vtable: NonNull::from_ref(&MIMALLOC_DLALLOC_VTABLE),
@@ -69,7 +86,7 @@ static mut MI_HEAP: LazyLock<*mut mi_heap_t> = LazyLock::new(|| unsafe {
     // commit, manual testing and expectations for upper bounds on memory usage.
     // Since `mi_option_disallow_os_alloc` is not set mimalloc may reserve even more memory
     // outside of this arena as it needs.
-    let mut size_mb = HEAP_SIZE_MB.load(Ordering::Acquire);
+    let mut size_mb = HEAP_SIZE_MB.load(Ordering::Acquire) as usize;
     if size_mb == 0 {
         size_mb = match *GAME {
             Game::DarkSouls3 => 6 * 1024,
@@ -79,17 +96,92 @@ static mut MI_HEAP: LazyLock<*mut mi_heap_t> = LazyLock::new(|| unsafe {
         };
     }
 
-    let size_bytes = size_mb as usize * 1024 * 1024;
+    let size = size_mb * 1024 * 1024;
+
+    let ptr = alloc_os_memory(size).expect("failed to allocate OS memory");
     let mut arena_id = mi_arena_id_t::default();
 
-    let res = mi_reserve_os_memory_ex(size_bytes, true, true, true, &mut arena_id);
-
-    if res != 0 {
-        panic!("mimalloc failed to reserve and commit OS memory");
+    if !mi_manage_os_memory_ex(ptr, size, true, false, false, -1, true, &mut arena_id) {
+        panic!("mimalloc failed to manage OS memory");
     }
 
     mi_heap_new_in_arena(arena_id)
 });
+
+unsafe fn alloc_os_memory(size: usize) -> Result<*mut c_void, eyre::Error> {
+    // Dev env vars to allow heap memory introspection from other processes.
+    // Path to a backing (on-disk) file for the heap memory.
+    let mapping_file = env::var_os("ME3_HEAP_MAPPING_FILE");
+    // Kernel object name to use with CreateFileMapping.
+    let mapping_name = env::var_os("ME3_HEAP_MAPPING_NAME");
+
+    let ptr = if mapping_file.is_none() && mapping_name.is_none() {
+        // Neither var is set, don't bother with a memory mapping.
+        unsafe {
+            VirtualAlloc(
+                None,
+                size,
+                MEM_COMMIT | MEM_RESERVE | VIRTUAL_ALLOCATION_TYPE(MEM_TOP_DOWN),
+                PAGE_READWRITE,
+            )
+        }
+    } else {
+        let handle = match mapping_file {
+            Some(path) => {
+                let file = fs::OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .open(path)?;
+
+                HANDLE(file.into_raw_handle())
+            }
+            None => INVALID_HANDLE_VALUE,
+        };
+
+        let mut name = vec![];
+        let name = match mapping_name {
+            Some(var) => {
+                name = var.encode_wide().chain([0]).collect();
+                PCWSTR::from_raw(name.as_ptr())
+            }
+            None => PCWSTR::null(),
+        };
+
+        let mapping = unsafe {
+            CreateFileMappingW(
+                handle,
+                None,
+                PAGE_READWRITE,
+                (size as u64 >> 32) as u32,
+                size as u32,
+                name,
+            )?
+        };
+
+        // N.B. MEM_TOP_DOWN support is undocumented but works on Windows and Wine.
+        unsafe {
+            MapViewOfFile3(
+                mapping,
+                None,
+                None,
+                0,
+                0,
+                VIRTUAL_ALLOCATION_TYPE(MEM_TOP_DOWN),
+                PAGE_READWRITE.0,
+                None,
+            )
+            .Value
+        }
+    };
+
+    if ptr.is_null() {
+        return Err(windows::core::Error::from_thread().into());
+    }
+
+    Ok(ptr)
+}
 
 unsafe extern "C" fn dtor(_: NonNull<ManuallyDrop<DlAllocator>>) {}
 
