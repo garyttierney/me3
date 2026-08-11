@@ -1,7 +1,7 @@
 use std::{
     env,
     ffi::c_void,
-    fs,
+    fs, hint,
     mem::ManuallyDrop,
     os::windows::{ffi::OsStrExt, io::IntoRawHandle},
     ptr::NonNull,
@@ -13,7 +13,7 @@ use std::{
 
 use libmimalloc_sys::{
     mi_arena_id_t, mi_free, mi_heap_malloc_aligned, mi_heap_new_in_arena, mi_heap_realloc_aligned,
-    mi_heap_t, mi_manage_os_memory_ex, mi_option_set, mi_usable_size,
+    mi_heap_t, mi_malloc_aligned, mi_manage_os_memory_ex, mi_option_set, mi_usable_size,
 };
 use me3_mod_host_types::{
     alloc::{DlAllocator, DlAllocatorVtable, DlHeapDirection},
@@ -238,7 +238,13 @@ unsafe extern "C" fn allocate_aligned(
     alignment: usize,
 ) -> *mut u8 {
     let alignment = alignment.max(16);
-    unsafe { mi_heap_malloc_aligned(*MI_HEAP, size.next_multiple_of(alignment), alignment) as _ }
+    let size = size.next_multiple_of(alignment);
+    let mut ptr = unsafe { mi_heap_malloc_aligned(*MI_HEAP, size, alignment) };
+    if ptr.is_null() {
+        hint::cold_path();
+        ptr = unsafe { mi_malloc_aligned(size, alignment) };
+    }
+    ptr as _
 }
 
 unsafe extern "C" fn reallocate(
