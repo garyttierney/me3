@@ -19,7 +19,7 @@ crate-type = ["cdylib"]
 indexmap.workspace = true
 closure-ffi = { version = "5.0", features = ["coverage", "std", "tuple_trait"] }
 color-eyre.workspace = true
-dearxan = "0.5.2"
+dearxan = "0.5.5"
 eyre = { workspace = true, default-features = false, features = ["track-caller"] }
 from-singleton.workspace = true
 libloading = "0.9.0"
