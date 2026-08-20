@@ -11,7 +11,7 @@ members = [
   "crates/mod-host-types",
   "crates/telemetry",
   "crates/xtask",
-  "crates/binary-analysis",
+  "crates/binary-analysis", "crates/mod-host-api",
 ]
 resolver = "2"
 
