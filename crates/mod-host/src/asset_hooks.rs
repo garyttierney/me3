@@ -11,12 +11,13 @@ use std::{
 };
 
 use base64::{prelude::BASE64_STANDARD, Engine};
+use diversion::static_hook;
 use eyre::{eyre, Context, OptionExt};
 use me3_binary_analysis::{fd4_step::Fd4StepTables, rtti::ClassMap};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_host_assets::{
     bhd5::Bhd5Header,
-    dl_device::{self, DlDeviceManager, DlFileOperator, VfsMounts},
+    dl_device::{self, DlDeviceManager, DlDeviceManagerGuard, DlFileOperator, VfsMounts},
     ebl::{mount_ebl, DlDeviceEblExt, EblFileManager},
     mapping::VfsOverrideMapping,
     wwise::{self, find_wwise_open_file, AkOpenMode},
@@ -102,25 +103,26 @@ fn hook_file_init(
 
     debug!("FileStep::STEP_Init" = ?init_fn);
 
-    ModHost::get_attached()
-        .hook(init_fn)
-        .with_span(info_span!("hook"))
-        .with_closure(move |p1, p2, trampoline| {
-            let result = hook_device_manager(exe, mapping.clone())
-                .and_then(|_| hook_mount_ebl(attach_config.clone(), exe))
-                .inspect_err(|e| error!("error" = &**e, "failed apply pre-hooks"));
+    unsafe {
+        let span = info_span!("hook");
+        static_hook(init_fn, |hook| {
+            move |p1, p2| {
+                let _guard = span.enter();
 
-            unsafe {
-                trampoline(p1, p2);
-            }
+                let result = hook_device_manager(exe, mapping.clone())
+                    .and_then(|_| hook_mount_ebl(attach_config.clone(), exe))
+                    .inspect_err(|e| error!("error" = &**e, "failed apply pre-hooks"));
 
-            if result.is_ok()
-                && let Err(e) = hook_ebl_utility(exe, &class_map, mapping.clone())
-            {
-                error!("error" = &*e, "failed to apply post-hooks");
+                hook.call_original((p1, p2));
+
+                if result.is_ok()
+                    && let Err(e) = hook_ebl_utility(exe, &class_map, mapping.clone())
+                {
+                    error!("error" = &*e, "failed to apply post-hooks");
+                }
             }
-        })
-        .install()?;
+        })?;
+    }
 
     Ok(())
 }
@@ -138,25 +140,26 @@ fn hook_ebl_utility(
 
     debug!(?make_ebl_object);
 
-    ModHost::get_attached()
-        .hook(make_ebl_object)
-        .with_closure(move |p1, path, p3, trampoline| {
-            let mut device_manager = DlDeviceManager::lock(device_manager);
+    unsafe {
+        static_hook(make_ebl_object, |hook| {
+            move |p1, path, p3| {
+                let mut device_manager = device_manager.lock();
 
-            let expanded = unsafe { device_manager.expand_path(path.as_wide()) };
+                let expanded = device_manager.expand_path(path.as_wide());
 
-            if mapping
-                .virtual_to_disk(OsString::from_wide(&expanded))
-                .is_some()
-            {
-                return None;
+                if mapping
+                    .virtual_to_disk(OsString::from_wide(&expanded))
+                    .is_some()
+                {
+                    return None;
+                }
+
+                let _guard = device_manager.push_vfs_mounts(&VFS_MOUNTS.lock().unwrap());
+
+                hook.call_original((p1, path, p3))
             }
-
-            let _guard = device_manager.push_vfs_mounts(&VFS_MOUNTS.lock().unwrap());
-
-            unsafe { (trampoline)(p1, path, p3) }
-        })
-        .install()?;
+        })?;
+    }
 
     info!("applied asset override hook");
 
@@ -170,14 +173,14 @@ fn hook_device_manager(
 ) -> Result<(), eyre::Error> {
     let device_manager = locate_device_manager(exe)?;
 
-    let open_disk_file = DlDeviceManager::lock(device_manager).open_disk_file();
+    let open_disk_file = device_manager.lock().open_disk_file();
 
     let override_path = {
         let mapping = mapping.clone();
 
         move |path: &DlUtf16String| {
             let path = path.get().ok()?;
-            let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_slice());
+            let expanded = device_manager.lock().expand_path(path.as_slice());
 
             let mapped_override = mapping.virtual_to_uid(OsString::from_wide(&expanded))?;
 
@@ -197,41 +200,40 @@ fn hook_device_manager(
             .is_ok()
     };
 
-    ModHost::get_attached()
-        .hook(open_disk_file)
-        .with_span(info_span!("hook"))
-        .with_closure(move |p1, path, p3, p4, p5, p6, trampoline| {
-            let file_operator = if let Some(path) = override_path(unsafe { path.as_ref() }) {
-                unsafe {
-                    trampoline(
+    unsafe {
+        let span = info_span!("hook");
+        static_hook(open_disk_file, |hook| {
+            move |p1, path, p3, p4, p5, p6| {
+                let _guard = span.enter();
+
+                let file_operator = if let Some(path) = override_path(path.as_ref()) {
+                    hook.call_original((
                         p1,
                         NonNull::from(&path).cast(),
                         PCWSTR::from_raw(path.as_ptr()),
                         p4,
                         p5,
                         p6,
-                    )
+                    ))
+                } else {
+                    hook.call_original((p1, path, p3, p4, p5, p6))
+                };
+
+                if let Some(file_operator) = file_operator {
+                    static HOOK_RESULT: OnceLock<bool> = OnceLock::new();
+
+                    if *HOOK_RESULT.get_or_init(|| hook_set_path(file_operator)) {
+                        return Some(file_operator);
+                    }
                 }
-            } else {
-                unsafe { trampoline(p1, path, p3, p4, p5, p6) }
-            };
 
-            if let Some(file_operator) = file_operator {
-                static HOOK_RESULT: OnceLock<bool> = OnceLock::new();
-
-                if *HOOK_RESULT.get_or_init(|| hook_set_path(file_operator)) {
-                    return Some(file_operator);
-                }
-            }
-
-            unsafe {
                 VFS_MOUNTS
                     .lock()
                     .unwrap()
                     .try_open_file(path, p3, p4, p5, p6)
             }
-        })
-        .install()?;
+        })?;
+    }
 
     info!("applied asset override hook");
 
@@ -250,7 +252,7 @@ fn hook_set_path(
     let override_path = move |path: &DlUtf16String| {
         let path = path.get().ok()?;
 
-        let expanded = DlDeviceManager::lock(device_manager).expand_path(path.as_slice());
+        let expanded = device_manager.lock().expand_path(path.as_slice());
 
         let mapped_override = mapping.virtual_to_uid(OsString::from_wide(&expanded))?;
 
@@ -264,16 +266,17 @@ fn hook_set_path(
     for set_path in [vtable.set_path, vtable.set_path2, vtable.set_path3] {
         let override_path = override_path.clone();
 
-        ModHost::get_attached()
-            .hook(set_path)
-            .with_closure(move |p1, path, p3, p4, trampoline| {
-                if let Some(path) = override_path(unsafe { path.as_ref() }) {
-                    unsafe { trampoline(p1, path.as_ref().into(), p3, p4) }
-                } else {
-                    unsafe { trampoline(p1, path, p3, p4) }
+        unsafe {
+            static_hook(set_path, |hook| {
+                move |p1, path, p3, p4| {
+                    if let Some(path) = override_path(path.as_ref()) {
+                        hook.call_original((p1, path.as_ref().into(), p3, p4))
+                    } else {
+                        hook.call_original((p1, path, p3, p4))
+                    }
                 }
-            })
-            .install()?;
+            })?;
+        }
     }
 
     Ok(())
@@ -293,7 +296,7 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
         P: AsRef<Path>,
         F: Fn(PCWSTR) -> bool,
     {
-        let mut device_manager = DlDeviceManager::lock(locate_device_manager(exe)?);
+        let mut device_manager = DlDeviceManager::lock(locate_device_manager(exe)?.0);
 
         let expanded = unsafe { device_manager.expand_path(bhd_path.as_wide()) };
         let bhd_path = OsString::from_wide(&expanded);
@@ -473,44 +476,49 @@ fn hook_mount_ebl(attach_config: Arc<AttachConfig>, exe: Executable) -> Result<(
 
     debug!(?mount_ebl);
 
-    ModHost::get_attached()
-        .hook(mount_ebl)
-        .with_span(info_span!("hook"))
-        .with_closure(move |p1, p2, p3, p4, p5, p6, trampoline| {
-            if attach_config.boot_boost && let Some(cache_path) = &attach_config.cache_path {
-                match load_cached_ebl(exe, cache_path, p2, p5, p4, |p2| unsafe {
-                    trampoline(p1, p2, p3, p4, p5, p6)
-                }) {
-                    Ok(()) => {
-                        return true;
-                    }
-                    Err(e) => {
-                        error!("error" = &*e, key = %unsafe { str::from_utf8(p5.as_bytes()).unwrap() });
+    unsafe {
+        let span = info_span!("hook");
+        static_hook(mount_ebl, |hook| {
+            move |p1, p2, p3, p4, p5, p6| {
+                let _guard = span.enter();
+
+                if attach_config.boot_boost
+                    && let Some(cache_path) = &attach_config.cache_path
+                {
+                    match load_cached_ebl(exe, cache_path, p2, p5, p4, |p2| {
+                        hook.call_original((p1, p2, p3, p4, p5, p6))
+                    }) {
+                        Ok(()) => {
+                            return true;
+                        }
+                        Err(e) => {
+                            error!("error" = &*e, key = str::from_utf8(p5.as_bytes()).ok());
+                        }
                     }
                 }
-            }
 
-            if let Ok(device_manager) = locate_device_manager(exe) {
-                let mut device_manager = DlDeviceManager::lock(device_manager);
+                if let Ok(device_manager) = locate_device_manager(exe) {
+                    let mut device_manager = DlDeviceManager::lock(device_manager.0);
 
-                let snap = device_manager.snapshot();
+                    let snap = device_manager.snapshot();
 
-                let result = unsafe { trampoline(p1, p2, p3, p4, p5, p6) };
+                    let result = hook.call_original((p1, p2, p3, p4, p5, p6));
 
-                match snap {
-                    Ok(snap) => {
-                        let new = device_manager.extract_new(snap);
-                        VFS_MOUNTS.lock().unwrap().append(new);
+                    match snap {
+                        Ok(snap) => {
+                            let new = device_manager.extract_new(snap);
+                            VFS_MOUNTS.lock().unwrap().append(new);
+                        }
+                        Err(e) => error!("error" = &*eyre!(e), "snapshot error"),
                     }
-                    Err(e) => error!("error" = &*eyre!(e), "snapshot error"),
-                }
 
-                result
-            } else {
-                unsafe { trampoline(p1, p2, p3, p4, p5, p6) }
+                    result
+                } else {
+                    hook.call_original((p1, p2, p3, p4, p5, p6))
+                }
             }
-        })
-        .install()?;
+        })?;
+    }
 
     info!("applied asset override hook");
 
@@ -526,49 +534,56 @@ fn try_hook_wwise(
     let wwise_open_file =
         find_wwise_open_file(exe, class_map).ok_or_eyre("WwiseOpenFileByName not found")?;
 
-    ModHost::get_attached()
-        .hook(wwise_open_file)
-        .with_span(info_span!("hook"))
-        .with_closure(move |p1, path, open_mode, p4, p5, p6, trampoline| {
-            let path_string = unsafe { path.to_string().unwrap() };
+    unsafe {
+        let span = info_span!("hook");
+        static_hook(wwise_open_file, |hook| {
+            move |p1, path, open_mode, p4, p5, p6| {
+                let _guard = span.enter();
 
-            if let Some(mapped_override) = wwise::find_override(&mapping, &path_string) {
-                info!("override" = %mapped_override);
+                let path_string = path.to_string().unwrap();
 
-                // Force lookup to wwise's ordinary read (from disk) mode instead of the EBL read.
-                unsafe {
-                    trampoline(
+                if let Some(mapped_override) = wwise::find_override(&mapping, &path_string) {
+                    info!("override" = %mapped_override);
+
+                    // Force lookup to wwise's ordinary read (from disk) mode instead of the EBL read.
+                    hook.call_original((
                         p1,
                         mapped_override.as_pcwstr(),
                         AkOpenMode::Read as _,
                         p4,
                         p5,
                         p6,
-                    )
+                    ))
+                } else {
+                    hook.call_original((p1, path, open_mode, p4, p5, p6))
                 }
-            } else {
-                unsafe { trampoline(p1, path, open_mode, p4, p5, p6) }
             }
-        })
-        .install()?;
+        })?;
+    }
 
     info!("applied asset override hook");
 
     Ok(())
 }
 
-fn locate_device_manager(
-    exe: Executable,
-) -> Result<NonNull<DlDeviceManager>, dl_device::FindError> {
-    struct DeviceManager(Result<NonNull<DlDeviceManager>, dl_device::FindError>);
+#[derive(Clone, Copy, Debug)]
+struct DeviceManager(NonNull<DlDeviceManager>);
 
-    static DEVICE_MANAGER: OnceLock<DeviceManager> = OnceLock::new();
+unsafe impl Send for DeviceManager {}
+unsafe impl Sync for DeviceManager {}
 
-    unsafe impl Send for DeviceManager {}
-    unsafe impl Sync for DeviceManager {}
+fn locate_device_manager(exe: Executable) -> Result<DeviceManager, dl_device::FindError> {
+    static DEVICE_MANAGER: OnceLock<Result<DeviceManager, dl_device::FindError>> = OnceLock::new();
 
     DEVICE_MANAGER
-        .get_or_init(|| DeviceManager(dl_device::find_device_manager(exe, Some(&MIMALLOC_DLALLOC))))
-        .0
+        .get_or_init(|| {
+            dl_device::find_device_manager(exe, Some(&MIMALLOC_DLALLOC)).map(DeviceManager)
+        })
         .clone()
+}
+
+impl DeviceManager {
+    fn lock(self) -> DlDeviceManagerGuard {
+        DlDeviceManager::lock(self.0)
+    }
 }

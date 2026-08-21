@@ -1,5 +1,6 @@
 use std::{collections::BTreeMap, mem, ptr::NonNull, slice, sync::OnceLock};
 
+use diversion::{install, installer::HookInstaller, static_hook};
 use eyre::{eyre, OptionExt};
 use me3_binary_analysis::{pe, rtti::ClassMap};
 use me3_launcher_attach_protocol::AttachConfig;
@@ -9,7 +10,7 @@ use pelite::pe::{Pe, PeObject};
 use regex::bytes::Regex;
 use tracing::{debug, info, instrument};
 
-use crate::{executable::Executable, host::ModHost};
+use crate::executable::Executable;
 
 mod mimalloc;
 
@@ -50,18 +51,12 @@ pub fn hook_system_allocator(
                 .byte_offset(i32::from_le_bytes([b0, b1, b2, b3]) as _)
                 as *const ();
 
-            mem::transmute::<_, unsafe extern "C" fn() -> NonNull<DlAllocator>>(ptr)
+            mem::transmute::<_, unsafe extern "C" fn() -> *const DlAllocator>(ptr)
         };
 
-        ModHost::get_attached()
-            .hook(get_system_allocator)
-            .with({
-                extern "C" fn get_allocator_override() -> NonNull<DlAllocator> {
-                    NonNull::from_ref(&MIMALLOC_DLALLOC)
-                }
-                get_allocator_override
-            })
-            .install()?;
+        unsafe {
+            static_hook(get_system_allocator, |_| || &MIMALLOC_DLALLOC)?;
+        }
 
         Ok(())
     }
@@ -130,17 +125,11 @@ pub fn hook_heap_allocators(
     let alloc_table = allocator_table_mut(attach_config, exe)?;
     alloc_table.fill(Some(NonNull::from_ref(&MIMALLOC_DLALLOC)));
 
-    extern "C" fn nothing(_: NonNull<()>) {}
-
-    ModHost::get_attached()
-        .hook(vtable.init)
-        .with(nothing)
-        .install()?;
-
-    let _ = ModHost::get_attached()
-        .hook(vtable.deinit)
-        .with(nothing)
-        .install();
+    unsafe {
+        extern "C" fn nothing(_: NonNull<()>) {}
+        install(vtable.init)?.update_thunk(|_| nothing);
+        install(vtable.deinit)?.update_thunk(|_| nothing);
+    }
 
     Ok(())
 }
@@ -250,19 +239,12 @@ fn patch_ds3(exe: Executable) -> Result<(), eyre::Error> {
             .byte_offset(i32::from_le_bytes([b0, b1, b2, b3]) as _) as *const ()
     };
 
-    let fn_ptr = unsafe {
-        mem::transmute::<_, unsafe extern "C" fn(*const ()) -> NonNull<DlAllocator>>(ptr)
-    };
+    let fn_ptr =
+        unsafe { mem::transmute::<_, unsafe extern "C" fn(*const ()) -> *const DlAllocator>(ptr) };
 
-    ModHost::get_attached()
-        .hook(fn_ptr)
-        .with({
-            extern "C" fn debug_allocator(_: *const ()) -> NonNull<DlAllocator> {
-                NonNull::from_ref(&MIMALLOC_DLALLOC)
-            }
-            debug_allocator
-        })
-        .install()?;
+    unsafe {
+        static_hook(fn_ptr, |_| |_| &MIMALLOC_DLALLOC)?;
+    }
 
     Ok(())
 }
@@ -294,19 +276,12 @@ fn patch_sdt(exe: Executable) -> Result<(), eyre::Error> {
         .max_by_key(|(_, i)| *i)
         .ok_or_eyre("debug allocator getter pattern returned no matches")?;
 
-    let fn_ptr = unsafe {
-        mem::transmute::<_, unsafe extern "C" fn(*const ()) -> NonNull<DlAllocator>>(ptr)
-    };
+    let fn_ptr =
+        unsafe { mem::transmute::<_, unsafe extern "C" fn(*const ()) -> *const DlAllocator>(ptr) };
 
-    ModHost::get_attached()
-        .hook(fn_ptr)
-        .with({
-            extern "C" fn debug_allocator(_: *const ()) -> NonNull<DlAllocator> {
-                NonNull::from_ref(&MIMALLOC_DLALLOC)
-            }
-            debug_allocator
-        })
-        .install()?;
+    unsafe {
+        static_hook(fn_ptr, |_| |_| &MIMALLOC_DLALLOC)?;
+    }
 
     Ok(())
 }
@@ -319,13 +294,10 @@ fn patch_er(class_map: &ClassMap) -> Result<(), eyre::Error> {
 
     let fn_ptr = unsafe { vtable.as_ref::<unsafe extern "C" fn(NonNull<()>)>() };
 
-    ModHost::get_attached()
-        .hook(*fn_ptr)
-        .with({
-            extern "C" fn nothing(_: NonNull<()>) {}
-            nothing
-        })
-        .install()?;
+    unsafe {
+        extern "C" fn nothing(_: NonNull<()>) {}
+        install(*fn_ptr)?.update_thunk(|_| nothing);
+    }
 
     Ok(())
 }

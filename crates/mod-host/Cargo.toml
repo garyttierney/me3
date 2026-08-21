@@ -16,12 +16,14 @@ sentry = ["me3-telemetry/sentry"]
 crate-type = ["cdylib"]
 
 [dependencies]
-indexmap.workspace = true
-closure-ffi = { version = "5.0", features = ["coverage", "std", "tuple_trait"] }
+base64 = "0.22.1"
+closure-ffi = { version = "5.1", features = ["coverage", "std"] }
 color-eyre.workspace = true
 dearxan = "0.5.5"
+diversion = { version = "0.2.1", features = ["custom"] }
 eyre = { workspace = true, default-features = false, features = ["track-caller"] }
 from-singleton.workspace = true
+indexmap.workspace = true
 libloading = "0.9.0"
 libmimalloc-sys = { git = "https://github.com/Dasaav-dsv/mimalloc_rust.git", tag = "v0.1.49-mimalloc-v3.4.1", features = [
     "extended",
@@ -35,17 +37,18 @@ me3-mod-host-assets.workspace = true
 me3-mod-host-types.workspace = true
 me3-mod-protocol.workspace = true
 me3-telemetry.workspace = true
+memchr.workspace = true
+miniz_oxide = { version = "0.9.0", features = ["std"] }
 pelite.workspace = true
-regex.workspace = true
-rdvec.workspace = true
+pkcs1 = { version = "0.7.5", features = ["std"] }
 rayon.workspace = true
-retour = { git = "https://github.com/Hpmason/retour-rs" }
+rdvec.workspace = true
+regex.workspace = true
 seq-macro = "0.3.6"
 serde_json.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
-memchr.workspace = true
 windows = { workspace = true, features = [
     "Wdk_System_Threading",
     "Win32_Graphics_Gdi",
@@ -62,9 +65,6 @@ windows = { workspace = true, features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 xxhash-rust.workspace = true
-pkcs1 = { version = "0.7.5", features = ["std"] }
-base64 = "0.22.1"
-miniz_oxide = { version = "0.9.0", features = ["std"] }
 
 [build-dependencies]
 winresource = "0.1"

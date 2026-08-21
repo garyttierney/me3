@@ -1,5 +1,6 @@
 use std::{mem, ptr, sync::Arc};
 
+use diversion::static_hook;
 use eyre::{eyre, OptionExt};
 use me3_binary_analysis::pe;
 use me3_launcher_attach_protocol::AttachConfig;
@@ -21,7 +22,6 @@ use windows::{
 use crate::{
     deferred::{defer_init, Deferred},
     executable::Executable,
-    host::ModHost,
 };
 
 #[instrument(name = "skip_logos", skip_all)]
@@ -151,24 +151,26 @@ fn fix_show_window_flash() -> Result<(), eyre::Error> {
     unsafe {
         let user32 = GetModuleHandleW(w!("user32.dll"))?;
 
-        let register_class = GetProcAddress(user32, s!("RegisterClassExW"))
+        let register_class_proc = GetProcAddress(user32, s!("RegisterClassExW"))
             .ok_or_eyre("RegisterClassExW not found")?;
 
-        ModHost::get_attached()
-            .hook(mem::transmute::<
-                _,
-                unsafe extern "C" fn(*const WNDCLASSEXW) -> u16,
-            >(register_class))
-            .with_closure(|class, trampoline| {
+        let register_class = mem::transmute::<
+            *const (),
+            unsafe extern "C" fn(*const WNDCLASSEXW) -> u16,
+        >(register_class_proc as *const ());
+
+        // TODO: use `static_hook_once` with an IAT HookInstaller.
+        static_hook(register_class, |hook| {
+            |class| {
                 if !class.is_null() {
                     let mut class = class.read();
                     class.hbrBackground = CreateSolidBrush(COLORREF(0));
-                    trampoline(&class)
+                    hook.call_original((&class,))
                 } else {
-                    trampoline(class)
+                    hook.call_original((class,))
                 }
-            })
-            .install()?;
+            }
+        })?;
 
         Ok(())
     }
