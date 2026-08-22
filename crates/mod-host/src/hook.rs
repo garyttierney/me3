@@ -1,8 +1,9 @@
-use std::{arch::asm, ptr::NonNull};
+use std::{arch::asm, ffi::c_void, ptr::NonNull};
 
 use closure_ffi::traits::FnPtr;
 use diversion::installer::HookInstaller;
 use pelite::pe::{Pe, Rva};
+use windows::Win32::System::Memory::{VirtualProtect, PAGE_READWRITE};
 
 use crate::executable::Executable;
 
@@ -51,6 +52,14 @@ where
 
                 if !name.as_bytes().eq_ignore_ascii_case(import_name) {
                     continue;
+                }
+
+                // The IAT may be write-protected.
+                unsafe {
+                    let ptr = address.as_ptr() as *const c_void;
+                    let size = size_of_val(address);
+                    let mut old = Default::default();
+                    let _ = VirtualProtect(ptr, size, PAGE_READWRITE, &mut old);
                 }
 
                 // Can't ordinarily write to this pointer, see `update_thunk` below.
