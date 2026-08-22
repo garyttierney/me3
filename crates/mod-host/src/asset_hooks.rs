@@ -545,7 +545,8 @@ fn try_hook_wwise(
                 if let Some(mapped_override) = wwise::find_override(&mapping, &path_string) {
                     info!("override" = %mapped_override);
 
-                    // Force lookup to wwise's ordinary read (from disk) mode instead of the EBL read.
+                    // Force lookup to wwise's ordinary read (from disk) mode instead of the EBL
+                    // read.
                     hook.call_original((
                         p1,
                         mapped_override.as_pcwstr(),

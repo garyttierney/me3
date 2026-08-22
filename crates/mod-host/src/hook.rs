@@ -27,7 +27,7 @@ where
 {
     for import in exe.imports()? {
         if let Ok(import_dll) = import.dll_name()
-            && dll.as_bytes().eq_ignore_ascii_case(&import_dll)
+            && dll.as_bytes().eq_ignore_ascii_case(import_dll)
         {
             let desc = import.image();
 
@@ -49,7 +49,7 @@ where
                     continue;
                 };
 
-                if !name.as_bytes().eq_ignore_ascii_case(&import_name) {
+                if !name.as_bytes().eq_ignore_ascii_case(import_name) {
                     continue;
                 }
 
