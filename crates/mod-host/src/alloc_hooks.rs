@@ -128,7 +128,9 @@ pub fn hook_heap_allocators(
     unsafe {
         extern "C" fn nothing(_: NonNull<()>) {}
         install(vtable.init)?.update_thunk(|_| nothing);
-        install(vtable.deinit)?.update_thunk(|_| nothing);
+        if let Ok(installer) = install(vtable.deinit) {
+            installer.update_thunk(|_| nothing);
+        }
     }
 
     Ok(())

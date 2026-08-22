@@ -1,18 +1,11 @@
-use std::{
-    mem,
-    sync::{LazyLock, Mutex, Once},
-};
+use std::sync::{LazyLock, Mutex, Once};
 
-use diversion::{hook::custom::install_custom, static_hook_once};
+use diversion::hook::{custom::install_custom, leak::StaticHook};
 use eyre::{eyre, Context, ContextCompat, OptionExt};
 use pelite::pe::{Pe, Rva, Va};
 use tracing::{info, instrument, Level, Span};
-use windows::{
-    core::{s, w},
-    Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW},
-};
 
-use crate::{executable::Executable, host::ModHost};
+use crate::{executable::Executable, hook::install_iat, host::ModHost};
 
 pub enum Deferred {
     BeforeMain,
@@ -77,12 +70,13 @@ where
         .ok_or_eyre("tried to defer function after init")
 }
 
-#[instrument]
+#[instrument(ret(level = Level::DEBUG))]
 fn hook_steam_init() -> Result<(), eyre::Error> {
     unsafe {
-        let steam_init = steam_init_fn()?;
+        let exe = Executable::new();
+        let installer = install_iat!(exe, "steam_api64.dll", SteamAPI_Init = fn() -> bool)?;
 
-        static_hook_once(steam_init, |hook| {
+        installer.static_hook_once(|hook| {
             || {
                 let res = hook.call_original(());
 
@@ -92,21 +86,9 @@ fn hook_steam_init() -> Result<(), eyre::Error> {
 
                 res
             }
-        })?;
+        });
 
         Ok(())
-    }
-}
-
-#[instrument(ret(level = Level::DEBUG))]
-fn steam_init_fn() -> Result<unsafe extern "C" fn() -> bool, eyre::Error> {
-    unsafe {
-        let steam_dll = LoadLibraryW(w!("steam_api64.dll"))?;
-
-        let steam_init =
-            GetProcAddress(steam_dll, s!("SteamAPI_Init")).ok_or_eyre("SteamAPI_Init not found")?;
-
-        Ok(mem::transmute(steam_init))
     }
 }
 

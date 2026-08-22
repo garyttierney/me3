@@ -34,6 +34,7 @@ mod deferred;
 mod executable;
 mod filesystem;
 mod host;
+mod hook;
 mod native;
 mod savefile;
 mod skip_logos;
