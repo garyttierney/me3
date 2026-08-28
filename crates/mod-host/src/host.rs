@@ -1,31 +1,22 @@
 use std::{
     ffi::CString,
     fmt::Debug,
-    marker::Tuple,
     panic,
     path::Path,
-    sync::{Arc, Mutex, OnceLock},
+    sync::{Mutex, OnceLock},
     time::Duration,
 };
 
-use closure_ffi::traits::FnPtr;
 use eyre::Context;
 use indexmap::IndexMap;
 use libloading::{Library, Symbol};
 use me3_launcher_attach_protocol::AttachConfig;
 use me3_mod_protocol::{native::NativeInitializerCondition, Game, ModProfile};
-use retour::Function;
 use tracing::{error, info, warn};
 
-use self::hook::HookInstaller;
-use crate::{
-    detour::UntypedDetour,
-    native::{ModEngineConnectorShim, ModEngineExtension, ModEngineInitializer},
-};
+use crate::native::{ModEngineConnectorShim, ModEngineExtension, ModEngineInitializer};
 
-mod append;
 pub mod game_properties;
-pub mod hook;
 
 static ATTACHED_INSTANCE: OnceLock<ModHost> = OnceLock::new();
 
@@ -39,7 +30,6 @@ struct PropertyOverrides {
 
 #[derive(Default)]
 pub struct ModHost {
-    hooks: Mutex<Vec<Arc<UntypedDetour>>>,
     native_modules: Mutex<Vec<Library>>,
     profiles: Vec<ModProfile>,
     property_overrides: Mutex<PropertyOverrides>,
@@ -49,7 +39,6 @@ pub struct ModHost {
 impl Debug for ModHost {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ModHost")
-            .field("hooks", &self.hooks)
             .field("profiles", &self.profiles)
             .field("property_overrides", &self.property_overrides)
             .finish()
@@ -137,14 +126,6 @@ impl ModHost {
     #[inline]
     pub fn attach(self) {
         ATTACHED_INSTANCE.set(self).expect("already attached");
-    }
-
-    pub fn hook<F>(&'static self, target: F) -> HookInstaller<F>
-    where
-        F: Function + FnPtr,
-        F::Arguments: Tuple,
-    {
-        HookInstaller::new(target).on_install(|hook| self.hooks.lock().unwrap().push(hook))
     }
 
     pub fn override_game_property(

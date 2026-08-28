@@ -1,15 +1,16 @@
 use std::{
-    ffi::OsString,
-    mem,
+    ffi::{CStr, CString, OsString},
     os::windows::{ffi::OsStringExt, raw::HANDLE},
     sync::Arc,
 };
 
-use eyre::OptionExt;
-use me3_mod_host_assets::mapping::VfsOverrideMapping;
-use tracing::{info, info_span, instrument};
+use closure_ffi::{thunk_factory, traits::FnPtr};
+use diversion::{hook::leak::StaticHook, install};
+use eyre::eyre;
+use me3_mod_host_assets::mapping::{VfsOverride, VfsOverrideMapping};
+use tracing::{info, info_span, instrument, Span};
 use windows::{
-    core::{s, w, BOOL, PCSTR, PCWSTR},
+    core::{w, BOOL, PCSTR, PCWSTR},
     Win32::{
         Foundation::HMODULE,
         Security::SECURITY_ATTRIBUTES,
@@ -21,297 +22,169 @@ use windows::{
     },
 };
 
-use crate::host::ModHost;
+type CreateFileA = unsafe extern "C" fn(
+    lpfilename: PCSTR,
+    dwdesiredaccess: u32,
+    dwsharemode: FILE_SHARE_MODE,
+    lpsecurityattributes: *const SECURITY_ATTRIBUTES,
+    dwcreationdisposition: FILE_CREATION_DISPOSITION,
+    dwflagsandattributes: FILE_FLAGS_AND_ATTRIBUTES,
+    htemplatefile: HANDLE,
+) -> HANDLE;
+
+type CreateFileW = unsafe extern "C" fn(
+    lpfilename: PCWSTR,
+    dwdesiredaccess: u32,
+    dwsharemode: FILE_SHARE_MODE,
+    lpsecurityattributes: *const SECURITY_ATTRIBUTES,
+    dwcreationdisposition: FILE_CREATION_DISPOSITION,
+    dwflagsandattributes: FILE_FLAGS_AND_ATTRIBUTES,
+    htemplatefile: HANDLE,
+) -> HANDLE;
+
+type CreateFile2 = unsafe extern "C" fn(
+    lpfilename: PCWSTR,
+    dwdesiredaccess: u32,
+    dwsharemode: FILE_SHARE_MODE,
+    dwcreationdisposition: FILE_CREATION_DISPOSITION,
+    pcreateexparams: *const CREATEFILE2_EXTENDED_PARAMETERS,
+) -> HANDLE;
+
+type CreateDirectoryA = unsafe extern "C" fn(
+    lppathname: PCSTR,
+    lpsecurityattributes: *const SECURITY_ATTRIBUTES,
+) -> HANDLE;
+
+type CreateDirectoryW = unsafe extern "C" fn(
+    lppathname: PCWSTR,
+    lpsecurityattributes: *const SECURITY_ATTRIBUTES,
+) -> HANDLE;
+
+type DeleteFileA = unsafe extern "C" fn(lpfilename: PCSTR) -> BOOL;
+
+type DeleteFileW = unsafe extern "C" fn(lpfilename: PCWSTR) -> BOOL;
 
 #[instrument(name = "filesystem", skip_all)]
 pub fn attach_override(mapping: Arc<VfsOverrideMapping>) -> Result<(), eyre::Error> {
-    let kernelbase = unsafe { GetModuleHandleW(w!("kernelbase.dll"))? };
+    unsafe {
+        let kernelbase = GetModuleHandleW(w!("kernelbase.dll"))?;
 
-    hook_create_file(kernelbase, mapping.clone())?;
+        hook!(kernelbase, CreateFileA, mapping, args.0)?;
+        hook!(kernelbase, CreateFileW, mapping, args.0)?;
+        hook!(kernelbase, CreateFile2, mapping, args.0)?;
 
-    hook_create_directory(kernelbase, mapping.clone())?;
+        hook!(kernelbase, CreateDirectoryA, mapping, args.0)?;
+        hook!(kernelbase, CreateDirectoryW, mapping, args.0)?;
 
-    hook_delete_file(kernelbase, mapping.clone())?;
-
-    Ok(())
-}
-
-#[instrument(name = "create_file", skip_all)]
-fn hook_create_file(kb: HMODULE, mapping: Arc<VfsOverrideMapping>) -> Result<(), eyre::Error> {
-    type CreateFileA = unsafe extern "C" fn(
-        lpfilename: PCSTR,
-        dwdesiredaccess: u32,
-        dwsharemode: FILE_SHARE_MODE,
-        lpsecurityattributes: *const SECURITY_ATTRIBUTES,
-        dwcreationdisposition: FILE_CREATION_DISPOSITION,
-        dwflagsandattributes: FILE_FLAGS_AND_ATTRIBUTES,
-        htemplatefile: HANDLE,
-    ) -> HANDLE;
-
-    type CreateFileW = unsafe extern "C" fn(
-        lpfilename: PCWSTR,
-        dwdesiredaccess: u32,
-        dwsharemode: FILE_SHARE_MODE,
-        lpsecurityattributes: *const SECURITY_ATTRIBUTES,
-        dwcreationdisposition: FILE_CREATION_DISPOSITION,
-        dwflagsandattributes: FILE_FLAGS_AND_ATTRIBUTES,
-        htemplatefile: HANDLE,
-    ) -> HANDLE;
-
-    type CreateFile2 = unsafe extern "C" fn(
-        lpfilename: PCWSTR,
-        dwdesiredaccess: u32,
-        dwsharemode: FILE_SHARE_MODE,
-        dwcreationdisposition: FILE_CREATION_DISPOSITION,
-        pcreateexparams: *const CREATEFILE2_EXTENDED_PARAMETERS,
-    ) -> HANDLE;
-
-    let (create_file_a, create_file_w, create_file_2) = unsafe {
-        let create_file_a =
-            GetProcAddress(kb, s!("CreateFileA")).ok_or_eyre("CreateFileA not found")?;
-        let create_file_w =
-            GetProcAddress(kb, s!("CreateFileW")).ok_or_eyre("CreateFileW not found")?;
-        let create_file_2 =
-            GetProcAddress(kb, s!("CreateFile2")).ok_or_eyre("CreateFile2 not found")?;
-
-        (
-            mem::transmute::<_, CreateFileA>(create_file_a),
-            mem::transmute::<_, CreateFileW>(create_file_w),
-            mem::transmute::<_, CreateFile2>(create_file_2),
-        )
-    };
-
-    ModHost::get_attached()
-        .hook(create_file_a)
-        .with_span(info_span!("create_file_a"))
-        .with_closure({
-            let mapping = mapping.clone();
-
-            move |p1, p2, p3, p4, p5, p6, p7, trampoline| unsafe {
-                if p1.is_null() {
-                    return trampoline(p1, p2, p3, p4, p5, p6, p7);
-                }
-
-                if let Ok(path) = p1.to_string()
-                    && let Some(mapped_override) = mapping.disk_or_uid_to_disk(path)
-                {
-                    info!("override" = %mapped_override);
-
-                    let c_string = mapped_override.to_c_string();
-                    return trampoline(PCSTR(c_string.as_ptr()), p2, p3, p4, p5, p6, p7);
-                }
-
-                trampoline(p1, p2, p3, p4, p5, p6, p7)
-            }
-        })
-        .install()?;
-
-    ModHost::get_attached()
-        .hook(create_file_w)
-        .with_span(info_span!("create_file_w"))
-        .with_closure({
-            let mapping = mapping.clone();
-
-            move |p1, p2, p3, p4, p5, p6, p7, trampoline| unsafe {
-                if p1.is_null() {
-                    return trampoline(p1, p2, p3, p4, p5, p6, p7);
-                }
-
-                let path = OsString::from_wide(p1.as_wide());
-
-                if let Some(mapped_override) = mapping.disk_or_uid_to_disk(path) {
-                    info!("override" = %mapped_override);
-
-                    return trampoline(mapped_override.into(), p2, p3, p4, p5, p6, p7);
-                }
-
-                trampoline(p1, p2, p3, p4, p5, p6, p7)
-            }
-        })
-        .install()?;
-
-    ModHost::get_attached()
-        .hook(create_file_2)
-        .with_span(info_span!("create_file_2"))
-        .with_closure({
-            let mapping = mapping.clone();
-
-            move |p1, p2, p3, p4, p5, trampoline| unsafe {
-                if p1.is_null() {
-                    return trampoline(p1, p2, p3, p4, p5);
-                }
-
-                let path = OsString::from_wide(p1.as_wide());
-
-                if let Some(mapped_override) = mapping.disk_or_uid_to_disk(path) {
-                    info!("override" = %mapped_override);
-
-                    return trampoline(mapped_override.into(), p2, p3, p4, p5);
-                }
-
-                trampoline(p1, p2, p3, p4, p5)
-            }
-        })
-        .install()?;
+        hook!(kernelbase, DeleteFileA, mapping, args.0)?;
+        hook!(kernelbase, DeleteFileW, mapping, args.0)?;
+    }
 
     info!("applied filesystem hook");
 
     Ok(())
 }
 
-#[instrument(name = "create_directory", skip_all)]
-fn hook_create_directory(kb: HMODULE, mapping: Arc<VfsOverrideMapping>) -> Result<(), eyre::Error> {
-    type CreateDirectoryA = unsafe extern "C" fn(
-        lppathname: PCSTR,
-        lpsecurityattributes: *const SECURITY_ATTRIBUTES,
-    ) -> HANDLE;
+macro_rules! hook {
+    ($module:ident, $name:ident, $mapping:ident, args.$argn:tt$(,)?) => {{
+        static NAME: &str = stringify!($name);
+        let span = info_span!(NAME);
+        hook_impl::<$name, _>($module, NAME, $mapping.clone(), span, |args| {
+            &mut args.$argn
+        })
+    }};
+}
 
-    type CreateDirectoryW = unsafe extern "C" fn(
-        lppathname: PCWSTR,
-        lpsecurityattributes: *const SECURITY_ATTRIBUTES,
-    ) -> HANDLE;
+use hook;
 
-    type CreateDirectoryExW = unsafe extern "C" fn(
-        lptemplatedirectory: PCWSTR,
-        lpnewdirectory: PCWSTR,
-        lpsecurityattributes: *const SECURITY_ATTRIBUTES,
-    ) -> HANDLE;
+unsafe fn hook_impl<T, S>(
+    module: HMODULE,
+    name: &str,
+    mapping: Arc<VfsOverrideMapping>,
+    span: Span,
+    f: impl for<'a> Fn(&'a mut T::Args<'_, '_, '_>) -> &'a mut S + Send + Sync + 'static,
+) -> eyre::Result<()>
+where
+    T: FnPtr + 'static,
+    VfsOverrideMapping: VfsOverrideCStr<S>,
+{
+    let fn_ptr = unsafe {
+        let c_str = CString::new(name).unwrap();
+        let fn_proc = GetProcAddress(module, PCSTR(c_str.as_ptr() as _))
+            .ok_or_else(|| eyre!("export {name} not found"))?;
 
-    let (create_dir_a, create_dir_w, create_dir_exw) = unsafe {
-        let create_dir_a =
-            GetProcAddress(kb, s!("CreateDirectoryA")).ok_or_eyre("CreateDirectoryA not found")?;
-        let create_dir_w =
-            GetProcAddress(kb, s!("CreateDirectoryW")).ok_or_eyre("CreateDirectoryW not found")?;
-        let create_dir_exw = GetProcAddress(kb, s!("CreateDirectoryExW"))
-            .ok_or_eyre("CreateDirectoryExW not found")?;
-
-        (
-            mem::transmute::<_, CreateDirectoryA>(create_dir_a),
-            mem::transmute::<_, CreateDirectoryW>(create_dir_w),
-            mem::transmute::<_, CreateDirectoryExW>(create_dir_exw),
-        )
+        T::from_ptr(fn_proc as *const ())
     };
 
-    ModHost::get_attached()
-        .hook(create_dir_a)
-        .with_closure({
-            let mapping = mapping.clone();
+    unsafe {
+        install(fn_ptr)?.static_hook_with_thunk(|hook| {
+            thunk_factory::make_send_sync(move |mut args| {
+                let _guard = span.enter();
+                let c_str = f(&mut args);
 
-            move |p1, p2, trampoline| unsafe {
-                if p1.is_null() {
-                    trampoline(p1, p2)
-                } else if let Ok(path) = p1.to_string()
-                    && let Some(mapped_override) = mapping.disk_or_uid_to_disk(path)
-                {
-                    let c_string = mapped_override.to_c_string();
-                    trampoline(PCSTR(c_string.as_ptr()), p2)
-                } else {
-                    trampoline(p1, p2)
+                let mapped_override = mapping.c_str_override(c_str);
+                if let Some(mapped_override) = &mapped_override {
+                    *c_str = <VfsOverrideMapping as VfsOverrideCStr<S>>::override_as_c_str(
+                        mapped_override,
+                    );
                 }
-            }
-        })
-        .install()?;
 
-    ModHost::get_attached()
-        .hook(create_dir_w)
-        .with_closure({
-            let mapping = mapping.clone();
-
-            move |p1, p2, trampoline| unsafe {
-                if p1.is_null() {
-                    trampoline(p1, p2)
-                } else if let Some(mapped_override) =
-                    mapping.disk_or_uid_to_disk(OsString::from_wide(p1.as_wide()))
-                {
-                    trampoline(mapped_override.into(), p2)
-                } else {
-                    trampoline(p1, p2)
-                }
-            }
-        })
-        .install()?;
-
-    ModHost::get_attached()
-        .hook(create_dir_exw)
-        .with_closure({
-            let mapping = mapping.clone();
-
-            move |p1, p2, p3, trampoline| unsafe {
-                if p1.is_null() {
-                    trampoline(p1, p2, p3)
-                } else if let Some(mapped_override) =
-                    mapping.disk_or_uid_to_disk(OsString::from_wide(p1.as_wide()))
-                {
-                    trampoline(mapped_override.into(), p2, p3)
-                } else {
-                    trampoline(p1, p2, p3)
-                }
-            }
-        })
-        .install()?;
-
-    info!("applied filesystem hook");
+                hook.call_original(args)
+            })
+        });
+    }
 
     Ok(())
 }
 
-#[instrument(name = "delete_file", skip_all)]
-fn hook_delete_file(kb: HMODULE, mapping: Arc<VfsOverrideMapping>) -> Result<(), eyre::Error> {
-    type DeleteFileA = unsafe extern "C" fn(lpfilename: PCSTR) -> BOOL;
-    type DeleteFileW = unsafe extern "C" fn(lpfilename: PCWSTR) -> BOOL;
+trait VfsOverrideCStr<T> {
+    type Override<'a>
+    where
+        Self: 'a;
 
-    let (delete_file_a, delete_file_w) = unsafe {
-        let delete_file_a =
-            GetProcAddress(kb, s!("DeleteFileA")).ok_or_eyre("DeleteFileA not found")?;
-        let delete_file_w =
-            GetProcAddress(kb, s!("DeleteFileW")).ok_or_eyre("DeleteFileW not found")?;
+    fn c_str_override<'a>(&'a self, c_str: &T) -> Option<Self::Override<'a>>;
 
-        (
-            mem::transmute::<_, DeleteFileA>(delete_file_a),
-            mem::transmute::<_, DeleteFileW>(delete_file_w),
-        )
-    };
+    fn override_as_c_str(over: &Self::Override<'_>) -> T;
+}
 
-    ModHost::get_attached()
-        .hook(delete_file_a)
-        .with_closure({
-            let mapping = mapping.clone();
+impl VfsOverrideCStr<PCSTR> for VfsOverrideMapping {
+    type Override<'a> = Vec<u8>;
 
-            move |p1, trampoline| unsafe {
-                if p1.is_null() {
-                    trampoline(p1)
-                } else if let Ok(path) = p1.to_string()
-                    && let Some(mapped_override) = mapping.disk_or_uid_to_disk(path)
-                {
-                    let c_string = mapped_override.to_c_string();
-                    trampoline(PCSTR(c_string.as_ptr()))
-                } else {
-                    trampoline(p1)
-                }
-            }
-        })
-        .install()?;
+    fn c_str_override<'a>(&'a self, c_str: &PCSTR) -> Option<Self::Override<'a>> {
+        if c_str.is_null() {
+            return None;
+        }
 
-    ModHost::get_attached()
-        .hook(delete_file_w)
-        .with_closure({
-            let mapping = mapping.clone();
+        let path = unsafe { CStr::from_ptr(c_str.as_ptr() as _).to_str().ok()? };
+        let mapped_override = self.disk_or_uid_to_disk(path)?;
 
-            move |p1, trampoline| unsafe {
-                if p1.is_null() {
-                    trampoline(p1)
-                } else if let Some(mapped_override) =
-                    mapping.disk_or_uid_to_disk(OsString::from_wide(p1.as_wide()))
-                {
-                    trampoline(mapped_override.into())
-                } else {
-                    trampoline(p1)
-                }
-            }
-        })
-        .install()?;
+        info!("override" = %mapped_override);
 
-    info!("applied filesystem hook");
+        Some(mapped_override.to_c_string())
+    }
 
-    Ok(())
+    fn override_as_c_str(over: &Self::Override<'_>) -> PCSTR {
+        PCSTR(over.as_ptr())
+    }
+}
+
+impl VfsOverrideCStr<PCWSTR> for VfsOverrideMapping {
+    type Override<'a> = &'a VfsOverride<'a>;
+
+    fn c_str_override<'a>(&'a self, c_str: &PCWSTR) -> Option<Self::Override<'a>> {
+        if c_str.is_null() {
+            return None;
+        }
+
+        let path = unsafe { OsString::from_wide(c_str.as_wide()) };
+        let mapped_override = self.disk_or_uid_to_disk(path)?;
+
+        info!("override" = %mapped_override);
+
+        Some(mapped_override)
+    }
+
+    fn override_as_c_str(over: &Self::Override<'_>) -> PCWSTR {
+        (*over).into()
+    }
 }

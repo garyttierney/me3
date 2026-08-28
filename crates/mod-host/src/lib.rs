@@ -1,7 +1,3 @@
-#![feature(fn_traits)]
-#![feature(tuple_trait)]
-#![feature(unboxed_closures)]
-
 use std::sync::{Arc, Mutex, OnceLock};
 
 use eyre::OptionExt;
@@ -35,9 +31,9 @@ mod alloc_hooks;
 mod asset_hooks;
 mod debugger;
 mod deferred;
-mod detour;
 mod executable;
 mod filesystem;
+mod hook;
 mod host;
 mod native;
 mod savefile;
