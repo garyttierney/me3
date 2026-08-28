@@ -28,13 +28,13 @@ There has been a few attempts to counter Arxan's protections by the Souls moddin
 #### DS3 and DSR "anti cheat bypasses"
 Dark Souls III and Dark Souls Remastered had a very active online cheating community. Many cheats required hooking game functions that are protected by Arxan. Detection of this tampering while playing online would lead to bans, so some have taken a crack at semi-manually patching out most of the integrity checks. The resulting "bypasses" were kept private and distributed among small groups of cheaters before inevitably getting leaked to more and more people. They were also used by early community anti cheats such as the [DS3 PvP Watchdog](https://www.nexusmods.com/darksouls3/mods/352).
 
-#### [MetalCrow](https://github.com/metal-crow)'s DS1 Overhaul anti-anti cheat
+#### [MetalCrow](https://github.com/metal-crow)'s DS1 Overhaul anti-anti cheat {#metalcrows-ds1-overhaul-anti-anti-cheat}
 The [Dark Souls 1 Overhaul](https://github.com/metal-crow/Dark-Souls-1-Overhaul) mod is meant to dramatically improve the online PvP experience in Dark Souls Remastered. To prevent users being banned due to the code patches made by the mod, code integrity checks where manually found so they can be patched out ([source](https://github.com/metal-crow/Dark-Souls-1-Overhaul/blob/master/OverhaulDLL/src/AntiAntiCheat.cpp)). 
 
-#### Yui's anti code restoration patches
+#### Yui's anti code restoration patches {#yuis-anti-code-restoration-patches}
 [Yui](https://github.com/LukeYui)'s [Seamless Co-op](https://www.nexusmods.com/eldenring/mods/510) mods require hundreds of hooks to function, many of which target code that is protected by Arxan's anti-tamper code restoration feature. She found that since Elden Ring, these routines are (almost?) all triggered from timed checks in regular game code, most likely for performance reasons. The code determining if it's time to run an individual check looks like this:
 
-<a name="timed_restoration_check"></a>
+[](){#timed_restoration_check}
 ```c linenums="1"
 if (TIME_LEFT == 0.0f) {
     TIME_LEFT = get_random_delay_seconds(CHECK_FLAG);
@@ -243,7 +243,7 @@ JMP     LAB_1404e6f39
 
 The first part of this looks very much like a partial context save. Inspecting the branches further and deobfuscating leaves us with the following graph, confirming this suspicion:
 
-<a name="stub_cfg"></a>
+[](){#stub_cfg}
 
 ``` mermaid
 stateDiagram-v2
@@ -306,7 +306,7 @@ This is where Arxan's use of the `TEST RSP, 0xf` instruction comes back to haunt
 - Basic blocks are regularly split into smaller blocks of few instructions, likely to defend against pattern scans.
 - Surprisingly, many of them are not obfuscated at all, and look very much like the [deobfuscated CFG shown above](#stub_cfg). The non-obfuscated ones lack the 3 obfuscated "fake" calls leading to the context save.
 
-### Return Gadgets
+### Return Gadgets {#return-gadgets}
 Now that I had a way to find all stubs, I returned to Dark Souls Remastered to continue my analysis there, as it was the game I needed to support first and foremost. The `TEST RSP, 0xf` pattern matched 2976 times in that game (which happens to be higher than all other FROMSOFTWARE games). To find what was writing over the bogus return addresses, I used the Rust bindings for the [Unicorn](https://www.unicorn-engine.org/) emulator to step through a stub starting at the `TEST RSP, 0xf` instruction while logging instructions that wrote to a stack address above the original RSP, which lead me to blocks like this (high stack writes highlighted):
 
 ```nasm hl_lines="4 9 14"
@@ -561,7 +561,7 @@ My first low-effort solution was to track this set according to the current exec
 
 This turned out to work great for Dark Souls Remastered and Dark Souls 2, taking less than a second to find all return gadgets of DSR's 2976 stubs on a single thread. It is the technique used in [`arxan-disabler`](https://github.com/tremwil/arxan-disabler) crate, the precursor to `dearxan` that only supported these two games.
 
-### Visiting the Stub's Full CFG
+### Visiting the Stub's Full CFG {#visiting-the-stubs-full-cfg}
 
 When I decided to support other FROMSOFTWARE games, however, this turned out to be insufficient. The stubs had gotten more complex with deeper branching and it was prohibitively expensive to go through all execution paths, so I had to design an approach which scales linearly in the number of instructions. The canonical approach is to keep a set of visited instructions and kill the current fork when one is encountered, but required a few adjustments to work with obfuscated control flow:
 
