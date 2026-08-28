@@ -20,7 +20,7 @@ base64 = "0.22.1"
 closure-ffi = { version = "5.1", features = ["coverage", "std"] }
 color-eyre.workspace = true
 dearxan = "0.5.5"
-diversion = { version = "0.2.1", features = ["custom"] }
+diversion = { version = "0.2.2", features = ["custom"] }
 eyre = { workspace = true, default-features = false, features = ["track-caller"] }
 from-singleton.workspace = true
 indexmap.workspace = true

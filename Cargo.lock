@@ -803,9 +803,9 @@ checksum = "8975ffdaa0ef3661bfe02dbdcc06c9f829dfafe6a3c474de366a8d5e44276921"
 
 [[package]]
 name = "diversion"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed9d24dda86fc323a737dbd1ebbb8f35810d9e3bc01dcce7c4a77967d184b881"
+checksum = "2bec5d3dd7dc3b2f61d1d292196c3dd92e79f9fcd79675d1b513d13d8a429976"
 dependencies = [
  "bump-into",
  "closure-ffi",
