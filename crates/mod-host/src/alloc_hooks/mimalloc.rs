@@ -13,7 +13,8 @@ use std::{
 
 use libmimalloc_sys::{
     mi_arena_id_t, mi_free, mi_heap_malloc_aligned, mi_heap_new_in_arena, mi_heap_realloc_aligned,
-    mi_heap_t, mi_malloc_aligned, mi_manage_os_memory_ex, mi_option_set, mi_usable_size,
+    mi_heap_t, mi_is_in_heap_region, mi_malloc_aligned, mi_manage_os_memory_ex, mi_option_set,
+    mi_usable_size,
 };
 use me3_mod_host_types::{
     alloc::{DlAllocator, DlAllocatorVtable, DlHeapDirection},
@@ -39,6 +40,15 @@ pub static MIMALLOC_DLALLOC: DlAllocator = DlAllocator {
 };
 
 static HEAP_SIZE_MB: AtomicU32 = AtomicU32::new(0);
+
+/// Whether `ptr` can safely be passed to a mimalloc operation that reads block metadata.
+///
+/// The game may retain allocations made before its allocator table is patched. More importantly,
+/// a corrupt or sentinel pointer must not reach mimalloc: mimalloc derives its page metadata from
+/// the pointer, so even a value such as `0x118` can turn into an access violation near null.
+fn is_mimalloc_block(ptr: *mut u8) -> bool {
+    !ptr.is_null() && unsafe { mi_is_in_heap_region(ptr.cast()) }
+}
 
 pub fn set_heap_size(new_size_mb: u32) {
     HEAP_SIZE_MB.store(new_size_mb, Ordering::Release);
@@ -221,7 +231,7 @@ unsafe extern "C" fn num_blocks(_: NonNull<DlAllocator>) -> usize {
 }
 
 unsafe extern "C" fn block_size(_: NonNull<DlAllocator>, block: *mut u8) -> usize {
-    if !block.is_null() {
+    if is_mimalloc_block(block) {
         unsafe { mi_usable_size(block as _) }
     } else {
         0
@@ -262,6 +272,9 @@ unsafe extern "C" fn reallocate_aligned(
     alignment: usize,
 ) -> *mut u8 {
     let alignment = alignment.max(16);
+    if !old.is_null() && !is_mimalloc_block(old) {
+        return std::ptr::null_mut();
+    }
     unsafe {
         mi_heap_realloc_aligned(
             *MI_HEAP,
@@ -273,8 +286,10 @@ unsafe extern "C" fn reallocate_aligned(
 }
 
 unsafe extern "C" fn free(_: NonNull<DlAllocator>, ptr: *mut u8) {
-    unsafe {
-        mi_free(ptr as _);
+    if is_mimalloc_block(ptr) {
+        unsafe {
+            mi_free(ptr as _);
+        }
     }
 }
 
@@ -319,8 +334,8 @@ unsafe extern "C" fn self_diagnose(_: NonNull<DlAllocator>) -> bool {
     false
 }
 
-unsafe extern "C" fn is_valid_block(_: NonNull<DlAllocator>, _: *mut u8) -> bool {
-    true
+unsafe extern "C" fn is_valid_block(_: NonNull<DlAllocator>, block: *mut u8) -> bool {
+    is_mimalloc_block(block)
 }
 
 unsafe extern "C" fn lock(_: NonNull<DlAllocator>) {}
@@ -329,4 +344,41 @@ unsafe extern "C" fn unlock(_: NonNull<DlAllocator>) {}
 
 unsafe extern "C" fn block_of(_: NonNull<DlAllocator>, _: *mut u8) -> *mut u8 {
     std::ptr::null_mut()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn teardown_near_null_pointer_is_rejected_before_mimalloc_metadata_access() {
+        let pointer = 0x118usize as *mut u8;
+        let allocator = NonNull::from_ref(&MIMALLOC_DLALLOC);
+
+        assert!(!is_mimalloc_block(pointer));
+        assert_eq!(unsafe { block_size(allocator, pointer) }, 0);
+        assert!(!unsafe { is_valid_block(allocator, pointer) });
+        assert!(unsafe { reallocate_aligned(allocator, pointer, 64, 16) }.is_null());
+        assert!(unsafe { back_reallocate_aligned(allocator, pointer, 64, 16) }.is_null());
+        unsafe { free(allocator, pointer) };
+        unsafe { back_free(allocator, pointer) };
+    }
+
+    #[test]
+    fn null_pointer_remains_a_free_noop_and_a_realloc_allocation_request() {
+        assert!(!is_mimalloc_block(std::ptr::null_mut()));
+        unsafe { free(NonNull::from_ref(&MIMALLOC_DLALLOC), std::ptr::null_mut()) };
+    }
+
+    #[test]
+    fn mimalloc_owned_block_still_reaches_size_validity_and_free_paths() {
+        let pointer = unsafe { mi_malloc_aligned(64, 16) }.cast::<u8>();
+        assert!(!pointer.is_null());
+
+        let allocator = NonNull::from_ref(&MIMALLOC_DLALLOC);
+        assert!(is_mimalloc_block(pointer));
+        assert!(unsafe { is_valid_block(allocator, pointer) });
+        assert!(unsafe { block_size(allocator, pointer) } >= 64);
+        unsafe { free(allocator, pointer) };
+    }
 }
