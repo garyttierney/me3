@@ -112,15 +112,9 @@ impl ModProfile {
         }
     }
 
-    pub fn mem_patch(&self) -> Option<bool> {
+    pub fn patch_mem(&self) -> Option<bool> {
         match self {
-            ModProfile::V1(v1) => v1.mem_patch,
-        }
-    }
-
-    pub fn mem_patch_heap_size(&self) -> Option<u32> {
-        match self {
-            ModProfile::V1(v1) => v1.mem_patch_heap_size,
+            ModProfile::V1(v1) => v1.patch_mem,
         }
     }
 
@@ -167,13 +161,7 @@ pub struct ModProfileV1 {
 
     /// Patch memory limits for supported games to improve mod stability.
     #[serde(default)]
-    #[serde(alias = "patch_mem")]
-    mem_patch: Option<bool>,
-
-    /// Override how many megabytes of memory the supported game should allocate
-    /// (with `mem_patch = true`).
-    #[serde(default)]
-    mem_patch_heap_size: Option<u32>,
+    patch_mem: Option<bool>,
 
     /// Debug game property overrides.
     #[serde(default)]
