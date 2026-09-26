@@ -1671,7 +1671,7 @@ dependencies = [
 
 [[package]]
 name = "me3-binary-analysis"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "memchr",
  "pelite",
@@ -1683,7 +1683,7 @@ dependencies = [
 
 [[package]]
 name = "me3-cli"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "assert_fs",
  "base64",
@@ -1723,7 +1723,7 @@ dependencies = [
 
 [[package]]
 name = "me3-env"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "me3-mod-protocol",
  "serde",
@@ -1732,7 +1732,7 @@ dependencies = [
 
 [[package]]
 name = "me3-ipc"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "me3-env",
  "me3-launcher-attach-protocol",
@@ -1744,7 +1744,7 @@ dependencies = [
 
 [[package]]
 name = "me3-launcher"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "eyre",
  "me3-env",
@@ -1762,7 +1762,7 @@ dependencies = [
 
 [[package]]
 name = "me3-launcher-attach-protocol"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "eyre",
  "indexmap",
@@ -1774,7 +1774,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-host"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "base64",
  "closure-ffi",
@@ -1821,7 +1821,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-host-assets"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "from-singleton",
  "libc",
@@ -1844,7 +1844,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-host-types"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "me3-binary-analysis",
  "me3-env",
@@ -1858,7 +1858,7 @@ dependencies = [
 
 [[package]]
 name = "me3-mod-protocol"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "expect-test",
  "indexmap",
@@ -1874,7 +1874,7 @@ dependencies = [
 
 [[package]]
 name = "me3_telemetry"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "color-eyre",
  "eyre",
@@ -4581,7 +4581,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.12.1"
+version = "0.13.0"
 
 [[package]]
 name = "xxhash-rust"
