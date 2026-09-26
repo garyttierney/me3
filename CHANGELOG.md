@@ -4,9 +4,17 @@ All notable changes to this project will be documented in this file.
 <!-- markdown-link-check-disable -->
 <!-- ignore lint rules that are often triggered by content generated from commits / git-cliff -->
 <!-- markdownlint-disable line-length no-bare-urls ul-style emphasis-style -->
-## me3 - [v0.12.1](https://github.com/garyttierney/me3/releases/v0.12.1) - 2026-07-19
+## me3 - [v0.13.0](https://github.com/garyttierney/me3/releases/v0.13.0) - 2026-08-11
 
 ### 🚀 Features
+
+- [da9abcf](https://github.com/garyttierney/me3/commit/da9abcf86d8f8bfc470801fc8b42d246c40d1fef)  *(host)* Allocate memory at the highest possible address, add dev env vars in [#857](https://github.com/garyttierney/me3/pull/857)
+
+
+
+- [6d381d7](https://github.com/garyttierney/me3/commit/6d381d7342b62cbe9d27c5b3c3f317533618293b)  *(host)* Allow for overriding system properties in [#845](https://github.com/garyttierney/me3/pull/845)
+
+
 
 - [6593712](https://github.com/garyttierney/me3/commit/659371208397101e40ebfec85c8802a7a448f8df)  *(host)* Allow for user provided heap sizes in MB in [#828](https://github.com/garyttierney/me3/pull/828)
 
@@ -66,6 +74,10 @@ All notable changes to this project will be documented in this file.
 
 
 - [4365f37](https://github.com/garyttierney/me3/commit/4365f372e272e8b41a31af63bb47c57457abb144)  *(deps)* Don't eliminate debug tracing events
+
+
+
+- [15a19de](https://github.com/garyttierney/me3/commit/15a19de49312b9b7af4c4efe963b57b17078db4c)  *(host)* Fallback to the global mimalloc heap when an allocation fails (for any reason)
 
 
 
@@ -132,6 +144,10 @@ All notable changes to this project will be documented in this file.
   > to fix Steam Input compatibility and the Steam overlay.
 
 
+- [2cd22c0](https://github.com/garyttierney/me3/commit/2cd22c0503ae9afd3b57b406599b1a0d586cce11) Quote full path to me3 (it may contain spaces) in [#860](https://github.com/garyttierney/me3/pull/860)
+
+
+
 - [e153f4f](https://github.com/garyttierney/me3/commit/e153f4f87f6eb65b454b4deda14e371678ee95f6) Include me3 profiles in taplo config
 
 
@@ -171,6 +187,20 @@ All notable changes to this project will be documented in this file.
   > https://github.com/rust-lang/rust/issues/153438
 
 ### 📚 Documentation
+
+- [529bf68](https://github.com/garyttierney/me3/commit/529bf68637e6c0976b5472925aa0e22a35fcd0bf) Mod-profile simplified chinese in [#850](https://github.com/garyttierney/me3/pull/850)
+
+
+
+- [f2381cf](https://github.com/garyttierney/me3/commit/f2381cf7989348909202f88d72472e3634a0d644) Link to ko-fi in [#847](https://github.com/garyttierney/me3/pull/847)
+
+
+  > Sets up the sponsor button and links it to @Dasaav-dsv's ko-fi.
+
+
+- [8aa3e57](https://github.com/garyttierney/me3/commit/8aa3e57358ebbc2aabb884d7d44414d029ae3f1c) Add policy on using LLMs in [#848](https://github.com/garyttierney/me3/pull/848)
+
+
 
 - [670e0e8](https://github.com/garyttierney/me3/commit/670e0e83a323271e23ba53f890e317d0c47bf1e4) Add code-signing policy in [#835](https://github.com/garyttierney/me3/pull/835)
 
@@ -2946,7 +2976,7 @@ All notable changes to this project will be documented in this file.
 - [c4e6ef5](https://github.com/garyttierney/me3/commit/c4e6ef502776db75d89dbfef6c585b658a28caf4) Initial commit
 
 
-[0.12.1]: https://github.com/garyttierney/me3/compare/v0.11.0..v0.12.1
+[0.13.0]: https://github.com/garyttierney/me3/compare/v0.11.0..v0.13.0
 [0.11.0]: https://github.com/garyttierney/me3/compare/v0.9.0..v0.11.0
 [0.9.0]: https://github.com/garyttierney/me3/compare/v0.8.1..v0.9.0
 [0.8.1]: https://github.com/garyttierney/me3/compare/v0.7.0..v0.8.1
