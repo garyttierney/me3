@@ -7,10 +7,6 @@ use std::{
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
     process::Stdio,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
 };
 
 use clap::{
@@ -520,24 +516,30 @@ pub fn launch(
     // Set terminal window title. See console_codes(4)
     print!("\x1B]0;me3 - {}\x07", profile.name());
 
-    let running = Arc::new(AtomicBool::new(true));
+    let (tx, rx) = std::sync::mpsc::channel();
     let mut launcher_proc = injector_command.spawn()?;
 
-    let monitor_thread_running = running.clone();
+    let ctrl_c_tx = tx.clone();
+    ctrlc::set_handler(move || {
+        let _ = ctrl_c_tx.send(None);
+    })?;
 
-    let monitor_thread = std::thread::spawn(move || {
+    let monitor_open_tx = tx.clone();
+    std::thread::spawn(move || {
         monitor_pipe.disable_cleanup(true);
+        let _ = monitor_open_tx.send(Some(monitor_pipe.into_file().open()));
+    });
 
-        let monitor_pipe = monitor_pipe
-            .into_file()
-            .open()
-            .expect("failed to open pipe");
-
+    // Handle getting a CTRL+C before the monitor pipe is open
+    if let Some(monitor_pipe) = rx
+        .recv()
+        .unwrap()
+        .map(|m| m.expect("failed to open monitor pipe"))
+    {
         let mut reader = BufReader::new(monitor_pipe);
-
         let mut exit_code = None;
 
-        while monitor_thread_running.load(Ordering::Relaxed) {
+        while rx.try_recv().is_err() {
             exit_code = exit_code.or_else(|| {
                 launcher_proc
                     .try_wait()
@@ -558,15 +560,9 @@ pub fn launch(
                 break;
             }
         }
+    }
 
-        let _ = launcher_proc.kill();
-    });
-
-    ctrlc::set_handler(move || {
-        running.store(false, Ordering::Relaxed);
-    })?;
-
-    let _ = monitor_thread.join();
+    let _ = launcher_proc.kill();
 
     if args.diagnostics {
         open::that_detached(&*log_file_path)?;
