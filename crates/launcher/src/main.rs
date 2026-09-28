@@ -43,18 +43,19 @@ fn run(
     }
 
     let game_path = args.exe.parent();
-    let mut game = Game::launch(&args.exe, args.argv, game_path)?;
+    let game = Game::launch(&args.exe, args.argv, game_path)?;
     let request = AttachRequest { config };
 
-    match game.attach(&args.host_dll, console_log_writer, file_log_writer, request) {
-        Ok(_) => info!("attached to game successfully"),
-        Err(e) => {
-            game.child.kill()?;
-            return Err(e);
-        }
-    }
-
+    let attach_handle =
+        game.spawn_attach_thread(args.host_dll, console_log_writer, file_log_writer, request);
     game.join();
+
+    // If we haven't finished attaching yet, we don't care if it succeeded or not
+    if attach_handle.is_finished() {
+        attach_handle
+            .join()
+            .map_err(|_| eyre::eyre!("attach panicked"))??;
+    }
 
     Ok(())
 }

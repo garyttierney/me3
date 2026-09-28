@@ -10,6 +10,7 @@ use std::{
     path::{Path, PathBuf},
     process::{Command, Stdio},
     sync::Arc,
+    thread::JoinHandle,
 };
 
 use eyre::{eyre, Context};
@@ -27,7 +28,8 @@ use windows::{
             LibraryLoader::{GetModuleHandleW, GetProcAddress},
             Memory::{VirtualAllocEx, MEM_COMMIT, MEM_RESERVE, PAGE_EXECUTE_READWRITE},
             Threading::{
-                CreateRemoteThread, ResumeThread, WaitForSingleObject, CREATE_SUSPENDED, INFINITE,
+                CreateRemoteThread, ResumeThread, TerminateProcess, WaitForSingleObject,
+                CREATE_SUSPENDED, INFINITE,
             },
         },
     },
@@ -104,41 +106,54 @@ impl Game {
         Ok(Self { child, bridge })
     }
 
-    #[instrument(skip_all, err)]
-    pub fn attach(
+    /// Spawns a thread responsible for performing the attach request and resuming the game
+    /// process.
+    ///
+    /// The thread kills the game process if attaching fails.
+    pub fn spawn_attach_thread(
         &self,
-        dll_path: &Path,
+        dll_path: PathBuf,
         console_log: MakeWriterWrapper,
         file_log: MakeWriterWrapper,
         attach_request: AttachRequest,
-    ) -> LauncherResult<Attachment> {
+    ) -> JoinHandle<LauncherResult<Attachment>> {
         let pid = self.child.id();
-
-        info!(pid, "attaching to process");
+        let thread_handle = self.child.main_thread_handle().try_clone_to_owned();
+        let process_handle = self.child.as_handle().try_clone_to_owned();
+        let bridge = self.bridge.clone();
 
         self.spawn_msg_thread(console_log, file_log);
 
-        let thread_handle = self.child.main_thread_handle();
-        let process_handle = self.child.as_handle().try_clone_to_owned()?;
+        let span = tracing::info_span!("attach");
+        std::thread::spawn(move || {
+            let _entered = span.enter();
 
-        inject_dll(&process_handle, dll_path).wrap_err("failed to inject mod host DLL")?;
+            let process_handle = process_handle?;
+            let attach_inner = || {
+                let thread_handle = thread_handle?;
+                info!(pid, "attaching to process");
 
-        if attach_request.config.suspend {
-            info!("Process will be suspended until a debugger is attached...");
-        }
+                inject_dll(&process_handle, &dll_path).wrap_err("failed to inject mod host DLL")?;
 
-        let response = self
-            .bridge
-            .request(attach_request)?
-            .map_err(|e| eyre!(e.0))?;
+                if attach_request.config.suspend {
+                    info!("Process will be suspended until a debugger is attached...");
+                }
 
-        unsafe {
-            ResumeThread(HANDLE(thread_handle.as_raw_handle()));
-        }
+                let response = bridge.request(attach_request)?.map_err(|e| eyre!(e.0))?;
 
-        info!("Successfully attached");
+                unsafe {
+                    ResumeThread(HANDLE(thread_handle.as_raw_handle()));
+                }
 
-        Ok(response)
+                info!("Successfully attached");
+
+                Ok(response)
+            };
+            attach_inner().inspect_err(move |e| unsafe {
+                tracing::error!(?e, "attach failed");
+                let _ = TerminateProcess(HANDLE(process_handle.as_raw_handle()), 1);
+            })
+        })
     }
 
     pub fn join(mut self) {
