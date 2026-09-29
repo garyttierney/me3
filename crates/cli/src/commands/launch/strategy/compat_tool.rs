@@ -167,7 +167,10 @@ impl CompatToolLaunchStrategy {
         command.env("STEAM_COMPAT_CLIENT_INSTALL_PATH", steam.path());
         command.env("STEAM_COMPAT_INSTALL_PATH", install_dir);
         command.env("STEAM_COMPAT_TOOL_PATH", tool_paths.join(":"));
-        command.env("STEAM_COMPAT_LIBRARY_PATHS", library.path());
+        command.env(
+            "STEAM_COMPAT_LIBRARY_PATHS",
+            library.path().join("steamapps"),
+        );
         let prefix_path = steam
             .library_paths()?
             .into_iter()
