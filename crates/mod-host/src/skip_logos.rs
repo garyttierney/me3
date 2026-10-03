@@ -1,5 +1,6 @@
-use std::{mem, ptr, sync::Arc};
+use std::{ptr, sync::Arc};
 
+use diversion::hook::leak::StaticHook;
 use eyre::{eyre, OptionExt};
 use me3_binary_analysis::pe;
 use me3_launcher_attach_protocol::AttachConfig;
@@ -8,20 +9,14 @@ use pelite::pe::Pe;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use regex::bytes::Regex;
 use tracing::{error, info, instrument, Span};
-use windows::{
-    core::{s, w},
-    Win32::{
-        Foundation::COLORREF,
-        Graphics::Gdi::CreateSolidBrush,
-        System::LibraryLoader::{GetModuleHandleW, GetProcAddress},
-        UI::WindowsAndMessaging::WNDCLASSEXW,
-    },
+use windows::Win32::{
+    Foundation::COLORREF, Graphics::Gdi::CreateSolidBrush, UI::WindowsAndMessaging::WNDCLASSEXW,
 };
 
 use crate::{
     deferred::{defer_init, Deferred},
     executable::Executable,
-    host::ModHost,
+    hook::install_iat,
 };
 
 #[instrument(name = "skip_logos", skip_all)]
@@ -29,7 +24,7 @@ pub fn attach_override(
     attach_config: Arc<AttachConfig>,
     exe: Executable,
 ) -> Result<(), eyre::Error> {
-    fix_show_window_flash()?;
+    fix_show_window_flash(exe)?;
 
     defer_init(Span::current(), Deferred::AfterMain, move || {
         if attach_config.skip_logos {
@@ -147,28 +142,27 @@ fn skip_sprj_logos(exe: Executable) -> Result<(), eyre::Error> {
 }
 
 /// Replaces the default WNDCLASSEXW white background color with black.
-fn fix_show_window_flash() -> Result<(), eyre::Error> {
+fn fix_show_window_flash(exe: Executable) -> Result<(), eyre::Error> {
     unsafe {
-        let user32 = GetModuleHandleW(w!("user32.dll"))?;
+        let installer = install_iat!(
+            exe,
+            "user32.dll",
+            RegisterClassExW = fn(*const WNDCLASSEXW) -> u16
+        )?;
 
-        let register_class = GetProcAddress(user32, s!("RegisterClassExW"))
-            .ok_or_eyre("RegisterClassExW not found")?;
-
-        ModHost::get_attached()
-            .hook(mem::transmute::<
-                _,
-                unsafe extern "C" fn(*const WNDCLASSEXW) -> u16,
-            >(register_class))
-            .with_closure(|class, trampoline| {
+        // We're expecting the game to call this once when creating the window,
+        // it's an IAT hook so other DLLs won't call it (through the game's imports).
+        installer.static_hook_once(|hook| {
+            |class| {
                 if !class.is_null() {
                     let mut class = class.read();
                     class.hbrBackground = CreateSolidBrush(COLORREF(0));
-                    trampoline(&class)
+                    hook.call_original((&class,))
                 } else {
-                    trampoline(class)
+                    hook.call_original((class,))
                 }
-            })
-            .install()?;
+            }
+        });
 
         Ok(())
     }

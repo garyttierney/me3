@@ -6,6 +6,7 @@ use std::{
     sync::Arc,
 };
 
+use diversion::{install, installer::HookInstaller, static_hook};
 use eyre::{eyre, OptionExt};
 use from_singleton::FromSingleton;
 use me3_binary_analysis::{fd4_step::Fd4StepTables, pe};
@@ -17,7 +18,7 @@ use pelite::pe::{Pe, Va};
 use regex::bytes::Regex;
 use tracing::{error, info, instrument, warn, Span};
 
-use crate::{executable::Executable, host::ModHost};
+use crate::executable::Executable;
 
 const SL_FATAL_ERROR: &str = "could not load alternative savefile location";
 
@@ -97,37 +98,38 @@ fn oversized_regulation_fix_after_er(
         .ok_or_eyre("CSRegulationStep::STEP_Idle not found")?;
 
     // Intercept and free the raw regulation to prevent writing it to the savefile.
-    ModHost::get_attached()
-        .hook(apply_fn)
-        .with_closure(move |p1, p2, trampoline| unsafe {
-            trampoline(p1, p2);
+    unsafe {
+        static_hook(apply_fn, |hook| {
+            move |p1, p2| {
+                hook.call_original((p1, p2));
 
-            let regulation_manager = from_singleton::address_of::<CSRegulationManager>()
-                .unwrap()
-                .as_mut();
+                let regulation_manager = from_singleton::address_of::<CSRegulationManager>()
+                    .unwrap()
+                    .as_mut();
 
-            if let Some(raw_regulation) = regulation_manager.raw_regulation.take() {
-                let raw_regulation_len = mem::take(&mut regulation_manager.raw_regulation_len);
+                if let Some(raw_regulation) = regulation_manager.raw_regulation.take() {
+                    let raw_regulation_len = mem::take(&mut regulation_manager.raw_regulation_len);
 
-                if raw_regulation_len == 0 {
-                    return;
-                }
+                    if raw_regulation_len == 0 {
+                        return;
+                    }
 
-                match DlStdAllocator::for_object(exe, raw_regulation.as_ptr()) {
-                    Ok(alloc) => alloc.dealloc(
-                        raw_regulation.as_ptr(),
-                        Layout::from_size_align_unchecked(raw_regulation_len, 1),
-                    ),
-                    Err(e) => {
-                        warn!(
-                            "error" = &*eyre!(e),
-                            "failed to deallocate raw regulation data"
-                        );
+                    match DlStdAllocator::for_object(exe, raw_regulation.as_ptr()) {
+                        Ok(alloc) => alloc.dealloc(
+                            raw_regulation.as_ptr(),
+                            Layout::from_size_align_unchecked(raw_regulation_len, 1),
+                        ),
+                        Err(e) => {
+                            warn!(
+                                "error" = &*eyre!(e),
+                                "failed to deallocate raw regulation data"
+                            );
+                        }
                     }
                 }
             }
-        })
-        .install()?;
+        })?;
+    }
 
     Ok(())
 }
@@ -157,6 +159,10 @@ fn oversized_regulation_fix_for_sdt(exe: Executable) -> Result<(), eyre::Error> 
     .unwrap();
 
     // Intercept and skip writing the regulation to the savefile.
+    extern "C" fn return_true(_: usize) -> bool {
+        true
+    }
+
     call_re
         .captures_iter(text)
         .filter_map(|c| {
@@ -180,13 +186,9 @@ fn oversized_regulation_fix_for_sdt(exe: Executable) -> Result<(), eyre::Error> 
                 None
             }
         })
-        .try_for_each(|f| {
-            ModHost::get_attached()
-                .hook(f)
-                .with_closure(|_, _| true)
-                .install()?;
-
-            eyre::Ok(())
+        .try_for_each(|f| unsafe {
+            install(f)?.update_thunk(|_| return_true);
+            diversion::Result::Ok(())
         })?;
 
     Ok(())
