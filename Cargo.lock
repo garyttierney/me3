@@ -655,9 +655,9 @@ dependencies = [
 
 [[package]]
 name = "dearxan"
-version = "0.5.5"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df9ca30e38c5e599272283f9afa1bfbc3b5ed2dbf7f3dea72baba352a4a7b72b"
+checksum = "12d359f4dbd3d36b127f5f0f92de5678c49620f1398ee4dd518dac321fbf191e"
 dependencies = [
  "atomic-wait",
  "bitfield-struct",
@@ -1599,11 +1599,13 @@ dependencies = [
 
 [[package]]
 name = "libmimalloc-sys"
-version = "0.1.49-mimalloc-v3.4.1"
-source = "git+https://github.com/Dasaav-dsv/mimalloc_rust.git?tag=v0.1.49-mimalloc-v3.4.1#3a2bd7ca51d925c295c5a83c69e3f475ade94d7b"
+version = "0.1.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "667f4fec20f29dfc6bc7357c582d91796c169ad7e2fce709468aefeb2c099870"
 dependencies = [
  "cc",
  "cty",
+ "libc",
 ]
 
 [[package]]
@@ -1807,6 +1809,14 @@ dependencies = [
  "windows 0.62.2",
  "winresource",
  "xxhash-rust",
+]
+
+[[package]]
+name = "me3-mod-host-api"
+version = "0.9.0"
+dependencies = [
+ "me3-launcher-attach-protocol",
+ "serde_json",
 ]
 
 [[package]]
