@@ -209,6 +209,13 @@ impl CompatToolLaunchStrategy {
         command.env("STEAM_COMPAT_DATA_PATH", prefix_path);
         command.env("STEAM_COMPAT_APP_ID", app_id.to_string());
 
+        Ok(())
+    }
+
+    /// Builds an `LD_PRELOAD` argument for `env(1)` instead of an environment
+    /// variable. NixOS's `steam-run` has a sandbox that doesn't propagate an
+    /// ambient `LD_PRELOAD` so it needs to be explicit
+    fn ld_preload_arg(steam: &SteamDir) -> OsString {
         let mut ld_preload = steam
             .path()
             .join("ubuntu12_64/gameoverlayrenderer.so")
@@ -219,8 +226,9 @@ impl CompatToolLaunchStrategy {
             ld_preload.push(&existing_ld_preload);
         }
 
-        command.env("LD_PRELOAD", ld_preload);
-        Ok(())
+        let mut arg = OsString::from("LD_PRELOAD=");
+        arg.push(ld_preload);
+        arg
     }
 }
 
@@ -282,10 +290,36 @@ impl LaunchStrategy for CompatToolLaunchStrategy {
             tool = parent_tool;
         }
 
-        let mut command = Command::new(
-            args.pop_front()
-                .ok_or_eyre("Compat Tool produced invalid command")?,
-        );
+        let program = args
+            .pop_front()
+            .ok_or_eyre("Compat Tool produced invalid command")?;
+
+        let ld_preload = Self::ld_preload_arg(&steam);
+
+        let wrapper = std::env::var("ME3_COMPAT_TOOL_WRAPPER")
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
+
+        let mut command = if let Some(wrapper) = wrapper {
+            let mut wrapper_args: VecDeque<String> = shlex::split(&wrapper)
+                .ok_or_eyre("Couldn't parse ME3_COMPAT_TOOL_WRAPPER command")?
+                .into();
+            let wrapper_program = wrapper_args
+                .pop_front()
+                .ok_or_eyre("ME3_COMPAT_TOOL_WRAPPER must not be empty")?;
+
+            let mut command = Command::new(wrapper_program);
+            command.args(wrapper_args);
+            command.arg("env");
+            command
+        } else {
+            Command::new("env")
+        };
+
+        command.env_remove("LD_PRELOAD");
+        command.arg(ld_preload);
+        command.arg(program);
         command.args(args);
         command.arg(exe);
         command.arg("--");
