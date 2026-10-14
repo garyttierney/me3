@@ -557,6 +557,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
+name = "const-default"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b396d1f76d455557e1218ec8066ae14bba60b4b36ecd55577ba979f5db7ecaa"
+
+[[package]]
 name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -803,9 +809,9 @@ checksum = "8975ffdaa0ef3661bfe02dbdcc06c9f829dfafe6a3c474de366a8d5e44276921"
 
 [[package]]
 name = "diversion"
-version = "0.2.2"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bec5d3dd7dc3b2f61d1d292196c3dd92e79f9fcd79675d1b513d13d8a429976"
+checksum = "19c853c8dc4fc257a5f8bfeb03523f4fb2c813b12798a61b035a8aec104d37f7"
 dependencies = [
  "bump-into",
  "closure-ffi",
@@ -817,14 +823,15 @@ dependencies = [
 
 [[package]]
 name = "diversion-abi"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32a4931bb682ef43d7c5249b7eccc218d8170a66ecf8f645b4c04b82e627875f"
+checksum = "b41d9f5d2ae92c4c226d2a705ec00b13d8bc123cd4bbe55363e3dc2599b3d923"
 dependencies = [
  "atomic-wait",
  "bump-into",
  "closure-ffi",
  "libc",
+ "rlsf",
  "slab",
  "xxhash-rust",
 ]
@@ -2757,6 +2764,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "rlsf"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07393724337be2ee43a9d86164df4505746874a3fa65913374bc6d6a92314362"
+dependencies = [
+ "cfg-if",
+ "const-default",
+ "libc",
+ "rustversion",
 ]
 
 [[package]]
