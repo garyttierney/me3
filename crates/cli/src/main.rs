@@ -143,6 +143,7 @@ fn main() {
             commands::launch::launch(db, config, args, tmp_log_file_path.clone())
         }
         Commands::Profile(ProfileCommands::Create(args)) => commands::profile::create(config, args),
+        Commands::Profile(ProfileCommands::Convert(args)) => commands::profile::convert(args),
         Commands::Profile(ProfileCommands::List) => commands::profile::list(db),
         Commands::Profile(ProfileCommands::Show(name)) => commands::profile::show(db, config, name),
         #[cfg(target_os = "windows")]

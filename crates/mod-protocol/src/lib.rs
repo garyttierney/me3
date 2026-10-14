@@ -136,48 +136,54 @@ impl ModProfile {
     }
 }
 
+impl Into<ModProfile> for ModProfileV1 {
+    fn into(self) -> ModProfile {
+        ModProfile::V1(self)
+    }
+}
+
 #[derive(Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct ModProfileV1 {
     /// The games that this profile supports.
     #[serde(default)]
-    supports: Vec<Supports>,
+    pub supports: Vec<Supports>,
 
     /// Native modules (DLLs) that will be loaded.
     #[serde(default)]
     #[serde(alias = "native")]
-    natives: Vec<Native>,
+    pub natives: Vec<Native>,
 
     /// A collection of packages containing assets that should be considered for loading
     /// before the DVDBND.
     #[serde(default)]
     #[serde(alias = "package")]
-    packages: Vec<Package>,
+    pub packages: Vec<Package>,
 
     /// Name of an alternative savefile to use (in the default savefile directory).
     #[serde(default)]
-    savefile: Option<String>,
+    pub savefile: Option<String>,
 
     /// Starts the game with multiplayer server connectivity enabled.
     #[serde(default)]
-    start_online: Option<bool>,
+    pub start_online: Option<bool>,
 
     /// Try to neutralize Arxan GuardIT code protection to improve mod stability.
     #[serde(default)]
-    disable_arxan: Option<bool>,
+    pub disable_arxan: Option<bool>,
 
     /// Patch memory limits for supported games to improve mod stability.
     #[serde(default)]
     #[serde(alias = "patch_mem")]
-    mem_patch: Option<bool>,
+    pub mem_patch: Option<bool>,
 
     /// Override how many megabytes of memory the supported game should allocate
     /// (with `mem_patch = true`).
     #[serde(default)]
-    mem_patch_heap_size: Option<u32>,
+    pub mem_patch_heap_size: Option<u32>,
 
     /// Debug game property overrides.
     #[serde(default)]
-    debug_properties: DebugProperties,
+    pub debug_properties: DebugProperties,
 }
 
 #[cfg(test)]

@@ -1,3 +1,5 @@
+mod modengine2;
+
 use std::{fs, path::PathBuf};
 
 use clap::{ArgAction, Args, Subcommand};
@@ -11,7 +13,15 @@ use me3_mod_protocol::{
 };
 use tracing::error;
 
-use crate::{config::Config, db::DbContext, output::OutputBuilder, Game};
+use crate::{
+    commands::profile::modengine2::ModEngine2Config, config::Config, db::DbContext,
+    output::OutputBuilder, Game,
+};
+
+#[derive(Copy, Clone, Debug, clap::ValueEnum)]
+pub enum ProfileConvertFormat {
+    ModEngine2,
+}
 
 #[derive(Subcommand, Debug)]
 #[command(flatten_help = true)]
@@ -19,12 +29,37 @@ pub enum ProfileCommands {
     /// Create a new ModProfile.
     Create(ProfileCreateArgs),
 
+    /// Convert an alternative mod loader configuration file to a me3 ModProfile.
+    Convert(ProfileConvertArgs),
+
     /// List profiles in the profile dir.
     #[clap(disable_help_flag = true)]
     List,
 
     /// Show information on a profile.
     Show(#[clap(flatten)] ProfileNameArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct ProfileConvertArgs {
+    /// A format identifier of the mod loader, currently only "modengine2" is supported.
+    format: ProfileConvertFormat,
+
+    /// Game to associate with this profile for one-click launches, if it cannot be inferred from the configuration file.
+    #[clap(
+        short('g'),
+        long,
+        hide_possible_values = false,
+        help_heading = "Game selection"
+    )]
+    #[arg(value_enum)]
+    game: Option<Game>,
+
+    /// Path to the configuration file to read.
+    input: PathBuf,
+
+    /// Output path to the me3 profile to be written.
+    output: PathBuf,
 }
 
 #[derive(Args, Debug)]
@@ -215,6 +250,16 @@ pub fn create(config: Config, args: ProfileCreateArgs) -> color_eyre::Result<()>
     let contents = toml::to_string_pretty(&profile)?;
 
     std::fs::write(profile_path, contents)?;
+
+    Ok(())
+}
+
+#[tracing::instrument(err, skip_all)]
+pub fn convert(args: ProfileConvertArgs) -> color_eyre::Result<()> {
+    let config = std::fs::read_to_string(args.input)?;
+    let me2: ModEngine2Config = toml::from_str(&config)?;
+    let me3_toml = toml::to_string_pretty(&me2.into_mod_profile())?;
+    std::fs::write(args.output, me3_toml)?;
 
     Ok(())
 }
